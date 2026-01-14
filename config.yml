@@ -1,0 +1,31 @@
+app:
+  name: "HR SAS Backend Service"
+web:
+  port: 9000
+  prefork: false
+log:
+  level: 6
+database:
+  username: postgres
+  password: postgres
+  host: localhost
+  port: 5432
+  name: "hr_saas"
+  sslmode: "disable"
+  timezone: "Asia/Jakarta"
+  pool:
+    idle: 10
+    max: 100
+    lifetime: 300
+# mail:
+#   smtp:
+#     host: smtp.gmail.com
+#     port: 587
+#     username: itbawon@gmail.com
+#     password: "ctog pmjh tmff gnsj"
+#     from: "Bank Wonosobo <itbawon@gmail.com>"
+# jwt:
+#   secret: "supersecret"
+#   issuer: "bw-auth-serice"
+#   audience: "bw-users"
+#   expires_in: 30000 # menit

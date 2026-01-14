@@ -1,0 +1,19 @@
+@baseurl=http://localhost:9000
+@token=z8kTLN2S-bBsdjtognWs1islfv0bUKEZeTQB4xu9dnA
+
+
+### Create Employee
+POST {{baseurl}}/api/employees
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullname": "Jane Smith",
+  "birth_place": "New York",
+  "birth_date": "1990-05-15",
+  "blood_type": "O+",
+  "marital_status": "Single",
+  "religion": "None",
+  "phone": "+1234567890",
+  "timezone": "UTC-5"
+}

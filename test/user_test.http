@@ -1,0 +1,30 @@
+@baseurl=http://localhost:9000
+@token=z8kTLN2S-bBsdjtognWs1islfv0bUKEZeTQB4xu9dnA
+### Register User
+POST {{baseurl}}/api/_register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "johndoe@example.com",
+  "password": "securePassword123"
+}
+
+### Login User
+POST {{baseurl}}/api/_login
+Content-Type: application/json
+
+{
+  "email": "johndoe@example.com",
+  "password": "securePassword123"
+}
+
+### Get Current User
+GET {{baseurl}}/api/users/_current 
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### Logout User
+DELETE {{baseurl}}/api/users/_logout  
+Content-Type: application/json
+Authorization: Bearer {{token}}

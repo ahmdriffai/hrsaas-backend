@@ -1,0 +1,33 @@
+@baseurl=http://localhost:9000
+@token=YnzMlwvR5yKNe3mV4iJl4FBKgVBalYFx
+
+### Register Company
+@userID=d5dfd1e4-a1b4-4aa7-aeaa-03e80427ea81
+POST {{baseurl}}/api/companies/_register
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "user_id": "{{userID}}",
+  "name": "Bawon"
+}
+
+### Create Company
+POST {{baseurl}}/api/companies
+Content-Type: application/json
+
+{
+  "name": "Bank Wonosobo",
+  "logo_url": "http://localhost:8000",
+  "bussiness_field": "Banking",
+  "address":"Jl. Ahmad Yani",
+  "province": "Jawa Tengah",
+  "city": "Wonosobo",
+  "district": "Wonosobo",
+  "village": "Wonosobo",
+  "zip_code": "56311",
+  "phone_number": "6288882121",
+  "fax_number": "08509840",
+  "email": "admin@bankwonosobo.co.id",
+  "website": "www.bankwonosobo.co.id"
+}
