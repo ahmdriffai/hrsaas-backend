@@ -29,7 +29,7 @@ type CreateEmployeeRequest struct {
 }
 
 type SearchEmployeeRequest struct {
-	CompanyID string `json:"employee_id" validate:"required"`
+	CompanyID string `json:"company_id" validate:"required"`
 	Key       string `json:"key" validate:"max=100"`
 	Page      int    `json:"page" validate:"min=1"`
 	Size      int    `json:"size" validate:"min=1,max=100"`

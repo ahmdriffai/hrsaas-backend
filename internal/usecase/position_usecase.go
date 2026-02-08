@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
@@ -60,8 +59,7 @@ func (c *PositionUseCase) Create(ctx context.Context, request *model.CreatePosit
 		return nil, fiber.ErrInternalServerError
 	}
 
-	fmt.Println("Tesssss ====")
-
+	// commit transaction
 	if err := tx.Commit().Error; err != nil {
 		c.Log.WithError(err).Error("Failed to commit transaction")
 		return nil, fiber.ErrInternalServerError

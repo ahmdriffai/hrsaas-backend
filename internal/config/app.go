@@ -31,6 +31,7 @@ func Bootstrap(config *BootstrapConfig) {
 	sanctionRepository := repository.NewSanctionRepository(config.Log)
 	emSancRepository := repository.NewEmSancRepository(config.Log)
 	positionRepository := repository.NewPositionRepository(config.Log)
+	officeLocationRepositoruy := repository.NewOfficeLocationRepository(config.Log)
 
 	// setup producer
 
@@ -41,6 +42,7 @@ func Bootstrap(config *BootstrapConfig) {
 	sanctionUseCase := usecase.NewSantionUseCase(config.DB, config.Log, config.Validate, sanctionRepository)
 	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
+	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
@@ -49,20 +51,22 @@ func Bootstrap(config *BootstrapConfig) {
 	santionController := http.NewSanctionController(sanctionUseCase, config.Log)
 	emSangController := http.NewEmSancController(emSancUseCase, config.Log)
 	positionController := http.NewPositionController(positionUseCase, config.Log)
+	officeLocationController := http.NewOfficeLocationController(officeLocationUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
 
 	// route config
 	routeConfig := route.RouteConfig{
-		App:                config.App,
-		CompanyController:  companyController,
-		AuthMiddleware:     authMiddleware,
-		UserController:     userController,
-		EmployeeController: employeeController,
-		SanctionController: santionController,
-		EmSancController:   emSangController,
-		PositionController: positionController,
+		App:                      config.App,
+		CompanyController:        companyController,
+		AuthMiddleware:           authMiddleware,
+		UserController:           userController,
+		EmployeeController:       employeeController,
+		SanctionController:       santionController,
+		EmSancController:         emSangController,
+		PositionController:       positionController,
+		OfficeLocationController: officeLocationController,
 	}
 
 	routeConfig.Setup()

@@ -7,14 +7,15 @@ import (
 )
 
 type RouteConfig struct {
-	App                *fiber.App
-	AuthMiddleware     fiber.Handler
-	CompanyController  *http.CompanyController
-	UserController     *http.UserController
-	EmployeeController *http.EmployeeController
-	SanctionController *http.SanctionController
-	EmSancController   *http.EmSancController
-	PositionController *http.PositionController
+	App                      *fiber.App
+	AuthMiddleware           fiber.Handler
+	CompanyController        *http.CompanyController
+	UserController           *http.UserController
+	EmployeeController       *http.EmployeeController
+	OfficeLocationController *http.OfficeLocationController
+	SanctionController       *http.SanctionController
+	EmSancController         *http.EmSancController
+	PositionController       *http.PositionController
 }
 
 func (c *RouteConfig) Setup() {
@@ -25,6 +26,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupSanctionRouter()
 	c.SetupEmployeeSanctionRouter()
 	c.SetupPositionRouter()
+	c.SetupOfficeLocationRouter()
 }
 
 /*
@@ -70,4 +72,10 @@ func (c *RouteConfig) SetupPositionRouter() {
 	route := c.App.Group("/api/positions", c.AuthMiddleware)
 	route.Get("/", c.PositionController.ListPosition)
 	route.Post("/", c.PositionController.Create)
+}
+
+func (c *RouteConfig) SetupOfficeLocationRouter() {
+	route := c.App.Group("/api/office-locations", c.AuthMiddleware)
+	route.Get("/", c.OfficeLocationController.List)
+	route.Post("/", c.OfficeLocationController.Create)
 }
