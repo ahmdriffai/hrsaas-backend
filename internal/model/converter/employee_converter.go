@@ -6,6 +6,7 @@ import (
 )
 
 func EmployeeToResponse(employee *entity.Employee) *model.EmployeeResponse {
+
 	return &model.EmployeeResponse{
 		ID:             employee.ID,
 		CompanyID:      employee.CompanyID,

@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS employee_shifts;
+DROP TABLE IF EXISTS shifts;

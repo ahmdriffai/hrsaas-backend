@@ -72,3 +72,22 @@ func (c *OfficeLocationController) List(ctx *fiber.Ctx) error {
 		Paging: paging,
 	})
 }
+
+func (c *OfficeLocationController) AssignEmployee(ctx *fiber.Ctx) error {
+	request := new(model.AssignEmployeeToOfficeLocationRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	request.CompanyID = middleware.GetCompanyId(ctx)
+
+	if err := c.UseCase.AssignEmployee(ctx.UserContext(), request); err != nil {
+		c.Log.WithError(err).Error("failed to assign employee to office location")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}

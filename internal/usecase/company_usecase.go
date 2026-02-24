@@ -43,7 +43,7 @@ Create Company
 func (c *CompanyUseCase) Create(ctx context.Context, request *model.CreateCompanyRequest) (*model.CompanyResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
-
+ 
 	if err := c.Validate.Struct(request); err != nil {
 		c.Log.WithError(err).Error("Failed to validate request body")
 		return nil, fiber.ErrBadRequest

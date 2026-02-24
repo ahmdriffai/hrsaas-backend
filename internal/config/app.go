@@ -32,17 +32,22 @@ func Bootstrap(config *BootstrapConfig) {
 	emSancRepository := repository.NewEmSancRepository(config.Log)
 	positionRepository := repository.NewPositionRepository(config.Log)
 	officeLocationRepositoruy := repository.NewOfficeLocationRepository(config.Log)
+	attendaceRepositpry := repository.NewAttendanceRepository(config.Log)
+	attendanceLogRepository := repository.NewAttendanceLogRepository(config.Log)
+	shifRepository := repository.NewShiftRepository(config.Log)
 
 	// setup producer
 
 	// setup usecase
 	companyUsecase := usecase.NewCompanyUseCase(config.DB, config.Log, config.Validate, companyRepository, userRepository)
 	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository)
-	employeeUseCase := usecase.NewEmployeeUseCase(config.DB, config.Log, config.Validate, employeeRepository)
+	employeeUseCase := usecase.NewEmployeeUseCase(config.DB, config.Log, config.Validate, employeeRepository, userRepository)
 	sanctionUseCase := usecase.NewSantionUseCase(config.DB, config.Log, config.Validate, sanctionRepository)
 	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
+	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, attendanceLogRepository)
+	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
@@ -52,6 +57,8 @@ func Bootstrap(config *BootstrapConfig) {
 	emSangController := http.NewEmSancController(emSancUseCase, config.Log)
 	positionController := http.NewPositionController(positionUseCase, config.Log)
 	officeLocationController := http.NewOfficeLocationController(officeLocationUseCase, config.Log)
+	attendaceController := http.NewAttendanceController(attendanceUseCase, config.Log)
+	shiftController := http.NewShifController(shiftUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
@@ -67,6 +74,8 @@ func Bootstrap(config *BootstrapConfig) {
 		EmSancController:         emSangController,
 		PositionController:       positionController,
 		OfficeLocationController: officeLocationController,
+		AttendanceController:     attendaceController,
+		ShiftController:          shiftController,
 	}
 
 	routeConfig.Setup()

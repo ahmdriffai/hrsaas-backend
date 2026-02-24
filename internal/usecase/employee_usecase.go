@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -18,14 +19,20 @@ type EmployeeUseCase struct {
 	Log                *logrus.Logger
 	Validate           *validator.Validate
 	EmployeeRepository *repository.EmployeeRepository
+	UserRepository     *repository.UserRepository
 }
 
-func NewEmployeeUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate, employeeRepository *repository.EmployeeRepository) *EmployeeUseCase {
+func NewEmployeeUseCase(db *gorm.DB,
+	log *logrus.Logger,
+	validate *validator.Validate,
+	employeeRepository *repository.EmployeeRepository,
+	userRepository *repository.UserRepository) *EmployeeUseCase {
 	return &EmployeeUseCase{
 		DB:                 db,
 		Log:                log,
 		Validate:           validate,
 		EmployeeRepository: employeeRepository,
+		UserRepository:     userRepository,
 	}
 }
 
@@ -52,6 +59,29 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 		return nil, fiber.NewError(fiber.StatusConflict, "Employee number already usage.")
 	}
 
+	// hash password
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to hash password")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	// create user entity
+	user := &entity.User{
+		Name:      request.Fullname,
+		Email:     request.Email,
+		Password:  string(passwordHash),
+		Role:      "USER",
+		CompanyID: request.CompanyID,
+	}
+
+	// create user in database
+	if err := c.UserRepository.Create(tx, user); err != nil {
+		c.Log.WithError(err).Error("Failed to create user")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	// create employee entity
 	employee := &entity.Employee{
 		Fullname:       request.Fullname,
 		BirthPlace:     request.BirthPlace,
@@ -63,6 +93,7 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 		Timezone:       request.Timezone,
 		CompanyID:      request.CompanyID,
 		EmployeeNumber: request.EmployeeNumber,
+		UserID:         user.ID,
 	}
 
 	if err := c.EmployeeRepository.Create(tx, employee); err != nil {

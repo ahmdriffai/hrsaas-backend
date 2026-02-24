@@ -5,15 +5,16 @@ import (
 )
 
 type UserResponse struct {
-	ID            string    `json:"id,omitempty"`
-	Name          string    `json:"name,omitempty"`
-	Email         string    `json:"email,omitempty"`
-	EmailVerified bool      `json:"email_verified,omitempty"`
-	Image         *string   `json:"image,omitempty"`
-	CompanyID     string    `json:"company_id,omitempty"`
-	Role          string    `json:"role,omitempty"`
-	CreatedAt     time.Time `json:"created_at,omitempty"`
-	UpdatedAt     time.Time `json:"updated_at,omitempty"`
+	ID            string            `json:"id,omitempty"`
+	Name          string            `json:"name,omitempty"`
+	Email         string            `json:"email,omitempty"`
+	EmailVerified bool              `json:"email_verified,omitempty"`
+	Image         *string           `json:"image,omitempty"`
+	CompanyID     string            `json:"company_id,omitempty"`
+	Role          string            `json:"role,omitempty"`
+	Employee      *EmployeeResponse `json:"employee,omitempty"`
+	CreatedAt     time.Time         `json:"created_at,omitempty"`
+	UpdatedAt     time.Time         `json:"updated_at,omitempty"`
 }
 
 type LoginUserResponse struct {

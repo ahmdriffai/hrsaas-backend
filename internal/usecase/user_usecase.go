@@ -53,12 +53,16 @@ func (c *UserUseCase) Verify(ctx context.Context, request *model.VerifyUserReque
 
 	// Check expiry
 	if session.ExpiredAt.Before(time.Now()) {
+		if err := c.SessionRepository.Delete(tx, session); err != nil {
+			c.Log.WithError(err).Error("Failed to delete session by user id")
+			return nil, fiber.ErrInternalServerError
+		}
 		return nil, fiber.NewError(fiber.StatusUnauthorized, "Session expired")
 	}
 
 	// find user
 	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, session.UserID); err != nil {
+	if err := c.UserRepository.FindById(tx, user, session.UserID, "Employee"); err != nil {
 		c.Log.Warnf("Failed find user by token : %+v", err)
 		return nil, fiber.ErrUnauthorized
 	}

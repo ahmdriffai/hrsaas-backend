@@ -16,6 +16,8 @@ type RouteConfig struct {
 	SanctionController       *http.SanctionController
 	EmSancController         *http.EmSancController
 	PositionController       *http.PositionController
+	AttendanceController     *http.AttendanceController
+	ShiftController          *http.ShiftController
 }
 
 func (c *RouteConfig) Setup() {
@@ -27,6 +29,8 @@ func (c *RouteConfig) Setup() {
 	c.SetupEmployeeSanctionRouter()
 	c.SetupPositionRouter()
 	c.SetupOfficeLocationRouter()
+	c.SetupAttendanceRouter()
+	c.SetupShiftRouter()
 }
 
 /*
@@ -46,7 +50,7 @@ func (c *RouteConfig) SetupCompanyRouter() {
 func (c *RouteConfig) SetupUserRouter() {
 	route := c.App.Group("/api/users", c.AuthMiddleware)
 	route.Get("/_current", c.UserController.GetCurrentUser)
-	route.Delete("/_logout", c.UserController.Logout)
+	c.App.Delete("/api/users/_logout", c.UserController.Logout)
 }
 
 func (c *RouteConfig) SetupEmployeeRouter() {
@@ -78,4 +82,17 @@ func (c *RouteConfig) SetupOfficeLocationRouter() {
 	route := c.App.Group("/api/office-locations", c.AuthMiddleware)
 	route.Get("/", c.OfficeLocationController.List)
 	route.Post("/", c.OfficeLocationController.Create)
+	route.Post("/assign-employee", c.OfficeLocationController.AssignEmployee)
+}
+
+func (c *RouteConfig) SetupAttendanceRouter() {
+
+	route := c.App.Group("/api/attendances", c.AuthMiddleware)
+	route.Post("/check-in", c.AttendanceController.CheckIn)
+}
+
+func (c *RouteConfig) SetupShiftRouter() {
+	route := c.App.Group("/api/shifts", c.AuthMiddleware)
+	route.Post("/", c.ShiftController.Create)
+	route.Post("/assign-employee", c.ShiftController.AssignEmployee)
 }

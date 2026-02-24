@@ -1,18 +1,18 @@
 package model
 
 type EmployeeResponse struct {
-	ID             string  `json:"id,omitempty"`
-	CompanyID      string  `json:"company_id,omitempty"`
-	UserID         *string `json:"user_id,omitempty"`
-	EmployeeNumber string  `json:"employee_number,omitempty"`
-	Fullname       string  `json:"fullname,omitempty"`
-	BirthPlace     string  `json:"birth_place,omitempty"`
-	BirthDate      string  `json:"birth_date,omitempty"`
-	BlodType       string  `json:"blood_type,omitempty"`
-	MaritalStatus  string  `json:"marital_status,omitempty"`
-	Religion       string  `json:"religion,omitempty"`
-	Phone          string  `json:"phone,omitempty"`
-	Timezone       string  `json:"timezone,omitempty"`
+	ID             string `json:"id,omitempty"`
+	CompanyID      string `json:"company_id,omitempty"`
+	UserID         string `json:"user_id,omitempty"`
+	EmployeeNumber string `json:"employee_number,omitempty"`
+	Fullname       string `json:"fullname,omitempty"`
+	BirthPlace     string `json:"birth_place,omitempty"`
+	BirthDate      string `json:"birth_date,omitempty"`
+	BlodType       string `json:"blood_type,omitempty"`
+	MaritalStatus  string `json:"marital_status,omitempty"`
+	Religion       string `json:"religion,omitempty"`
+	Phone          string `json:"phone,omitempty"`
+	Timezone       string `json:"timezone,omitempty"`
 }
 
 type CreateEmployeeRequest struct {
@@ -26,6 +26,8 @@ type CreateEmployeeRequest struct {
 	Religion       string `json:"religion" validate:"required"`
 	Phone          string `json:"phone" validate:"required"`
 	Timezone       string `json:"timezone" validate:"required"`
+	Email          string `json:"email" validate:"required,email"`
+	Password       string `json:"password" validate:"required,min=3"`
 }
 
 type SearchEmployeeRequest struct {

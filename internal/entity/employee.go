@@ -6,19 +6,21 @@ import (
 )
 
 type Employee struct {
-	ID             string  `gorm:"column:id;primaryKey"`
-	CompanyID      string  `gorm:"column:company_id;not null"`
-	UserID         *string `gorm:"column:user_id;null"`
-	EmployeeNumber string  `gorm:"column:employee_number;uniqueIndex"`
-	Fullname       string  `gorm:"column:fullname;not null"`
-	Gender         string  `gorm:"column:gender;not null"`
-	BirthPlace     string  `gorm:"column:birth_place;not null"`
-	BirthDate      string  `gorm:"column:birth_date;not null"`
-	BlodType       string  `gorm:"column:blood_type;not null"`
-	MaritalStatus  string  `gorm:"column:marital_status;not null"`
-	Religion       string  `gorm:"column:religion;not null"`
-	Phone          string  `gorm:"column:phone;not null"`
-	Timezone       string  `gorm:"column:timezone;not null"`
+	ID             string `gorm:"column:id;primaryKey"`
+	CompanyID      string `gorm:"column:company_id;not null"`
+	UserID         string `gorm:"column:user_id;not null"`
+	EmployeeNumber string `gorm:"column:employee_number;uniqueIndex"`
+	Fullname       string `gorm:"column:fullname;not null"`
+	Gender         string `gorm:"column:gender;not null"`
+	BirthPlace     string `gorm:"column:birth_place;not null"`
+	BirthDate      string `gorm:"column:birth_date;not null"`
+	BlodType       string `gorm:"column:blood_type;not null"`
+	MaritalStatus  string `gorm:"column:marital_status;not null"`
+	Religion       string `gorm:"column:religion;not null"`
+	Phone          string `gorm:"column:phone;not null"`
+	Timezone       string `gorm:"column:timezone;not null"`
+
+	OfficeLocations []OfficeLocation `gorm:"many2many:employee_office_locations"`
 }
 
 // BeforeCreate hook to set UUID

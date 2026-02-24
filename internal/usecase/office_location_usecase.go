@@ -5,6 +5,7 @@ import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -46,8 +47,8 @@ func (c *OfficeLocationUseCase) Create(ctx context.Context, request *model.Creat
 	officeLocation := &entity.OfficeLocation{
 		Name:      request.Name,
 		Address:   request.Address,
-		Lat:       request.Lat,
-		Lng:       request.Lng,
+		Lat:       strconv.FormatFloat(request.Lat, 'f', -1, 64),
+		Lng:       strconv.FormatFloat(request.Lng, 'f', -1, 64),
 		Radius:    request.Radius,
 		IsActive:  true,
 		CompanyID: request.CompanyID,
@@ -66,7 +67,6 @@ func (c *OfficeLocationUseCase) Create(ctx context.Context, request *model.Creat
 
 	return model.OfficeLocationToResponse(officeLocation), nil
 }
-
 
 /* Search Office Location
  */
@@ -102,4 +102,51 @@ func (c *OfficeLocationUseCase) Search(ctx context.Context, request *model.Searc
 	}
 
 	return responses, total, nil
+}
+
+func (c *OfficeLocationUseCase) AssignEmployee(ctx context.Context, request *model.AssignEmployeeToOfficeLocationRequest) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return fiber.ErrBadRequest
+	}
+
+	officeLocationTotal, err := c.OfficeLocationRepository.CountByIDAndCompanyID(tx, request.OfficeLocationID, request.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to check office location existence")
+		return fiber.ErrInternalServerError
+	}
+	if officeLocationTotal == 0 {
+		c.Log.Error("Office location not found")
+		return fiber.ErrBadRequest
+	}
+
+	employeeTotal, err := c.OfficeLocationRepository.CountEmployeeByIDAndCompanyID(tx, request.EmployeeID, request.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to check employee existence")
+		return fiber.ErrInternalServerError
+	}
+	if employeeTotal == 0 {
+		c.Log.Error("Employee not found")
+		return fiber.ErrBadRequest
+	}
+
+	if err := c.OfficeLocationRepository.DeleteEmployeeOfficeLocationsByEmployeeID(tx, request.EmployeeID); err != nil {
+		c.Log.WithError(err).Error("Failed to remove previous employee office location")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := c.OfficeLocationRepository.AssignEmployeeToOfficeLocation(tx, request.EmployeeID, request.OfficeLocationID); err != nil {
+		c.Log.WithError(err).Error("Failed to assign employee to office location")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }

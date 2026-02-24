@@ -2,7 +2,7 @@
 CREATE TABLE employees (
   id VARCHAR(36) NOT NULL,
   company_id VARCHAR(36) NOT NULL,
-  user_id VARCHAR(36) NULL,
+  user_id VARCHAR(36) NOT NULL,
   employee_number VARCHAR(50) NOT NULL,
   fullname VARCHAR(100) NOT NULL,
   gender VARCHAR(10) NOT NULL,
