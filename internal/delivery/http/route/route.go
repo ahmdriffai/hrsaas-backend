@@ -93,6 +93,7 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 
 func (c *RouteConfig) SetupShiftRouter() {
 	route := c.App.Group("/api/shifts", c.AuthMiddleware)
+	route.Get("/", c.ShiftController.List)
 	route.Post("/", c.ShiftController.Create)
 	route.Post("/assign-employee", c.ShiftController.AssignEmployee)
 }

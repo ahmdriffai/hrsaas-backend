@@ -24,6 +24,7 @@ type AttendanceUseCase struct {
 	AttendanceRepository *repository.AttendanceRepository
 	LocationRepository   *repository.OfficeLocationRepository
 	ShiftRepository      *repository.ShiftRepository
+	ShiftDayRepo         *repository.ShiftDayRepository
 	AttendanceLogRepo    *repository.AttendanceLogRepository
 }
 
@@ -34,6 +35,7 @@ func NewAttendanceUseCase(
 	attendanceRepository *repository.AttendanceRepository,
 	locationRepository *repository.OfficeLocationRepository,
 	shiftRepository *repository.ShiftRepository,
+	shiftDayRepo *repository.ShiftDayRepository,
 	attendanceLogRepo *repository.AttendanceLogRepository,
 ) *AttendanceUseCase {
 	return &AttendanceUseCase{
@@ -43,6 +45,7 @@ func NewAttendanceUseCase(
 		AttendanceRepository: attendanceRepository,
 		LocationRepository:   locationRepository,
 		ShiftRepository:      shiftRepository,
+		ShiftDayRepo:         shiftDayRepo,
 		AttendanceLogRepo:    attendanceLogRepo,
 	}
 }
@@ -69,7 +72,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	now := time.Now()
 
 	fmt.Println(request.EmployeeID)
-	// TODO: Ambil shift karyawan (misalnya dari employee.shift_id → shifts)
+	// Ambil shift karyawan (misalnya dari employee.shift_id → shifts)
 	// → Dapatkan start_time, late_tolerance
 	shifts, err := c.ShiftRepository.FindByEmployeeID(tx, request.EmployeeID)
 	if err != nil {
@@ -80,7 +83,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	}
 	shift := shifts[0]
 
-	// TODO: Cek apakah sudah ada attendance hari ini?
+	// Cek apakah sudah ada attendance hari ini?
 	// → Query attendance WHERE employee_id & date = today
 	var existingAttendance entity.Attendance
 	err = c.AttendanceRepository.FindByEmployeeIDAndDate(tx, &existingAttendance, request.EmployeeID, now)
@@ -92,7 +95,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Sudah check-in hari ini")
 	}
 
-	// TODO: Validasi lokasi
+	// Validasi lokasi
 	// - Ambil office_locations yang terdaftar oleh employee
 	locations, err := c.LocationRepository.GetByEmployeeID(tx, request.EmployeeID)
 	if err != nil {
@@ -149,20 +152,40 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		DeviceInfo:         request.DeviceInfo,
 	}
 
-	// TODO: Validasi wajah
+	// Validasi wajah
 	// - Kirim face_image ke Face Recognition Service
 	//  - Dapat confidence score
 	//  - is_face_verified = confidence >= threshold (misal 0.75)
 
-	// TODO: Tentukan status
+	// Tentukan status
 	//  - Jika now() > shift.start_time + late_tolerance → status = TERLAMBAT
 	//  - Else → status = HADIR
-	if now.After(shift.StartTime.Add(time.Duration(shift.LateTolerance) * time.Minute)) {
+
+	weekday := int(now.Weekday())
+	if weekday == int(time.Sunday) {
+		weekday = 7
+	}
+
+	var shiftDay entity.ShiftDays
+	if err := c.ShiftDayRepo.FindByShiftIDAndWeekday(tx, &shiftDay, shift.ID, weekday); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "Shift hari ini tidak ditemukan")
+		}
+		return nil, fiber.ErrInternalServerError
+	}
+
+	startTimeToday := time.Date(
+		now.Year(), now.Month(), now.Day(),
+		shiftDay.CheckIn.Hour(), shiftDay.CheckIn.Minute(), shiftDay.CheckIn.Second(), shiftDay.CheckIn.Nanosecond(),
+		now.Location(),
+	)
+
+	if now.After(startTimeToday.Add(time.Duration(shift.LateTolerance) * time.Minute)) {
 		// Set status to LATE
 		attendance.Status = "TERLAMBAT"
 	}
 
-	// TODO: Simpan ke attendance:
+	// Simpan ke attendance:
 	if err := c.AttendanceRepository.Create(tx, attendance); err != nil {
 		c.Log.WithError(err).Error("Failed to create attendance")
 		return nil, fiber.ErrInternalServerError
@@ -170,7 +193,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 
 	attendanceLog.AttendanceID = attendance.ID
 
-	// TODO: Simpan ke attendance_logs:
+	// Simpan ke attendance_logs:
 	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {
 		c.Log.WithError(err).Error("Failed to create attendance log")
 		return nil, fiber.ErrInternalServerError
@@ -280,5 +303,5 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 	return model.AttendandeToResponse(&attendance), nil
 }
 
-// TODO: Implement Attendance Use Case Break-In
-// TODO: Implement Attendance Use Case Break-Out
+// Implement Attendance Use Case Break-In
+// Implement Attendance Use Case Break-Out

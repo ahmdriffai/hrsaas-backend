@@ -35,6 +35,7 @@ func Bootstrap(config *BootstrapConfig) {
 	attendaceRepositpry := repository.NewAttendanceRepository(config.Log)
 	attendanceLogRepository := repository.NewAttendanceLogRepository(config.Log)
 	shifRepository := repository.NewShiftRepository(config.Log)
+	shiftDayRepository := repository.NewShiftDayRepository(config.Log)
 
 	// setup producer
 
@@ -46,8 +47,8 @@ func Bootstrap(config *BootstrapConfig) {
 	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
-	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, attendanceLogRepository)
-	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository)
+	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository)
+	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository, shiftDayRepository)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)

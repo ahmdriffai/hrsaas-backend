@@ -2,6 +2,7 @@ package repository
 
 import (
 	"hr-sas/internal/entity"
+	"hr-sas/internal/model"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -26,15 +27,12 @@ func (r *ShiftRepository) FindByEmployeeID(db *gorm.DB, employeeId string) ([]en
 			shifts.id,
 			shifts.company_id,
 			shifts.name,
-			('2000-01-01'::date + shifts.start_time) AS start_time,
-			('2000-01-01'::date + shifts.end_time) AS end_time,
 			shifts.late_tolerance,
 			shifts.created_at,
 			shifts.updated_at
 		`).
 		Joins("JOIN employee_shifts ON employee_shifts.shift_id = shifts.id").
 		Where("employee_shifts.employee_id = ?", employeeId).
-		Order("shifts.start_time ASC").
 		Find(&shifts).Error; err != nil {
 		return nil, err
 	}
@@ -69,4 +67,39 @@ func (r *ShiftRepository) AssignEmployeeToShift(db *gorm.DB, employeeID, shiftID
 		employeeID,
 		shiftID,
 	).Error
+}
+
+func (r *ShiftRepository) Search(db *gorm.DB, request *model.SearchShiftRequest) ([]entity.Shift, int64, error) {
+	var shifts []entity.Shift
+	if err := db.Scopes(r.FilterSearch(request)).
+		Select(`
+			shifts.id,
+			shifts.company_id,
+			shifts.name,
+			shifts.late_tolerance,
+			shifts.created_at,
+			shifts.updated_at
+		`).
+		Offset((request.Page - 1) * request.Size).
+		Limit(request.Size).
+		Find(&shifts).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var total int64
+	if err := db.Model(&entity.Shift{}).Scopes(r.FilterSearch(request)).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return shifts, total, nil
+}
+
+func (r *ShiftRepository) FilterSearch(request *model.SearchShiftRequest) func(tx *gorm.DB) *gorm.DB {
+	return func(tx *gorm.DB) *gorm.DB {
+		tx = tx.Where("company_id = ?", request.CompanyID)
+		if request.Key != "" {
+			tx = tx.Where("name LIKE ?", "%"+request.Key+"%")
+		}
+		return tx
+	}
 }

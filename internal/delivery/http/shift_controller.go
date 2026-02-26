@@ -5,6 +5,7 @@ import (
 	"hr-sas/internal/delivery/http/middleware"
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
+	"math"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -59,5 +60,31 @@ func (c *ShiftController) AssignEmployee(ctx *fiber.Ctx) error {
 
 	return ctx.JSON(model.WebResponse[any]{
 		Data: nil,
+	})
+}
+
+func (c *ShiftController) List(ctx *fiber.Ctx) error {
+	request := new(model.SearchShiftRequest)
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	request.Key = ctx.Query("key", "")
+	request.Page = ctx.QueryInt("page", 1)
+	request.Size = ctx.QueryInt("size", 10)
+
+	responses, total, err := c.UseCase.Search(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list shifts")
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.ShiftResponse]{
+		Data:   responses,
+		Paging: paging,
 	})
 }
