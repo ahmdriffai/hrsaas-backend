@@ -59,6 +59,17 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 		return nil, fiber.NewError(fiber.StatusConflict, "Employee number already usage.")
 	}
 
+	// cek user exist
+	count, err := c.UserRepository.CountByEmail(tx, request.Email)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to count user by email")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if count > 0 {
+		return nil, fiber.NewError(fiber.StatusConflict, "Email already registered")
+	}
+
 	// hash password
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {

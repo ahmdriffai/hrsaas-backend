@@ -125,7 +125,7 @@ func (c *UserUseCase) Register(ctx context.Context, request *model.RegisterUserR
 		Name:      request.Name,
 		Email:     request.Email,
 		Password:  string(passwordHash),
-		Role:      "USER",
+		Role:      "ADMIN",
 		CompanyID: company.ID,
 	}
 
