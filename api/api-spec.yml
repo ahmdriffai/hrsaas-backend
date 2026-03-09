@@ -13,8 +13,8 @@ servers:
 tags:
   - name: Time Off Requests
   - name: Time Off Types
-  - name: Time Off Attachments
   - name: Time Off Balances
+  - name: Common
 
 security:
   - bearerAuth: []
@@ -24,6 +24,7 @@ paths:
     post:
       tags: [Time Off Requests]
       summary: Create time off request
+      description: Employee and company scope are derived from bearer token.
       operationId: createTimeOffRequest
       requestBody:
         required: true
@@ -37,7 +38,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffRequest'
+                $ref: '#/components/schemas/SuccessTimeOffRequestResponse'
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -46,10 +47,6 @@ paths:
       summary: List time off requests
       operationId: listTimeOffRequests
       parameters:
-        - in: query
-          name: employee_id
-          schema:
-            type: string
         - in: query
           name: time_off_type_id
           schema:
@@ -87,7 +84,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffRequestList'
+                $ref: '#/components/schemas/SuccessTimeOffRequestListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/time-off-requests/{id}:
@@ -103,9 +100,55 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffRequest'
+                $ref: '#/components/schemas/SuccessTimeOffRequestResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/time-off-requests/_current:
+    get:
+      tags: [Time Off Requests]
+      summary: List current user time off requests
+      operationId: listCurrentUserTimeOffRequests
+      parameters:
+        - in: query
+          name: time_off_type_id
+          schema:
+            type: string
+        - in: query
+          name: request_status
+          schema:
+            $ref: '#/components/schemas/RequestStatus'
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffRequestListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/time-off-requests/{id}/approve:
     patch:
@@ -126,7 +169,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffRequest'
+                $ref: '#/components/schemas/SuccessTimeOffRequestResponse'
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -150,18 +193,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffRequest'
+                $ref: '#/components/schemas/SuccessTimeOffRequestResponse'
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  /api/time-off-requests/{id}/attachments:
+  /api/upload:
     post:
-      tags: [Time Off Attachments]
-      summary: Upload attachment to request
-      operationId: uploadTimeOffAttachment
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
+      tags: [Common]
+      summary: Upload File
+      operationId: uploadFile
       requestBody:
         required: true
         content:
@@ -173,31 +214,41 @@ paths:
                 file:
                   type: string
                   format: binary
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebResponseTimeOffAttachment'
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-    get:
-      tags: [Time Off Attachments]
-      summary: List request attachments
-      operationId: listTimeOffAttachments
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
+                path:
+                  type: string
+                  description: Directory prefix for uploaded files.
+                  example: "time-off/sakit/"
       responses:
         '200':
-          description: Success
+          description: Upload berhasil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffAttachmentList'
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+                $ref: '#/components/schemas/UploadSuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Payload too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/time-off-types:
     get:
@@ -210,7 +261,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffTypeList'
+                $ref: '#/components/schemas/SuccessTimeOffTypeListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [Time Off Types]
@@ -228,7 +279,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffType'
+                $ref: '#/components/schemas/SuccessTimeOffTypeResponse'
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -239,10 +290,6 @@ paths:
       summary: List balances
       operationId: listTimeOffBalances
       parameters:
-        - in: query
-          name: employee_id
-          schema:
-            type: string
         - in: query
           name: time_off_type_id
           schema:
@@ -258,7 +305,31 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebResponseTimeOffBalanceList'
+                $ref: '#/components/schemas/SuccessTimeOffBalanceListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/time-off-balances/_current:
+    get:
+      tags: [Time Off Balances]
+      summary: List current user time off balances
+      operationId: listCurrentUserTimeOffBalances
+      parameters:
+        - in: query
+          name: time_off_type_id
+          schema:
+            type: string
+        - in: query
+          name: period_year
+          schema:
+            type: integer
+            minimum: 2000
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffBalanceListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
 
 components:
@@ -367,8 +438,8 @@ components:
           format: date
         requested_days:
           type: number
-          format: integer
-          minimum: 1
+          format: float
+          minimum: 0.25
         request_reason:
           type: string
           maxLength: 255
@@ -424,22 +495,37 @@ components:
           minimum: 0
           default: 0
 
-    TimeOffAttachment:
+    UploadSuccessResponse:
       type: object
       properties:
-        id:
+        success:
+          type: boolean
+          example: true
+        message:
           type: string
-        time_off_request_id:
+          example: Upload successful
+        data:
+          $ref: '#/components/schemas/UploadedFileItem'
+
+    UploadedFileItem:
+      type: object
+      properties:
+        file_url:
           type: string
+          example: http://example.com/uploads/time-off/sakit/file.jpg
         file_name:
           type: string
+          example: surat-dokter.jpg
         mime_type:
           type: string
+          example: image/jpeg
         file_size:
           type: integer
           minimum: 0
-        file_url:
+          example: 345672
+        path:
           type: string
+          example: time-off/sakit/
 
     TimeOffBalance:
       type: object
@@ -461,6 +547,7 @@ components:
         remaining_days:
           type: integer
 
+
     PageMetadata:
       type: object
       properties:
@@ -476,78 +563,77 @@ components:
     ErrorResponse:
       type: object
       properties:
-        error:
+        success:
+          type: boolean
+          example: false
+        message:
           type: string
+          example: Unauthorized
 
-    WebResponseTimeOffRequest:
+    SuccessTimeOffRequestResponse:
       type: object
       properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
         data:
           $ref: '#/components/schemas/TimeOffRequest'
-        errors:
-          type: string
-          nullable: true
 
-    WebResponseTimeOffRequestList:
+    SuccessTimeOffRequestListResponse:
       type: object
       properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffRequest'
         paging:
           $ref: '#/components/schemas/PageMetadata'
-        errors:
-          type: string
-          nullable: true
 
-    WebResponseTimeOffType:
+    SuccessTimeOffTypeResponse:
       type: object
       properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
         data:
           $ref: '#/components/schemas/TimeOffType'
-        errors:
-          type: string
-          nullable: true
 
-    WebResponseTimeOffTypeList:
+    SuccessTimeOffTypeListResponse:
       type: object
       properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffType'
-        errors:
-          type: string
-          nullable: true
 
-    WebResponseTimeOffAttachment:
+    SuccessTimeOffBalanceListResponse:
       type: object
       properties:
-        data:
-          $ref: '#/components/schemas/TimeOffAttachment'
-        errors:
+        success:
+          type: boolean
+          example: true
+        message:
           type: string
-          nullable: true
-
-    WebResponseTimeOffAttachmentList:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/TimeOffAttachment'
-        errors:
-          type: string
-          nullable: true
-
-    WebResponseTimeOffBalanceList:
-      type: object
-      properties:
+          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffBalance'
-        errors:
-          type: string
-          nullable: true
