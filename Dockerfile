@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 
 # Build aplikasi
-RUN go build -o build/main cmd/api/main.go 
+RUN go build -o build/main cmd/web/main.go 
 
 # Stage 2: Minimal runtime
 FROM alpine:latest
