@@ -14,6 +14,7 @@ tags:
   - name: Time Off Requests
   - name: Time Off Types
   - name: Time Off Balances
+  - name: Time Off Approvals
   - name: Common
 
 security:
@@ -150,13 +151,31 @@ paths:
                 $ref: '#/components/schemas/SuccessTimeOffRequestListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /api/time-off-requests/{id}/approve:
-    patch:
-      tags: [Time Off Requests]
-      summary: Approve request
-      operationId: approveTimeOffRequest
+  /api/time-off-requests/{id}/approvals:
+    get:
+      tags: [Time Off Approvals]
+      summary: List approval steps for request
+      operationId: listTimeOffRequestApprovals
       parameters:
         - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffApprovalListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/time-off-requests/{id}/approvals/{approval_id}/approve:
+    patch:
+      tags: [Time Off Approvals]
+      summary: Approve a specific approval step
+      operationId: approveTimeOffApprovalStep
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - $ref: '#/components/parameters/ApprovalIdPath'
       requestBody:
         required: false
         content:
@@ -169,18 +188,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessTimeOffRequestResponse'
+                $ref: '#/components/schemas/SuccessTimeOffApprovalResponse'
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  /api/time-off-requests/{id}/reject:
+  /api/time-off-requests/{id}/approvals/{approval_id}/reject:
     patch:
-      tags: [Time Off Requests]
-      summary: Reject request
-      operationId: rejectTimeOffRequest
+      tags: [Time Off Approvals]
+      summary: Reject a specific approval step
+      operationId: rejectTimeOffApprovalStep
       parameters:
         - $ref: '#/components/parameters/IdPath'
+        - $ref: '#/components/parameters/ApprovalIdPath'
       requestBody:
         required: true
         content:
@@ -193,10 +213,100 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessTimeOffRequestResponse'
+                $ref: '#/components/schemas/SuccessTimeOffApprovalResponse'
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/time-off-approval-policies:
+    get:
+      tags: [Time Off Approvals]
+      summary: List time off approval policies
+      operationId: listTimeOffApprovalPolicies
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffApprovalPolicyListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Time Off Approvals]
+      summary: Create time off approval policy
+      operationId: createTimeOffApprovalPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeOffApprovalPolicyRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffApprovalPolicyResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/time-off-approval-policies/{id}:
+    get:
+      tags: [Time Off Approvals]
+      summary: Get time off approval policy detail
+      operationId: getTimeOffApprovalPolicyById
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffApprovalPolicyResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/time-off-approval-policies/{id}/steps:
+    get:
+      tags: [Time Off Approvals]
+      summary: List approval policy steps
+      operationId: listTimeOffApprovalPolicySteps
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffApprovalPolicyStepListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Time Off Approvals]
+      summary: Create approval policy step
+      operationId: createTimeOffApprovalPolicyStep
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeOffApprovalPolicyStepRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffApprovalPolicyStepResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /api/upload:
     post:
@@ -346,6 +456,12 @@ components:
       required: true
       schema:
         type: string
+    ApprovalIdPath:
+      in: path
+      name: approval_id
+      required: true
+      schema:
+        type: string
 
   responses:
     BadRequest:
@@ -473,7 +589,8 @@ components:
         is_quota_based:
           type: boolean
         default_quota_days:
-          type: integer
+          type: number
+          format: float
           minimum: 0
 
     CreateTimeOffTypeRequest:
@@ -491,7 +608,8 @@ components:
           type: boolean
           default: false
         default_quota_days:
-          type: integer
+          type: number
+          format: float
           minimum: 0
           default: 0
 
@@ -539,13 +657,123 @@ components:
         period_year:
           type: integer
         entitled_days:
-          type: integer
+          type: number
+          format: float
           minimum: 0
         used_days:
-          type: integer
+          type: number
+          format: float
           minimum: 0
         remaining_days:
+          type: number
+          format: float
+
+    ApprovalStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED, SKIPPED]
+
+    ApproverSource:
+      type: string
+      enum: [DIRECT_MANAGER, MANAGER_OF_MANAGER, DIVISION_HEAD, POSITION, SPECIFIC_EMPLOYEE]
+
+    TimeOffApprovalPolicy:
+      type: object
+      properties:
+        id:
+          type: string
+        company_id:
+          type: string
+        time_off_type_id:
+          type: string
+        division_id:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    TimeOffApprovalPolicyStep:
+      type: object
+      properties:
+        id:
+          type: string
+        policy_id:
+          type: string
+        step_no:
           type: integer
+        approver_source:
+          $ref: '#/components/schemas/ApproverSource'
+        approver_employee_id:
+          type: string
+          nullable: true
+        approver_position_id:
+          type: string
+          nullable: true
+        is_required:
+          type: boolean
+
+    TimeOffRequestApproval:
+      type: object
+      properties:
+        id:
+          type: string
+        time_off_request_id:
+          type: string
+        step_no:
+          type: integer
+        approver_employee_id:
+          type: string
+        approver_name:
+          type: string
+        approver_position:
+          type: string
+        approver_division:
+          type: string
+        status:
+          $ref: '#/components/schemas/ApprovalStatus'
+        action_at:
+          type: string
+          format: date-time
+          nullable: true
+        action_reason:
+          type: string
+          nullable: true
+
+    CreateTimeOffApprovalPolicyRequest:
+      type: object
+      required:
+        - time_off_type_id
+        - is_active
+      properties:
+        time_off_type_id:
+          type: string
+        division_id:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    CreateTimeOffApprovalPolicyStepRequest:
+      type: object
+      required:
+        - step_no
+        - approver_source
+      properties:
+        step_no:
+          type: integer
+        approver_source:
+          $ref: '#/components/schemas/ApproverSource'
+        approver_employee_id:
+          type: string
+          nullable: true
+        approver_position_id:
+          type: string
+          nullable: true
+        is_required:
+          type: boolean
+          default: true
 
 
     PageMetadata:
@@ -637,3 +865,81 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffBalance'
+
+    SuccessTimeOffApprovalPolicyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+        data:
+          $ref: '#/components/schemas/TimeOffApprovalPolicy'
+
+    SuccessTimeOffApprovalPolicyListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeOffApprovalPolicy'
+
+    SuccessTimeOffApprovalPolicyStepResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+        data:
+          $ref: '#/components/schemas/TimeOffApprovalPolicyStep'
+
+    SuccessTimeOffApprovalPolicyStepListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeOffApprovalPolicyStep'
+
+    SuccessTimeOffApprovalListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeOffRequestApproval'
+
+    SuccessTimeOffApprovalResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+        data:
+          $ref: '#/components/schemas/TimeOffRequestApproval'
