@@ -1,0 +1,25 @@
+services:
+  api:
+    image: ghcr.io/ahmdriffai/hrsaas-backend:dev
+    container_name: hrsaas-api
+    restart: always
+    command: sh -c "apk add --no-cache tzdata && ./main"
+    ports:
+      - 9000:9000
+    volumes:
+      - ./config:/app/config
+    networks:
+      - hrsaas-net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: hrsaas-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token xxx
+    networks:
+      - hrsaas-net
+
+networks:
+  hrsaas-net:
+    name: hrsaas-net
+    driver: bridge
