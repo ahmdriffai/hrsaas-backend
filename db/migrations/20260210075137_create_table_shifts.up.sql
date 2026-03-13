@@ -5,8 +5,8 @@ CREATE TABLE shifts
     name VARCHAR(100) NOT NULL,
     late_tolerance INT NOT NULL,
     schedule_type VARCHAR(20) NOT NULL DEFAULT 'fixed', -- fixed | flexible
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at  BIGINT NOT NULL,
+    updated_at  BIGINT NOT NULL,
     PRIMARY KEY(id),
 
     CONSTRAINT fk_shift_company_id
@@ -20,13 +20,13 @@ CREATE TABLE shift_days (
     shift_id VARCHAR(100) NOT NULL,
     weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 1 AND 7), -- 1 Senin ... 7 Minggu
     day_type VARCHAR(20) NOT NULL DEFAULT 'workday', -- workday | offday
-    check_in TIME NULL,
-    check_out TIME NULL,
-    break_start TIME NULL,
-    break_end TIME NULL,
+    check_in BIGINT NULL,
+    check_out BIGINT NULL,
+    break_start BIGINT NULL,
+    break_end BIGINT NULL,
     max_break_minutes INT NOT NULL DEFAULT 60,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at  BIGINT NOT NULL,
+    updated_at  BIGINT NOT NULL,
     CONSTRAINT fk_shift_days_shift_id
     FOREIGN KEY (shift_id) REFERENCES shifts(id) ON DELETE CASCADE,
     CONSTRAINT uq_shift_weekday UNIQUE (shift_id, weekday)
@@ -37,8 +37,8 @@ CREATE TABLE employee_shifts
     id BIGINT GENERATED ALWAYS AS IDENTITY,
     employee_id VARCHAR(36) NOT NULL,
     shift_id VARCHAR(100) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at  BIGINT NOT NULL,
+    updated_at  BIGINT NOT NULL,
     PRIMARY KEY(id),
 
     CONSTRAINT fk_employee_shift_employee_id

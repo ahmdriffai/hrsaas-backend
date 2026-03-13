@@ -3,8 +3,8 @@ package usecase
 import (
 	"context"
 	"hr-sas/internal/entity"
+	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
-	"hr-sas/internal/model/converter"
 	"hr-sas/internal/repository"
 
 	"github.com/go-playground/validator/v10"
@@ -86,17 +86,21 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 		CompanyID: request.CompanyID,
 	}
 
+	// TODO: assign to shifts
+
 	// create user in database
 	if err := c.UserRepository.Create(tx, user); err != nil {
 		c.Log.WithError(err).Error("Failed to create user")
 		return nil, fiber.ErrInternalServerError
 	}
 
+	birthDate, _ := lib.ParseDateToUnixMilli(request.BirthDate)
+
 	// create employee entity
 	employee := &entity.Employee{
 		Fullname:       request.Fullname,
 		BirthPlace:     request.BirthPlace,
-		BirthDate:      request.BirthDate,
+		BirthDate:      birthDate,
 		BlodType:       request.BlodType,
 		MaritalStatus:  request.MaritalStatus,
 		Religion:       request.Religion,
@@ -117,7 +121,7 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return converter.EmployeeToResponse(employee), nil
+	return model.EmployeeToResponse(employee), nil
 }
 
 /* Search Employee
@@ -146,7 +150,7 @@ func (c *EmployeeUseCase) Search(ctx context.Context, request *model.SearchEmplo
 
 	responses := make([]model.EmployeeResponse, len(employees))
 	for i, employee := range employees {
-		responses[i] = *converter.EmployeeToResponse(&employee)
+		responses[i] = *model.EmployeeToResponse(&employee)
 	}
 
 	return responses, total, nil

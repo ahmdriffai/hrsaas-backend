@@ -14,8 +14,8 @@ CREATE TABLE companies
   fax_number VARCHAR(20),
   email VARCHAR(100),
   website VARCHAR(100),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at  BIGINT NOT NULL,
+  updated_at  BIGINT NOT NULL,
   PRIMARY KEY(id)
 );
 
@@ -27,8 +27,8 @@ CREATE TABLE divisions
   company_id VARCHAR(100) NOT NULL,
   name VARCHAR(100) NOT NULL,
   description TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at  BIGINT NOT NULL,
+  updated_at  BIGINT NOT NULL,
   PRIMARY KEY (id),
   CONSTRAINT fk_division_company_id 
     FOREIGN KEY (company_id) REFERENCES companies (id)
@@ -40,8 +40,8 @@ CREATE TABLE positions (
   name VARCHAR(100) NOT NULL,
   description TEXT NULL,
   parent_id VARCHAR(50) NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP NOT NULL DEFAULT now(),
+  created_at  BIGINT NOT NULL,
+  updated_at  BIGINT NOT NULL,
   PRIMARY KEY (id),
   CONSTRAINT fk_parent
       FOREIGN KEY (parent_id) REFERENCES positions(id)

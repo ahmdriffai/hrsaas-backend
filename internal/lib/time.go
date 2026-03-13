@@ -2,6 +2,7 @@ package lib
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -77,4 +78,26 @@ func parseTwoDigits(a, b byte) (int, bool) {
 		return 0, false
 	}
 	return int(a-'0')*10 + int(b-'0'), true
+}
+
+func ParseDateToUnixMilli(dateStr string) (int64, error) {
+
+	// Parse the string into a time.Time object
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		fmt.Println("Error parsing date:", err)
+		return 0, err
+	}
+
+	// Convert to Unix epoch
+	return t.UnixMilli(), nil
+}
+
+func ParseTimeToUnixMilli(timeStr string) (int64, error) {
+	t, err := time.Parse("15:04", timeStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return t.UnixMilli(), nil
 }

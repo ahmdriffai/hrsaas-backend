@@ -1,6 +1,8 @@
 package entity
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -13,12 +15,14 @@ type Employee struct {
 	Fullname       string `gorm:"column:fullname;not null"`
 	Gender         string `gorm:"column:gender;not null"`
 	BirthPlace     string `gorm:"column:birth_place;not null"`
-	BirthDate      string `gorm:"column:birth_date;not null"`
+	BirthDate      int64  `gorm:"column:birth_date;not null"`
 	BlodType       string `gorm:"column:blood_type;not null"`
 	MaritalStatus  string `gorm:"column:marital_status;not null"`
 	Religion       string `gorm:"column:religion;not null"`
 	Phone          string `gorm:"column:phone;not null"`
 	Timezone       string `gorm:"column:timezone;not null"`
+	CreatedAt      int64  `gorm:"column:created_at"`
+	UpdatedAt      int64  `gorm:"column:updated_at"`
 
 	OfficeLocations []OfficeLocation `gorm:"many2many:employee_office_locations"`
 }
@@ -26,6 +30,8 @@ type Employee struct {
 // BeforeCreate hook to set UUID
 func (u *Employee) BeforeCreate(tx *gorm.DB) (err error) {
 	u.ID = uuid.NewString()
+	u.CreatedAt = int64(time.Now().UnixMilli())
+	u.UpdatedAt = int64(time.Now().UnixMilli())
 	return nil
 }
 

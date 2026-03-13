@@ -6,7 +6,6 @@ import (
 	"hr-sas/internal/lib"
 
 	"hr-sas/internal/model"
-	"hr-sas/internal/model/converter"
 	"hr-sas/internal/repository"
 	"time"
 
@@ -51,8 +50,10 @@ func (c *UserUseCase) Verify(ctx context.Context, request *model.VerifyUserReque
 		return nil, fiber.ErrUnauthorized
 	}
 
+	expiredAt := time.Unix(session.CreatedAt, 0)
+
 	// Check expiry
-	if session.ExpiredAt.Before(time.Now()) {
+	if expiredAt.Before(time.Now()) {
 		if err := c.SessionRepository.Delete(tx, session); err != nil {
 			c.Log.WithError(err).Error("Failed to delete session by user id")
 			return nil, fiber.ErrInternalServerError
@@ -76,7 +77,7 @@ func (c *UserUseCase) Verify(ctx context.Context, request *model.VerifyUserReque
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return converter.UserToResponse(user), nil
+	return model.UserToResponse(user), nil
 }
 
 /*
@@ -139,7 +140,7 @@ func (c *UserUseCase) Register(ctx context.Context, request *model.RegisterUserR
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return converter.UserToResponse(user), nil
+	return model.UserToResponse(user), nil
 }
 
 /*
@@ -190,7 +191,7 @@ func (c *UserUseCase) Login(ctx context.Context, request *model.LoginUserRequest
 		Token:     token,
 		IPAddress: &request.Ip,
 		UserAgent: &request.UserAgent,
-		ExpiredAt: time.Now().Add(24 * time.Hour),
+		ExpiredAt: time.Now().Add(24 * time.Hour).UnixMilli(),
 	}
 
 	if err := c.SessionRepository.Create(tx, session); err != nil {
@@ -204,7 +205,7 @@ func (c *UserUseCase) Login(ctx context.Context, request *model.LoginUserRequest
 	}
 
 	return &model.LoginUserResponse{
-		User:  *converter.UserToResponse(user),
+		User:  *model.UserToResponse(user),
 		Token: token,
 	}, nil
 }
