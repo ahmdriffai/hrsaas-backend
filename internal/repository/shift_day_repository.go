@@ -3,7 +3,6 @@ package repository
 import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/lib"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -35,8 +34,8 @@ func (r *ShiftDayRepository) FindByShiftIDAndWeekday(db *gorm.DB, shiftDay *enti
 		BreakStart      string `gorm:"column:break_start"`
 		BreakEnd        string `gorm:"column:break_end"`
 		MaxBreakMinutes int    `gorm:"column:max_break_minutes"`
-		CreatedAt       time.Time `gorm:"column:created_at"`
-		UpdatedAt       time.Time `gorm:"column:updated_at"`
+		CreatedAt       int64  `gorm:"column:created_at"`
+		UpdatedAt       int64  `gorm:"column:updated_at"`
 	}
 
 	var row shiftDayRow
@@ -47,22 +46,13 @@ func (r *ShiftDayRepository) FindByShiftIDAndWeekday(db *gorm.DB, shiftDay *enti
 		return err
 	}
 
-	checkIn, err := lib.ParseTimeHHMMOrHHMMSS(row.CheckIn)
-	if err != nil {
-		return err
-	}
-	checkOut, err := lib.ParseTimeHHMMOrHHMMSS(row.CheckOut)
-	if err != nil {
-		return err
-	}
-	breakStart, err := lib.ParseTimeHHMMOrHHMMSS(row.BreakStart)
-	if err != nil {
-		return err
-	}
-	breakEnd, err := lib.ParseTimeHHMMOrHHMMSS(row.BreakEnd)
-	if err != nil {
-		return err
-	}
+	checkIn, _ := lib.ParseTimeToUnixMilli(row.CheckIn)
+
+	checkOut, _ := lib.ParseTimeToUnixMilli(row.CheckOut)
+
+	breakStart, _ := lib.ParseTimeToUnixMilli(row.BreakStart)
+
+	breakEnd, _ := lib.ParseTimeToUnixMilli(row.BreakEnd)
 
 	*shiftDay = entity.ShiftDays{
 		ID:              row.ID,

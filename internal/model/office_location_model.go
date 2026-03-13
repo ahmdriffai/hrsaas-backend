@@ -6,13 +6,15 @@ import (
 )
 
 type OfficeLocationResponse struct {
-	ID       string  `json:"id"`
-	Name     string  `json:"name"`
-	Address  string  `json:"address"`
-	Lat      float64 `json:"lat"`
-	Lng      float64 `json:"lng"`
-	Radius   int     `json:"radius_meters"`
-	IsActive bool    `json:"is_active"`
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Address   string  `json:"address"`
+	Lat       float64 `json:"lat"`
+	Lng       float64 `json:"lng"`
+	Radius    int     `json:"radius_meters"`
+	IsActive  bool    `json:"is_active"`
+	CreatedAt int64   `json:"created_at"`
+	UpdatedAt int64   `json:"updated_at"`
 }
 
 type CreateOfficeLocationRequest struct {
@@ -43,12 +45,14 @@ func OfficeLocationToResponse(officeLocation *entity.OfficeLocation) *OfficeLoca
 	lng, _ := strconv.ParseFloat(officeLocation.Lng, 64)
 
 	return &OfficeLocationResponse{
-		ID:       officeLocation.ID,
-		Name:     officeLocation.Name,
-		Address:  officeLocation.Address,
-		Lat:      lat,
-		Lng:      lng,
-		Radius:   officeLocation.Radius,
-		IsActive: officeLocation.IsActive,
+		ID:        officeLocation.ID,
+		Name:      officeLocation.Name,
+		Address:   officeLocation.Address,
+		Lat:       lat,
+		Lng:       lng,
+		Radius:    officeLocation.Radius,
+		IsActive:  officeLocation.IsActive,
+		CreatedAt: officeLocation.CreatedAt,
+		UpdatedAt: officeLocation.UpdatedAt,
 	}
 }

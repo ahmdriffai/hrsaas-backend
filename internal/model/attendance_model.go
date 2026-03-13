@@ -6,9 +6,9 @@ type AttendanceResponse struct {
 	ID                string `json:"id"`
 	CompanyID         string `json:"company_id"`
 	EmployeeID        string `json:"employee_id"`
-	Date              string `json:"date"`
-	CheckInTime       string `json:"check_in_time,omitempty"`
-	CheckOutTime      string `json:"check_out_time,omitempty"`
+	Date              int64  `json:"date"`
+	CheckInTime       int64  `json:"check_in_time,omitempty"`
+	CheckOutTime      int64  `json:"check_out_time,omitempty"`
 	TotalWorkMinutes  int    `json:"total_work_minutes,omitempty"`
 	TotalBreakMinutes int    `json:"total_break_minutes,omitempty"`
 	Status            string `json:"status"`
@@ -29,9 +29,9 @@ func AttendandeToResponse(officeLocation *entity.Attendance) *AttendanceResponse
 		ID:                officeLocation.ID,
 		CompanyID:         officeLocation.CompanyID,
 		EmployeeID:        officeLocation.EmployeeID,
-		Date:              officeLocation.Date.String(),
-		CheckInTime:       officeLocation.CheckInTime.String(),
-		CheckOutTime:      officeLocation.CheckOutTime.String(),
+		Date:              officeLocation.Date,
+		CheckInTime:       officeLocation.CheckInTime,
+		CheckOutTime:      officeLocation.CheckOutTime,
 		TotalWorkMinutes:  officeLocation.TotalWorkMinutes,
 		TotalBreakMinutes: officeLocation.TotalBreakMinutes,
 		Status:            officeLocation.Status,

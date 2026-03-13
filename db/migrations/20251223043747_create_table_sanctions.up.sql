@@ -6,8 +6,8 @@ CREATE TABLE sanctions (
     description TEXT,
     level INT NOT NULL, -- e.g., 1 for low, 2 for medium, 3 for high
     note TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at  BIGINT NOT NULL,
+    updated_at  BIGINT NOT NULL,
     PRIMARY KEY (id),
 
     CONSTRAINT fk_sanction_company_id
@@ -24,11 +24,11 @@ CREATE TABLE employee_sanctions (
     company_id VARCHAR(36) NOT NULL,
     document_url VARCHAR(255) NOT NULL,
     reason TEXT,
-    start_date DATE,
-    end_date DATE,
+    start_date BIGINT,
+    end_date BIGINT,
     status VARCHAR(20) DEFAULT 'active', -- e.g., active, lifted, expired
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at  BIGINT NOT NULL,
+    updated_at  BIGINT NOT NULL,
     PRIMARY KEY (id),
 
     CONSTRAINT fk_employee_sanction_employee_id

@@ -64,13 +64,17 @@ func Bootstrap(config *BootstrapConfig) {
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
 	adminMiddleware := middleware.NewAdmin()
+	employeeMiddleware := middleware.NewEmployee()
 
 	// route config
 	routeConfig := route.RouteConfig{
-		App:                      config.App,
+		App: config.App,
+
+		AuthMiddleware:     authMiddleware,
+		AdminMiddleware:    adminMiddleware,
+		EmployeeMiddleware: employeeMiddleware,
+
 		CompanyController:        companyController,
-		AuthMiddleware:           authMiddleware,
-		AdminMiddleware:          adminMiddleware,
 		UserController:           userController,
 		EmployeeController:       employeeController,
 		SanctionController:       santionController,

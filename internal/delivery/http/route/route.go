@@ -7,9 +7,12 @@ import (
 )
 
 type RouteConfig struct {
-	App                      *fiber.App
-	AuthMiddleware           fiber.Handler
-	AdminMiddleware          fiber.Handler
+	App *fiber.App
+
+	AuthMiddleware     fiber.Handler
+	AdminMiddleware    fiber.Handler
+	EmployeeMiddleware fiber.Handler
+
 	CompanyController        *http.CompanyController
 	UserController           *http.UserController
 	EmployeeController       *http.EmployeeController
@@ -69,10 +72,12 @@ func (c *RouteConfig) SetupSanctionRouter() {
 }
 
 func (c *RouteConfig) SetupEmployeeSanctionRouter() {
-	route := c.App.Group("/api/employee-sanctions", c.AuthMiddleware, c.AdminMiddleware)
-	route.Post("/", c.EmSancController.Create)
-	route.Get("/", c.EmSancController.Search)
-	route.Get("/_current", c.EmSancController.CurrentSearch)
+	route := c.App.Group("/api/employee-sanctions", c.AuthMiddleware)
+	route.Get("/_current", c.EmployeeMiddleware, c.EmSancController.CurrentSearch)
+
+	adminRouter := route.Group("/", c.AuthMiddleware)
+	adminRouter.Post("/", c.EmSancController.Create)
+	adminRouter.Get("/", c.EmSancController.Search)
 }
 
 func (c *RouteConfig) SetupPositionRouter() {
@@ -90,7 +95,7 @@ func (c *RouteConfig) SetupOfficeLocationRouter() {
 
 func (c *RouteConfig) SetupAttendanceRouter() {
 	route := c.App.Group("/api/attendances", c.AuthMiddleware)
-	route.Post("/check-in", c.AttendanceController.CheckIn)
+	route.Post("/check-in", c.EmployeeMiddleware, c.AttendanceController.CheckIn)
 }
 
 func (c *RouteConfig) SetupShiftRouter() {

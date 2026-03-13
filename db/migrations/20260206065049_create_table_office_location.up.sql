@@ -8,8 +8,8 @@ CREATE TABLE office_locations
   radius_meters INT,
   address TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at  BIGINT NOT NULL,
+  updated_at  BIGINT NOT NULL,
   PRIMARY KEY(id),
 
   CONSTRAINT fk_office_location_company_id
@@ -23,8 +23,8 @@ CREATE TABLE employee_office_locations
   id BIGINT GENERATED ALWAYS AS IDENTITY,
   employee_id VARCHAR(36) NOT NULL,
   office_location_id VARCHAR(100) NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at  BIGINT NOT NULL,
+  updated_at  BIGINT NOT NULL,
   PRIMARY KEY(id),
 
   CONSTRAINT fk_employee_office_location_employee_id
