@@ -8,22 +8,16 @@ CREATE TABLE time_off_types
     PRIMARY KEY(id)
 );
 
-CREATE TABLE time_off_request(
+CREATE TABLE time_off_requests(
     id VARCHAR(36) NOT NULL,
     employee_id VARCHAR(36) NOT NULL,
-    company_id VARCHAR(36) NOT NULL,
     time_off_type_id VARCHAR(50) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
+    start_date BIGINT NOT NULL,
+    end_date BIGINT NOT NULL,
     request_reason TEXT,
     request_status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at BIGINT NOT NULL,
     PRIMARY KEY(id),
-
-    CONSTRAINT fk_time_off_request_company_id
-        FOREIGN KEY (company_id)
-        REFERENCES companies(id)
-        ON DELETE CASCADE,
 
     CONSTRAINT fk_time_off_request_employee_id
         FOREIGN KEY (employee_id)
@@ -81,7 +75,7 @@ CREATE TABLE time_off_approvals
     approver_id VARCHAR(36) NOT NULL,
     approval_status VARCHAR(50) NOT NULL,
     action_reason TEXT,
-    action_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    action_at BIGINT NULL,
     PRIMARY KEY(id),
 
     CONSTRAINT fk_time_off_approval_request_id
