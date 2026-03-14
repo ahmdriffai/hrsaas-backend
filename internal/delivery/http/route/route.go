@@ -22,6 +22,7 @@ type RouteConfig struct {
 	PositionController       *http.PositionController
 	AttendanceController     *http.AttendanceController
 	ShiftController          *http.ShiftController
+	TimeOffController        *http.TimeOffController
 }
 
 func (c *RouteConfig) Setup() {
@@ -35,6 +36,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupOfficeLocationRouter()
 	c.SetupAttendanceRouter()
 	c.SetupShiftRouter()
+	c.SetupTimeOffRouter()
 }
 
 /*
@@ -103,4 +105,17 @@ func (c *RouteConfig) SetupShiftRouter() {
 	route.Get("/", c.ShiftController.List)
 	route.Post("/", c.ShiftController.Create)
 	route.Post("/assign-employee", c.ShiftController.AssignEmployee)
+}
+
+func (c *RouteConfig) SetupTimeOffRouter() {
+	route := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
+	route.Get("/", c.TimeOffController.ListRequests)
+	route.Post("/", c.EmployeeMiddleware, c.TimeOffController.CreateRequest)
+	route.Get("/_current", c.EmployeeMiddleware, c.TimeOffController.ListCurrentRequests)
+
+	typeRoute := c.App.Group("/api/time-off-types", c.AuthMiddleware)
+	typeRoute.Get("/", c.TimeOffController.ListTypes)
+
+	balanceRoute := c.App.Group("/api/time-off-balances", c.AuthMiddleware)
+	balanceRoute.Get("/_current", c.EmployeeMiddleware, c.TimeOffController.ListCurrentBalances)
 }

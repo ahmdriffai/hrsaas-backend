@@ -23,6 +23,7 @@ type CreateTimeOffRequest struct {
 }
 
 type SearchTimeOffRequest struct {
+	EmployeeID    string `json:"employee_id" validate:"max=100"`
 	TimeOffTypeID string `json:"time_off_type_id" validate:"max=100"`
 	RequestStatus string `json:"request_status" validate:"max=20"`
 	StartDate     string `json:"start_date"`

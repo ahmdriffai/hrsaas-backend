@@ -36,6 +36,11 @@ func Bootstrap(config *BootstrapConfig) {
 	attendanceLogRepository := repository.NewAttendanceLogRepository(config.Log)
 	shifRepository := repository.NewShiftRepository(config.Log)
 	shiftDayRepository := repository.NewShiftDayRepository(config.Log)
+	timeOffTypeRepository := repository.NewTimeOffTypeRepository(config.Log)
+	timeOffRequestRepository := repository.NewTimeOffRequestRepository(config.Log)
+	timeOffBalanceRepository := repository.NewTimeOffBalanceRepository(config.Log)
+	timeOffApprovalRepository := repository.NewTimeOffApprovalRepository(config.Log)
+	timeOffAttachmentRepository := repository.NewTimeOffAttachmentRepository(config.Log)
 
 	// setup producer
 
@@ -49,6 +54,16 @@ func Bootstrap(config *BootstrapConfig) {
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
 	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository)
 	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository, shiftDayRepository)
+	timeOffUseCase := usecase.NewTimeOffUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		timeOffRequestRepository,
+		timeOffTypeRepository,
+		timeOffBalanceRepository,
+		timeOffApprovalRepository,
+		timeOffAttachmentRepository,
+	)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
@@ -60,6 +75,7 @@ func Bootstrap(config *BootstrapConfig) {
 	officeLocationController := http.NewOfficeLocationController(officeLocationUseCase, config.Log)
 	attendaceController := http.NewAttendanceController(attendanceUseCase, config.Log)
 	shiftController := http.NewShifController(shiftUseCase, config.Log)
+	timeOffController := http.NewTimeOffController(timeOffUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
@@ -83,6 +99,7 @@ func Bootstrap(config *BootstrapConfig) {
 		OfficeLocationController: officeLocationController,
 		AttendanceController:     attendaceController,
 		ShiftController:          shiftController,
+		TimeOffController:        timeOffController,
 	}
 
 	routeConfig.Setup()
