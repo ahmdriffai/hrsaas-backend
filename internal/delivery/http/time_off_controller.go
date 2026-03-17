@@ -140,3 +140,76 @@ func (c *TimeOffController) ListCurrentBalances(ctx *fiber.Ctx) error {
 		Data: responses,
 	})
 }
+
+func (c *TimeOffController) ListApprovals(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	responses, err := c.UseCase.ListApprovals(ctx.UserContext(), requestID)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list time off approvals")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.TimeOffApprovalResponse]{
+		Data: responses,
+	})
+}
+
+func (c *TimeOffController) Approve(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	approvalID := ctx.Params("approval_id")
+	if requestID == "" || approvalID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	user := middleware.GetUser(ctx)
+	if user.Employee == nil || user.Employee.ID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Employee not found")
+	}
+
+	request := new(model.ApproveTimeOffRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	if err := c.UseCase.Approve(ctx.UserContext(), requestID, approvalID, user.Employee.ID, request); err != nil {
+		c.Log.WithError(err).Error("failed to approve time off request")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}
+
+func (c *TimeOffController) Reject(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	approvalID := ctx.Params("approval_id")
+	if requestID == "" || approvalID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	user := middleware.GetUser(ctx)
+	if user.Employee == nil || user.Employee.ID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Employee not found")
+	}
+
+	request := new(model.RejectTimeOffRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	if err := c.UseCase.Reject(ctx.UserContext(), requestID, approvalID, user.Employee.ID, request); err != nil {
+		c.Log.WithError(err).Error("failed to reject time off request")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}

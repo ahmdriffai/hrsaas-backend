@@ -112,6 +112,9 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 	route.Get("/", c.TimeOffController.ListRequests)
 	route.Post("/", c.EmployeeMiddleware, c.TimeOffController.CreateRequest)
 	route.Get("/_current", c.EmployeeMiddleware, c.TimeOffController.ListCurrentRequests)
+	route.Get("/:id/approvals", c.TimeOffController.ListApprovals)
+	route.Patch("/:id/approvals/:approval_id/approve", c.EmployeeMiddleware, c.TimeOffController.Approve)
+	route.Patch("/:id/approvals/:approval_id/reject", c.EmployeeMiddleware, c.TimeOffController.Reject)
 
 	typeRoute := c.App.Group("/api/time-off-types", c.AuthMiddleware)
 	typeRoute.Get("/", c.TimeOffController.ListTypes)

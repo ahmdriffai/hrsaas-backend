@@ -64,7 +64,7 @@ CREATE TABLE time_off_attachments
 
     CONSTRAINT fk_time_off_attachment_request_id
         FOREIGN KEY (time_off_request_id)
-        REFERENCES time_off_request(id)
+        REFERENCES time_off_requests(id)
         ON DELETE CASCADE
 );
 
@@ -80,7 +80,7 @@ CREATE TABLE time_off_approvals
 
     CONSTRAINT fk_time_off_approval_request_id
         FOREIGN KEY (time_off_request_id)
-        REFERENCES time_off_request(id)
+        REFERENCES time_off_requests(id)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_time_off_approval_approver_id
