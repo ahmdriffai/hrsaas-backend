@@ -46,6 +46,23 @@ func (c *TimeOffController) CreateRequest(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *TimeOffController) GetRequestByID(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	response, err := c.UseCase.GetRequestByID(ctx.UserContext(), requestID)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to get time off request detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.TimeOffRequestResponse]{
+		Data: response,
+	})
+}
+
 // TODO: Add admin-only filters and company scoping.
 func (c *TimeOffController) ListRequests(ctx *fiber.Ctx) error {
 	request := new(model.SearchTimeOffRequest)
