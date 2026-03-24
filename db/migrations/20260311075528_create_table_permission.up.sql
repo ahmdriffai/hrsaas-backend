@@ -12,6 +12,7 @@ CREATE TABLE time_off_requests(
     id VARCHAR(36) NOT NULL,
     employee_id VARCHAR(36) NOT NULL,
     time_off_type_id VARCHAR(50) NOT NULL,
+    requested_days INT NOT NULL,
     start_date BIGINT NOT NULL,
     end_date BIGINT NOT NULL,
     request_reason TEXT,

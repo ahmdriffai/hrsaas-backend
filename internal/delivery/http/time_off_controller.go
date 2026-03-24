@@ -22,6 +22,7 @@ func NewTimeOffController(useCase *usecase.TimeOffUseCase, log *logrus.Logger) *
 	}
 }
 
+// TODO: Enforce role-based access (employee only) at middleware or here.
 func (c *TimeOffController) CreateRequest(ctx *fiber.Ctx) error {
 	request := new(model.CreateTimeOffRequest)
 	if err := ctx.BodyParser(request); err != nil {
@@ -45,6 +46,7 @@ func (c *TimeOffController) CreateRequest(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Add admin-only filters and company scoping.
 func (c *TimeOffController) ListRequests(ctx *fiber.Ctx) error {
 	request := new(model.SearchTimeOffRequest)
 	request.EmployeeID = ctx.Query("employee_id", "")
@@ -74,6 +76,7 @@ func (c *TimeOffController) ListRequests(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Return 403 if user has no employee profile.
 func (c *TimeOffController) ListCurrentRequests(ctx *fiber.Ctx) error {
 	request := new(model.SearchTimeOffRequest)
 	user := middleware.GetUser(ctx)
@@ -108,6 +111,7 @@ func (c *TimeOffController) ListCurrentRequests(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Support pagination if types grow large.
 func (c *TimeOffController) ListTypes(ctx *fiber.Ctx) error {
 	responses, err := c.UseCase.ListTypes(ctx.UserContext())
 	if err != nil {
@@ -120,6 +124,7 @@ func (c *TimeOffController) ListTypes(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Support filtering by period range if needed.
 func (c *TimeOffController) ListCurrentBalances(ctx *fiber.Ctx) error {
 	request := new(model.SearchTimeOffBalanceRequest)
 	request.TimeOffTypeID = ctx.Query("time_off_type_id", "")
@@ -141,6 +146,7 @@ func (c *TimeOffController) ListCurrentBalances(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Restrict access to request owner and approvers.
 func (c *TimeOffController) ListApprovals(ctx *fiber.Ctx) error {
 	requestID := ctx.Params("id")
 	if requestID == "" {
@@ -158,6 +164,7 @@ func (c *TimeOffController) ListApprovals(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Add audit logging for approval actions.
 func (c *TimeOffController) Approve(ctx *fiber.Ctx) error {
 	requestID := ctx.Params("id")
 	approvalID := ctx.Params("approval_id")
@@ -186,6 +193,7 @@ func (c *TimeOffController) Approve(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Add audit logging for reject actions.
 func (c *TimeOffController) Reject(ctx *fiber.Ctx) error {
 	requestID := ctx.Params("id")
 	approvalID := ctx.Params("approval_id")
@@ -211,5 +219,47 @@ func (c *TimeOffController) Reject(ctx *fiber.Ctx) error {
 
 	return ctx.JSON(model.WebResponse[any]{
 		Data: nil,
+	})
+}
+
+// TODO: Restrict to request owner and approvers.
+func (c *TimeOffController) ListAttachments(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	responses, err := c.UseCase.ListAttachments(ctx.UserContext(), requestID)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list time off attachments")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.TimeOffAttachmentResponse]{
+		Data: responses,
+	})
+}
+
+// TODO: Validate request status before allowing upload.
+func (c *TimeOffController) CreateAttachment(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	request := new(model.CreateTimeOffAttachmentRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	response, err := c.UseCase.CreateAttachment(ctx.UserContext(), requestID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to create time off attachment")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.TimeOffAttachmentResponse]{
+		Data: response,
 	})
 }

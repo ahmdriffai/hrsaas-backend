@@ -34,8 +34,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateTimeOffRequest'
       responses:
-        '201':
-          description: Created
+        '200':
+          description: Success
           content:
             application/json:
               schema:
@@ -188,7 +188,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessTimeOffApprovalResponse'
+                $ref: '#/components/schemas/SuccessEmptyResponse'
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -213,7 +213,49 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessTimeOffApprovalResponse'
+                $ref: '#/components/schemas/SuccessEmptyResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/time-off-requests/{id}/attachments:
+    get:
+      tags: [Time Off Requests]
+      summary: List attachments for a time off request
+      operationId: listTimeOffAttachments
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffAttachmentListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Time Off Requests]
+      summary: Create attachment for a time off request
+      operationId: createTimeOffAttachment
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeOffAttachmentRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffAttachmentResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -516,7 +558,7 @@ components:
         requested_days:
           type: number
           format: float
-          minimum: 0
+          minimum: 1
         request_reason:
           type: string
         request_status:
@@ -555,7 +597,7 @@ components:
         requested_days:
           type: number
           format: float
-          minimum: 0.25
+          minimum: 1
         request_reason:
           type: string
           maxLength: 255
@@ -616,14 +658,13 @@ components:
     UploadSuccessResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Upload successful
         data:
           $ref: '#/components/schemas/UploadedFileItem'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     UploadedFileItem:
       type: object
@@ -631,19 +672,7 @@ components:
         file_url:
           type: string
           example: http://example.com/uploads/time-off/sakit/file.jpg
-        file_name:
-          type: string
-          example: surat-dokter.jpg
-        mime_type:
-          type: string
-          example: image/jpeg
-        file_size:
-          type: integer
-          minimum: 0
-          example: 345672
-        path:
-          type: string
-          example: time-off/sakit/
+      required: [file_url]
 
     TimeOffBalance:
       type: object
@@ -801,145 +830,197 @@ components:
     SuccessTimeOffRequestResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           $ref: '#/components/schemas/TimeOffRequest'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffRequestListResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffRequest'
         paging:
           $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffTypeResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           $ref: '#/components/schemas/TimeOffType'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffTypeListResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffType'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffBalanceListResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffBalance'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffApprovalPolicyResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           $ref: '#/components/schemas/TimeOffApprovalPolicy'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffApprovalPolicyListResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffApprovalPolicy'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffApprovalPolicyStepResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           $ref: '#/components/schemas/TimeOffApprovalPolicyStep'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffApprovalPolicyStepListResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffApprovalPolicyStep'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffApprovalListResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffRequestApproval'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
 
     SuccessTimeOffApprovalResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Success
         data:
           $ref: '#/components/schemas/TimeOffRequestApproval'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
+
+    SuccessEmptyResponse:
+      type: object
+      properties:
+        data:
+          nullable: true
+          example: null
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
+
+    TimeOffAttachment:
+      type: object
+      properties:
+        id:
+          type: string
+        time_off_request_id:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        file_size:
+          type: integer
+        file_url:
+          type: string
+
+    CreateTimeOffAttachmentRequest:
+      type: object
+      required: [file_name, mime_type, file_size, file_url]
+      properties:
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        file_size:
+          type: integer
+        file_url:
+          type: string
+
+    SuccessTimeOffAttachmentResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TimeOffAttachment'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
+
+    SuccessTimeOffAttachmentListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeOffAttachment'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true

@@ -110,3 +110,19 @@ type CreateTimeOffApprovalPolicyStepRequest struct {
 	ApproverEmployeeID *string `json:"approver_employee_id,omitempty"`
 	ApproverPositionID *string `json:"approver_position_id,omitempty"`
 }
+
+type TimeOffAttachmentResponse struct {
+	ID               string `json:"id"`
+	TimeOffRequestID string `json:"time_off_request_id"`
+	FileName         string `json:"file_name"`
+	MimeType         string `json:"mime_type"`
+	FileSize         int    `json:"file_size"`
+	FileUrl          string `json:"file_url"`
+}
+
+type CreateTimeOffAttachmentRequest struct {
+	FileName string `json:"file_name" validate:"required,max=255"`
+	MimeType string `json:"mime_type" validate:"required,max=100"`
+	FileSize int    `json:"file_size" validate:"required,min=1"`
+	FileUrl  string `json:"file_url" validate:"required"`
+}

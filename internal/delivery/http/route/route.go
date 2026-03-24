@@ -23,6 +23,7 @@ type RouteConfig struct {
 	AttendanceController     *http.AttendanceController
 	ShiftController          *http.ShiftController
 	TimeOffController        *http.TimeOffController
+	UploadController         *http.UploadController
 }
 
 func (c *RouteConfig) Setup() {
@@ -37,6 +38,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupAttendanceRouter()
 	c.SetupShiftRouter()
 	c.SetupTimeOffRouter()
+	c.SetupCommonRouter()
 }
 
 /*
@@ -97,7 +99,8 @@ func (c *RouteConfig) SetupOfficeLocationRouter() {
 
 func (c *RouteConfig) SetupAttendanceRouter() {
 	route := c.App.Group("/api/attendances", c.AuthMiddleware)
-	route.Post("/check-in", c.EmployeeMiddleware, c.AttendanceController.CheckIn)
+	employeeRoute := route.Group("/", c.EmployeeMiddleware)
+	employeeRoute.Post("/check-in", c.AttendanceController.CheckIn)
 }
 
 func (c *RouteConfig) SetupShiftRouter() {
@@ -110,15 +113,25 @@ func (c *RouteConfig) SetupShiftRouter() {
 func (c *RouteConfig) SetupTimeOffRouter() {
 	route := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
 	route.Get("/", c.TimeOffController.ListRequests)
-	route.Post("/", c.EmployeeMiddleware, c.TimeOffController.CreateRequest)
-	route.Get("/_current", c.EmployeeMiddleware, c.TimeOffController.ListCurrentRequests)
+	employeeRoute := route.Group("/", c.EmployeeMiddleware)
+	employeeRoute.Post("/", c.TimeOffController.CreateRequest)
+	employeeRoute.Get("/_current", c.TimeOffController.ListCurrentRequests)
+	route.Get("/:id", c.TimeOffController.GetRequestByID)
 	route.Get("/:id/approvals", c.TimeOffController.ListApprovals)
-	route.Patch("/:id/approvals/:approval_id/approve", c.EmployeeMiddleware, c.TimeOffController.Approve)
-	route.Patch("/:id/approvals/:approval_id/reject", c.EmployeeMiddleware, c.TimeOffController.Reject)
+	employeeRoute.Patch("/:id/approvals/:approval_id/approve", c.TimeOffController.Approve)
+	employeeRoute.Patch("/:id/approvals/:approval_id/reject", c.TimeOffController.Reject)
+	route.Get("/:id/attachments", c.TimeOffController.ListAttachments)
+	employeeRoute.Post("/:id/attachments", c.TimeOffController.CreateAttachment)
 
 	typeRoute := c.App.Group("/api/time-off-types", c.AuthMiddleware)
 	typeRoute.Get("/", c.TimeOffController.ListTypes)
 
 	balanceRoute := c.App.Group("/api/time-off-balances", c.AuthMiddleware)
-	balanceRoute.Get("/_current", c.EmployeeMiddleware, c.TimeOffController.ListCurrentBalances)
+	balanceEmployeeRoute := balanceRoute.Group("/", c.EmployeeMiddleware)
+	balanceEmployeeRoute.Get("/_current", c.TimeOffController.ListCurrentBalances)
+}
+
+func (c *RouteConfig) SetupCommonRouter() {
+	route := c.App.Group("/api", c.AuthMiddleware)
+	route.Post("/upload", c.UploadController.Upload)
 }

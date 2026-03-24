@@ -76,6 +76,7 @@ func Bootstrap(config *BootstrapConfig) {
 	attendaceController := http.NewAttendanceController(attendanceUseCase, config.Log)
 	shiftController := http.NewShifController(shiftUseCase, config.Log)
 	timeOffController := http.NewTimeOffController(timeOffUseCase, config.Log)
+	uploadController := http.NewUploadController(config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
@@ -100,6 +101,7 @@ func Bootstrap(config *BootstrapConfig) {
 		AttendanceController:     attendaceController,
 		ShiftController:          shiftController,
 		TimeOffController:        timeOffController,
+		UploadController:         uploadController,
 	}
 
 	routeConfig.Setup()

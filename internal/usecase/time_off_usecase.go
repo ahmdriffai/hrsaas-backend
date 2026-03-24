@@ -60,6 +60,7 @@ func (c *TimeOffUseCase) CreateRequest(ctx context.Context, employeeID string, r
 	item := &entity.Time_Off_Requests{
 		EmployeeId:    employeeID,
 		TimeOffTypeId: request.TimeOffTypeID,
+		RequestedDays: int(request.RequestedDays),
 		StartDate:     mustParseEpoch(request.StartDate),
 		EndDate:       mustParseEpoch(request.EndDate),
 		RequestReason: &request.RequestReason,
@@ -69,6 +70,24 @@ func (c *TimeOffUseCase) CreateRequest(ctx context.Context, employeeID string, r
 
 	if err := c.TimeOffRequestRepo.Create(tx, item); err != nil {
 		c.Log.WithError(err).Error("Failed to create time off request")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	// Build approval chain from position hierarchy.
+	// TODO: Consider caching org structure to reduce DB roundtrips.
+	approvals, err := c.buildApprovalsFromPositionChain(tx, employeeID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to build approval chain")
+		return nil, err
+	}
+	// Bind approvals to the newly created request and set initial status.
+	for i := range approvals {
+		approvals[i].TimeOffRequestId = item.ID
+		approvals[i].Status = "PENDING"
+	}
+	// Persist approval records.
+	if err := c.TimeOffApprovalRepo.CreateMany(tx, approvals); err != nil {
+		c.Log.WithError(err).Error("Failed to create time off approvals")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -119,7 +138,7 @@ func (c *TimeOffUseCase) ListRequests(ctx context.Context, request *model.Search
 			TimeOffTypeID: item.TimeOffTypeId,
 			StartDate:     epochToDateString(item.StartDate),
 			EndDate:       epochToDateString(item.EndDate),
-			RequestedDays: 0,
+			RequestedDays: float64(item.RequestedDays),
 			RequestReason: requestReason,
 			RequestStatus: item.RequestStatus,
 			CreatedAt:     time.UnixMilli(item.CreatedAt),
@@ -132,6 +151,42 @@ func (c *TimeOffUseCase) ListRequests(ctx context.Context, request *model.Search
 	}
 
 	return responses, total, nil
+}
+
+// TODO: Add ownership checks for non-admin users.
+func (c *TimeOffUseCase) GetRequestByID(ctx context.Context, id string) (*model.TimeOffRequestResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item, err := c.TimeOffRequestRepo.FindByID(tx, id)
+	if err != nil {
+		c.Log.WithError(err).Error("Time off request not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	requestReason := ""
+	if item.RequestReason != nil {
+		requestReason = *item.RequestReason
+	}
+
+	response := &model.TimeOffRequestResponse{
+		ID:            item.ID,
+		EmployeeID:    item.EmployeeId,
+		TimeOffTypeID: item.TimeOffTypeId,
+		StartDate:     epochToDateString(item.StartDate),
+		EndDate:       epochToDateString(item.EndDate),
+		RequestedDays: float64(item.RequestedDays),
+		RequestReason: requestReason,
+		RequestStatus: item.RequestStatus,
+		CreatedAt:     time.UnixMilli(item.CreatedAt),
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return response, nil
 }
 
 // TODO: Add caching if types rarely change.
@@ -375,6 +430,80 @@ func (c *TimeOffUseCase) Reject(ctx context.Context, requestID, approvalID, appr
 	return nil
 }
 
+// TODO: Consider file validation (mime/size) and ownership checks.
+func (c *TimeOffUseCase) ListAttachments(ctx context.Context, requestID string) ([]model.TimeOffAttachmentResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	items, err := c.TimeOffAttachmentRepo.ListByRequestID(tx, requestID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to list time off attachments")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	responses := make([]model.TimeOffAttachmentResponse, len(items))
+	for i, item := range items {
+		responses[i] = model.TimeOffAttachmentResponse{
+			ID:               item.ID,
+			TimeOffRequestID: item.TimeOffRequestId,
+			FileName:         item.FileName,
+			MimeType:         item.MimeType,
+			FileSize:         item.FileSize,
+			FileUrl:          item.FileUrl,
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return responses, nil
+}
+
+// TODO: Enforce request ownership and approval status before allowing attachments.
+func (c *TimeOffUseCase) CreateAttachment(ctx context.Context, requestID string, request *model.CreateTimeOffAttachmentRequest) (*model.TimeOffAttachmentResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	if _, err := c.TimeOffRequestRepo.FindByID(tx, requestID); err != nil {
+		c.Log.WithError(err).Error("Time off request not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	item := &entity.Time_Off_Attachment{
+		TimeOffRequestId: requestID,
+		FileName:         request.FileName,
+		MimeType:         request.MimeType,
+		FileSize:         request.FileSize,
+		FileUrl:          request.FileUrl,
+	}
+
+	if err := c.TimeOffAttachmentRepo.Create(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to create time off attachment")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return &model.TimeOffAttachmentResponse{
+		ID:               item.ID,
+		TimeOffRequestID: item.TimeOffRequestId,
+		FileName:         item.FileName,
+		MimeType:         item.MimeType,
+		FileSize:         item.FileSize,
+		FileUrl:          item.FileUrl,
+	}, nil
+}
+
 // TODO: Replace with a proper date parsing strategy shared across the codebase.
 // TODO: Handle parse error explicitly instead of returning 0.
 func mustParseEpoch(date string) int64 {
@@ -393,4 +522,90 @@ func epochToDateString(ts int64) string {
 		return ""
 	}
 	return time.UnixMilli(ts).Format("2006-01-02")
+}
+
+// TODO: Add cycle detection limit configuration.
+func (c *TimeOffUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, employeeID string) ([]entity.Time_Off_Approval, error) {
+	// Fetch active contract to get current position + division.
+	type contractRow struct {
+		EmployeeID string `gorm:"column:employee_id"`
+		DivisionID string `gorm:"column:division_id"`
+		PositionID string `gorm:"column:position_id"`
+		StartDate  int64  `gorm:"column:start_date"`
+		EndDate    *int64 `gorm:"column:end_date"`
+	}
+
+	var contract contractRow
+	now := nowEpoch()
+	if err := tx.Table("employee_contracts").
+		Select("employee_id, division_id, position_id, start_date, end_date").
+		Where("employee_id = ?", employeeID).
+		Where("end_date IS NULL OR end_date >= ?", now).
+		Order("start_date DESC").
+		Limit(1).
+		Take(&contract).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Active contract not found")
+	}
+
+	// Load current position and start from its parent.
+	type positionRow struct {
+		ID       string  `gorm:"column:id"`
+		ParentID *string `gorm:"column:parent_id"`
+	}
+
+	approvals := make([]entity.Time_Off_Approval, 0, 4)
+	var current positionRow
+	if err := tx.Table("positions").
+		Select("id, parent_id").
+		Where("id = ?", contract.PositionID).
+		Take(&current).Error; err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Position not found")
+	}
+
+	parentID := current.ParentID
+
+	const maxDepth = 20
+	// Walk up the position hierarchy until root or depth limit.
+	for depth := 0; depth < maxDepth && parentID != nil; depth++ {
+		var parent positionRow
+		// Resolve parent position.
+		if err := tx.Table("positions").
+			Select("id, parent_id").
+			Where("id = ?", *parentID).
+			Take(&parent).Error; err != nil {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Parent position not found")
+		}
+
+		var approver struct {
+			EmployeeID string `gorm:"column:employee_id"`
+		}
+		// Find the approver (employee) who holds the parent position in same division.
+		if err := tx.Table("employee_contracts").
+			Select("employee_id").
+			Where("position_id = ?", parent.ID).
+			Where("division_id = ?", contract.DivisionID).
+			Where("end_date IS NULL OR end_date >= ?", now).
+			Order("start_date DESC").
+			Limit(1).
+			Take(&approver).Error; err != nil {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Approver not found for position")
+		}
+
+		// Avoid self-approval.
+		if approver.EmployeeID != employeeID {
+			approvals = append(approvals, entity.Time_Off_Approval{
+				ApproverId: approver.EmployeeID,
+			})
+		}
+
+		// Move to the next parent.
+		parentID = parent.ParentID
+	}
+
+	// Require at least one approver.
+	if len(approvals) == 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Approval chain is empty")
+	}
+
+	return approvals, nil
 }

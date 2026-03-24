@@ -27,6 +27,7 @@ type Time_Off_Requests struct {
 	EmployeeId string `gorm:"column:employee_id;not null"`
 	// CompanyId     string `gorm:"column:company_id;not null"`
 	TimeOffTypeId string  `gorm:"column:time_off_type_id;not null"`
+	RequestedDays int     `gorm:"column:requested_days;not null"`
 	StartDate     int64   `gorm:"column:start_date;not null"`
 	EndDate       int64   `gorm:"column:end_date;not null"`
 	RequestReason *string `gorm:"column:request_reason"`
