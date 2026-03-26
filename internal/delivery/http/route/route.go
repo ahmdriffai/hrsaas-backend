@@ -13,17 +13,19 @@ type RouteConfig struct {
 	AdminMiddleware    fiber.Handler
 	EmployeeMiddleware fiber.Handler
 
-	CompanyController        *http.CompanyController
-	UserController           *http.UserController
-	EmployeeController       *http.EmployeeController
-	OfficeLocationController *http.OfficeLocationController
-	SanctionController       *http.SanctionController
-	EmSancController         *http.EmSancController
-	PositionController       *http.PositionController
-	AttendanceController     *http.AttendanceController
-	ShiftController          *http.ShiftController
-	TimeOffController        *http.TimeOffController
-	UploadController         *http.UploadController
+	CompanyController          *http.CompanyController
+	UserController             *http.UserController
+	EmployeeController         *http.EmployeeController
+	OfficeLocationController   *http.OfficeLocationController
+	SanctionController         *http.SanctionController
+	EmSancController           *http.EmSancController
+	PositionController         *http.PositionController
+	AttendanceController       *http.AttendanceController
+	ShiftController            *http.ShiftController
+	TimeOffController          *http.TimeOffController
+	UploadController           *http.UploadController
+	EmployeeContractController *http.EmployeeContractController
+	DivisionController         *http.DivisionController
 }
 
 func (c *RouteConfig) Setup() {
@@ -34,11 +36,13 @@ func (c *RouteConfig) Setup() {
 	c.SetupSanctionRouter()
 	c.SetupEmployeeSanctionRouter()
 	c.SetupPositionRouter()
+	c.SetupDivisionRouter()
 	c.SetupOfficeLocationRouter()
 	c.SetupAttendanceRouter()
 	c.SetupShiftRouter()
 	c.SetupTimeOffRouter()
 	c.SetupCommonRouter()
+	c.SetupEmployeeContractRouter()
 }
 
 /*
@@ -67,6 +71,21 @@ func (c *RouteConfig) SetupEmployeeRouter() {
 
 	adminRoute := route.Group("/", c.AdminMiddleware)
 	adminRoute.Post("/", c.EmployeeController.CreateEmployee)
+}
+
+func (c *RouteConfig) SetupEmployeeContractRouter() {
+	route := c.App.Group("/api/employee-contracts", c.AuthMiddleware)
+	route.Get("/", c.EmployeeContractController.List)
+	adminRoute := route.Group("/", c.AdminMiddleware)
+	adminRoute.Post("/", c.EmployeeContractController.Create)
+}
+
+func (c *RouteConfig) SetupDivisionRouter() {
+	route := c.App.Group("/api/divisions", c.AuthMiddleware)
+	route.Get("/", c.DivisionController.List)
+
+	adminRoute := route.Group("/", c.AdminMiddleware)
+	adminRoute.Post("/", c.DivisionController.Create)
 }
 
 func (c *RouteConfig) SetupSanctionRouter() {
@@ -113,13 +132,17 @@ func (c *RouteConfig) SetupShiftRouter() {
 func (c *RouteConfig) SetupTimeOffRouter() {
 	route := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
 	route.Get("/", c.TimeOffController.ListRequests)
+
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Post("/", c.TimeOffController.CreateRequest)
 	employeeRoute.Get("/_current", c.TimeOffController.ListCurrentRequests)
+
 	route.Get("/:id", c.TimeOffController.GetRequestByID)
 	route.Get("/:id/approvals", c.TimeOffController.ListApprovals)
+
 	employeeRoute.Patch("/:id/approvals/:approval_id/approve", c.TimeOffController.Approve)
 	employeeRoute.Patch("/:id/approvals/:approval_id/reject", c.TimeOffController.Reject)
+
 	route.Get("/:id/attachments", c.TimeOffController.ListAttachments)
 	employeeRoute.Post("/:id/attachments", c.TimeOffController.CreateAttachment)
 

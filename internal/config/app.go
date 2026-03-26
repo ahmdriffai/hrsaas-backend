@@ -41,6 +41,8 @@ func Bootstrap(config *BootstrapConfig) {
 	timeOffBalanceRepository := repository.NewTimeOffBalanceRepository(config.Log)
 	timeOffApprovalRepository := repository.NewTimeOffApprovalRepository(config.Log)
 	timeOffAttachmentRepository := repository.NewTimeOffAttachmentRepository(config.Log)
+	employeeContractRepository := repository.NewEmployeeContractRepository(config.Log)
+	divisionRepository := repository.NewDivisionRepository(config.Log)
 
 	// setup producer
 
@@ -64,6 +66,8 @@ func Bootstrap(config *BootstrapConfig) {
 		timeOffApprovalRepository,
 		timeOffAttachmentRepository,
 	)
+	employeeContractUseCase := usecase.NewEmployeeContractUseCase(config.DB, config.Log, config.Validate, employeeContractRepository)
+	divisionUseCase := usecase.NewDivisionUseCase(config.DB, config.Log, config.Validate, divisionRepository)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
@@ -77,6 +81,8 @@ func Bootstrap(config *BootstrapConfig) {
 	shiftController := http.NewShifController(shiftUseCase, config.Log)
 	timeOffController := http.NewTimeOffController(timeOffUseCase, config.Log)
 	uploadController := http.NewUploadController(config.Log)
+	employeeContractController := http.NewEmployeeContractController(employeeContractUseCase, config.Log)
+	divisionController := http.NewDivisionController(divisionUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
@@ -91,17 +97,19 @@ func Bootstrap(config *BootstrapConfig) {
 		AdminMiddleware:    adminMiddleware,
 		EmployeeMiddleware: employeeMiddleware,
 
-		CompanyController:        companyController,
-		UserController:           userController,
-		EmployeeController:       employeeController,
-		SanctionController:       santionController,
-		EmSancController:         emSangController,
-		PositionController:       positionController,
-		OfficeLocationController: officeLocationController,
-		AttendanceController:     attendaceController,
-		ShiftController:          shiftController,
-		TimeOffController:        timeOffController,
-		UploadController:         uploadController,
+		CompanyController:          companyController,
+		UserController:             userController,
+		EmployeeController:         employeeController,
+		SanctionController:         santionController,
+		EmSancController:           emSangController,
+		PositionController:         positionController,
+		OfficeLocationController:   officeLocationController,
+		AttendanceController:       attendaceController,
+		ShiftController:            shiftController,
+		TimeOffController:          timeOffController,
+		UploadController:           uploadController,
+		EmployeeContractController: employeeContractController,
+		DivisionController:         divisionController,
 	}
 
 	routeConfig.Setup()
