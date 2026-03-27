@@ -74,3 +74,9 @@ type EmployeeContract struct {
 	PositionID   string  `gorm:"column:position_id;not null"`
 	Salary       float64 `gorm:"column:salary;not null"`
 }
+
+// BeforeCreate hook to set UUID
+func (c *EmployeeContract) BeforeCreate(tx *gorm.DB) (err error) {
+	c.ID = uuid.NewString()
+	return nil
+}
