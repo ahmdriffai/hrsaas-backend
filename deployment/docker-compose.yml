@@ -10,10 +10,26 @@ services:
       - ./config:/app/config
     networks:
       - hrsaas-net
+  panel:
+    image: ghcr.io/ahmdriffai/hrsaas-frontend:development
+    container_name: hrsaas-panel
+    restart: always
+    ports:
+      - 5173:5173
+    networks:
+      - hrsaas-net
 
-  cloudflared:
+  cloudflared-api:
     image: cloudflare/cloudflared:latest
-    container_name: hrsaas-tunnel
+    container_name: hrsaas-api-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token xxx
+    networks:
+      - hrsaas-net
+
+  cloudflared-panel:
+    image: cloudflare/cloudflared:latest
+    container_name: hrsaas-panel-tunnel
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token xxx
     networks:
