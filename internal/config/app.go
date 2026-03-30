@@ -67,7 +67,14 @@ func Bootstrap(config *BootstrapConfig) {
 		timeOffApprovalRepository,
 		timeOffAttachmentRepository,
 	)
-	employeeContractUseCase := usecase.NewEmployeeContractUseCase(config.DB, config.Log, config.Validate, employeeContractRepository)
+	employeeContractUseCase := usecase.NewEmployeeContractUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		employeeContractRepository,
+		timeOffTypeRepository,
+		timeOffBalanceRepository,
+	)
 	divisionUseCase := usecase.NewDivisionUseCase(config.DB, config.Log, config.Validate, divisionRepository)
 	visitUseCase := usecase.NewVisitUseCase(config.DB, config.Log, config.Validate, visitRepository)
 

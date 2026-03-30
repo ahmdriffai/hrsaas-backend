@@ -151,6 +151,8 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 
 	typeRoute := c.App.Group("/api/time-off-types", c.AuthMiddleware)
 	typeRoute.Get("/", c.TimeOffController.ListTypes)
+	typeAdminRoute := typeRoute.Group("/", c.AdminMiddleware)
+	typeAdminRoute.Post("/", c.TimeOffController.CreateType)
 
 	balanceRoute := c.App.Group("/api/time-off-balances", c.AuthMiddleware)
 	balanceEmployeeRoute := balanceRoute.Group("/", c.EmployeeMiddleware)

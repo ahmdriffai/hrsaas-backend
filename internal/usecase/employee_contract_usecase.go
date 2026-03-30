@@ -15,18 +15,29 @@ import (
 )
 
 type EmployeeContractUseCase struct {
-	DB        *gorm.DB
-	Log       *logrus.Logger
-	Validate  *validator.Validate
-	Repo      *repository.EmployeeContractRepository
+	DB                 *gorm.DB
+	Log                *logrus.Logger
+	Validate           *validator.Validate
+	Repo               *repository.EmployeeContractRepository
+	TimeOffTypeRepo    *repository.TimeOffTypeRepository
+	TimeOffBalanceRepo *repository.TimeOffBalanceRepository
 }
 
-func NewEmployeeContractUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate, repo *repository.EmployeeContractRepository) *EmployeeContractUseCase {
+func NewEmployeeContractUseCase(
+	db *gorm.DB,
+	log *logrus.Logger,
+	validate *validator.Validate,
+	repo *repository.EmployeeContractRepository,
+	timeOffTypeRepo *repository.TimeOffTypeRepository,
+	timeOffBalanceRepo *repository.TimeOffBalanceRepository,
+) *EmployeeContractUseCase {
 	return &EmployeeContractUseCase{
-		DB:       db,
-		Log:      log,
-		Validate: validate,
-		Repo:     repo,
+		DB:                 db,
+		Log:                log,
+		Validate:           validate,
+		Repo:               repo,
+		TimeOffTypeRepo:    timeOffTypeRepo,
+		TimeOffBalanceRepo: timeOffBalanceRepo,
 	}
 }
 
@@ -67,6 +78,35 @@ func (c *EmployeeContractUseCase) Create(ctx context.Context, request *model.Cre
 	if err := c.Repo.Create(tx, item); err != nil {
 		c.Log.WithError(err).Error("Failed to create employee contract")
 		return nil, fiber.ErrInternalServerError
+	}
+
+	// Auto-create time off balances for quota-based types.
+	periodYear := time.UnixMilli(startDate).UTC().Year()
+	types, err := c.TimeOffTypeRepo.ListQuotaBased(tx)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to list time off types")
+		return nil, fiber.ErrInternalServerError
+	}
+	for _, t := range types {
+		if _, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, request.EmployeeID, t.ID, periodYear); err == nil {
+			continue
+		} else if err != nil && err != gorm.ErrRecordNotFound {
+			c.Log.WithError(err).Error("Failed to check time off balance")
+			return nil, fiber.ErrInternalServerError
+		}
+
+		balance := &entity.Time_Off_Balance{
+			EmployeeId:    request.EmployeeID,
+			TimeOffTypeId: t.ID,
+			PeriodYear:    periodYear,
+			EntitledDays:  t.DefaultQuotaDays,
+			UsedDays:      0,
+			RemainingDays: t.DefaultQuotaDays,
+		}
+		if err := c.TimeOffBalanceRepo.Create(tx, balance); err != nil {
+			c.Log.WithError(err).Error("Failed to create time off balance")
+			return nil, fiber.ErrInternalServerError
+		}
 	}
 
 	if err := tx.Commit().Error; err != nil {

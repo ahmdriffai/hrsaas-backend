@@ -151,6 +151,25 @@ func (c *TimeOffController) ListTypes(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Enforce admin-only access with middleware at router.
+func (c *TimeOffController) CreateType(ctx *fiber.Ctx) error {
+	request := new(model.CreateTimeOffTypeRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	response, err := c.UseCase.CreateType(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to create time off type")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.TimeOffTypeResponse]{
+		Data: response,
+	})
+}
+
 // TODO: Support filtering by period range if needed.
 func (c *TimeOffController) ListCurrentBalances(ctx *fiber.Ctx) error {
 	request := new(model.SearchTimeOffBalanceRequest)
