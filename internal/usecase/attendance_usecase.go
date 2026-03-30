@@ -70,6 +70,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 
 	// init time now
 	now := time.Now()
+	nowMilli := time.Now().UnixMilli()
 
 	fmt.Println(request.EmployeeID)
 	// Ambil shift karyawan (misalnya dari employee.shift_id → shifts)
@@ -86,7 +87,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	// Cek apakah sudah ada attendance hari ini?
 	// → Query attendance WHERE employee_id & date = today
 	var existingAttendance entity.Attendance
-	err = c.AttendanceRepository.FindByEmployeeIDAndDate(tx, &existingAttendance, request.EmployeeID, now)
+	err = c.AttendanceRepository.FindByEmployeeIDAndDate(tx, &existingAttendance, request.EmployeeID, nowMilli)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, fiber.ErrInternalServerError
 	}
@@ -133,15 +134,15 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	attendance := &entity.Attendance{
 		CompanyID:   request.CompanyID,
 		EmployeeID:  request.EmployeeID,
-		Date:        now,
-		CheckInTime: now,
+		Date:        nowMilli,
+		CheckInTime: nowMilli,
 		Status:      "HADIR", // Default status
 	}
 
 	// attendance log object
 	attendanceLog := &entity.AttendanceLog{
 		Type:               "CHECK_IN",
-		Time:               now,
+		Time:               nowMilli,
 		Lat:                request.Lat,
 		Lng:                request.Lng,
 		LocationDistance:   locationDistance,
@@ -174,9 +175,10 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		return nil, fiber.ErrInternalServerError
 	}
 
+	checkInDateType := time.UnixMilli(shiftDay.CheckIn)
 	startTimeToday := time.Date(
 		now.Year(), now.Month(), now.Day(),
-		shiftDay.CheckIn.Hour(), shiftDay.CheckIn.Minute(), shiftDay.CheckIn.Second(), shiftDay.CheckIn.Nanosecond(),
+		checkInDateType.Hour(), checkInDateType.Minute(), checkInDateType.Second(), checkInDateType.Nanosecond(),
 		now.Location(),
 	)
 
@@ -211,10 +213,13 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 
 func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckInAttendanceRequest) (*model.AttendanceResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
-	defer tx.Rollback()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 
 	if request.EmployeeID == "" {
-		c.Log.Error("Bad Request")
 		return nil, fiber.NewError(400, "User tidak bisa melakukan check-out karena bukan karyawan")
 	}
 
@@ -224,9 +229,10 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 	}
 
 	now := time.Now()
+	nowMilli := now.UnixMilli()
 
 	var attendance entity.Attendance
-	err := c.AttendanceRepository.FindByEmployeeIDAndDate(tx, &attendance, request.EmployeeID, now)
+	err := c.AttendanceRepository.FindByEmployeeIDAndDate(tx, &attendance, request.EmployeeID, nowMilli)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.NewError(fiber.StatusBadRequest, "Belum check-in hari ini")
@@ -234,7 +240,7 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		return nil, fiber.ErrInternalServerError
 	}
 
-	if !attendance.CheckOutTime.IsZero() {
+	if attendance.CheckOutTime != 0 {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Sudah check-out hari ini")
 	}
 
@@ -244,31 +250,40 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 	}
 
 	isInRange := false
+	var distance float64
+
 	for _, location := range locations {
 		lat, err := strconv.ParseFloat(location.Lat, 64)
 		if err != nil {
 			continue
 		}
+
 		lng, err := strconv.ParseFloat(location.Lng, 64)
 		if err != nil {
 			continue
 		}
 
-		distance := lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
+		distance = lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
+
 		if distance <= float64(location.Radius) {
 			isInRange = true
 			break
 		}
 	}
+
 	if !isInRange {
 		return nil, fiber.NewError(400, "Anda diluar jangkauan")
 	}
 
-	attendance.CheckOutTime = now
-	totalWorkMinutes := int(now.Sub(attendance.CheckInTime).Minutes()) - attendance.TotalBreakMinutes
+	attendance.CheckOutTime = nowMilli
+
+	checkInTime := time.UnixMilli(attendance.CheckInTime)
+
+	totalWorkMinutes := int(now.Sub(checkInTime).Minutes()) - attendance.TotalBreakMinutes
 	if totalWorkMinutes < 0 {
 		totalWorkMinutes = 0
 	}
+
 	attendance.TotalWorkMinutes = totalWorkMinutes
 
 	if err := c.AttendanceRepository.Update(tx, &attendance); err != nil {
@@ -279,10 +294,10 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 	attendanceLog := &entity.AttendanceLog{
 		AttendanceID:       attendance.ID,
 		Type:               "CHECK_OUT",
-		Time:               now,
+		Time:               nowMilli,
 		Lat:                request.Lat,
 		Lng:                request.Lng,
-		LocationDistance:   0,
+		LocationDistance:   distance,
 		IsLocationVerified: true,
 		IsFaceVerified:     false,
 		FaceConfidence:     0,

@@ -36,6 +36,14 @@ func Bootstrap(config *BootstrapConfig) {
 	attendanceLogRepository := repository.NewAttendanceLogRepository(config.Log)
 	shifRepository := repository.NewShiftRepository(config.Log)
 	shiftDayRepository := repository.NewShiftDayRepository(config.Log)
+	timeOffTypeRepository := repository.NewTimeOffTypeRepository(config.Log)
+	timeOffRequestRepository := repository.NewTimeOffRequestRepository(config.Log)
+	timeOffBalanceRepository := repository.NewTimeOffBalanceRepository(config.Log)
+	timeOffApprovalRepository := repository.NewTimeOffApprovalRepository(config.Log)
+	timeOffAttachmentRepository := repository.NewTimeOffAttachmentRepository(config.Log)
+	employeeContractRepository := repository.NewEmployeeContractRepository(config.Log)
+	divisionRepository := repository.NewDivisionRepository(config.Log)
+	visitRepository := repository.NewVisitRepository(config.Log)
 
 	// setup producer
 
@@ -49,6 +57,19 @@ func Bootstrap(config *BootstrapConfig) {
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
 	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository)
 	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository, shiftDayRepository)
+	timeOffUseCase := usecase.NewTimeOffUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		timeOffRequestRepository,
+		timeOffTypeRepository,
+		timeOffBalanceRepository,
+		timeOffApprovalRepository,
+		timeOffAttachmentRepository,
+	)
+	employeeContractUseCase := usecase.NewEmployeeContractUseCase(config.DB, config.Log, config.Validate, employeeContractRepository)
+	divisionUseCase := usecase.NewDivisionUseCase(config.DB, config.Log, config.Validate, divisionRepository)
+	visitUseCase := usecase.NewVisitUseCase(config.DB, config.Log, config.Validate, visitRepository)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
@@ -60,25 +81,39 @@ func Bootstrap(config *BootstrapConfig) {
 	officeLocationController := http.NewOfficeLocationController(officeLocationUseCase, config.Log)
 	attendaceController := http.NewAttendanceController(attendanceUseCase, config.Log)
 	shiftController := http.NewShifController(shiftUseCase, config.Log)
+	timeOffController := http.NewTimeOffController(timeOffUseCase, config.Log)
+	uploadController := http.NewUploadController(config.Log)
+	employeeContractController := http.NewEmployeeContractController(employeeContractUseCase, config.Log)
+	divisionController := http.NewDivisionController(divisionUseCase, config.Log)
+	visitController := http.NewVisitController(visitUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
 	adminMiddleware := middleware.NewAdmin()
+	employeeMiddleware := middleware.NewEmployee()
 
 	// route config
 	routeConfig := route.RouteConfig{
-		App:                      config.App,
-		CompanyController:        companyController,
-		AuthMiddleware:           authMiddleware,
-		AdminMiddleware:          adminMiddleware,
-		UserController:           userController,
-		EmployeeController:       employeeController,
-		SanctionController:       santionController,
-		EmSancController:         emSangController,
-		PositionController:       positionController,
-		OfficeLocationController: officeLocationController,
-		AttendanceController:     attendaceController,
-		ShiftController:          shiftController,
+		App: config.App,
+
+		AuthMiddleware:     authMiddleware,
+		AdminMiddleware:    adminMiddleware,
+		EmployeeMiddleware: employeeMiddleware,
+
+		CompanyController:          companyController,
+		UserController:             userController,
+		EmployeeController:         employeeController,
+		SanctionController:         santionController,
+		EmSancController:           emSangController,
+		PositionController:         positionController,
+		OfficeLocationController:   officeLocationController,
+		AttendanceController:       attendaceController,
+		ShiftController:            shiftController,
+		TimeOffController:          timeOffController,
+		UploadController:           uploadController,
+		EmployeeContractController: employeeContractController,
+		DivisionController:         divisionController,
+		VisitController:            visitController,
 	}
 
 	routeConfig.Setup()

@@ -3,6 +3,7 @@ package repository
 import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -63,9 +64,11 @@ func (r *ShiftRepository) DeleteEmployeeShiftsByEmployeeID(db *gorm.DB, employee
 
 func (r *ShiftRepository) AssignEmployeeToShift(db *gorm.DB, employeeID, shiftID string) error {
 	return db.Exec(
-		"INSERT INTO employee_shifts (employee_id, shift_id) VALUES (?, ?)",
+		"INSERT INTO employee_shifts (employee_id, shift_id, created_at, updated_at) VALUES (?, ?, ?, ?)",
 		employeeID,
 		shiftID,
+		int64(time.Now().UnixMilli()),
+		int64(time.Now().UnixMilli()),
 	).Error
 }
 

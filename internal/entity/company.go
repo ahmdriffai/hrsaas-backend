@@ -23,13 +23,15 @@ type Company struct {
 	Email          *string `gorm:"column:email"`
 	Website        *string `gorm:"column:website"`
 
-	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime"`
+	CreatedAt int64 `gorm:"column:created_at"`
+	UpdatedAt int64 `gorm:"column:updated_at"`
 }
 
 // BeforeCreate hook to set UUID
 func (u *Company) BeforeCreate(tx *gorm.DB) (err error) {
 	u.ID = uuid.NewString()
+	u.CreatedAt = int64(time.Now().UnixMilli())
+	u.UpdatedAt = int64(time.Now().UnixMilli())
 	return nil
 }
 

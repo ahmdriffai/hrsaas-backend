@@ -18,25 +18,15 @@ func NewAttendanceRepository(log *logrus.Logger) *AttendanceRepository {
 		Log: log,
 	}
 }
-
 func (r *AttendanceRepository) Update(db *gorm.DB, attendance *entity.Attendance) error {
-	attendance.UpdatedAt = time.Now()
+	attendance.UpdatedAt = time.Now().UnixMilli()
 
 	updates := map[string]any{
-		"company_id":          attendance.CompanyID,
-		"employee_id":         attendance.EmployeeID,
-		"date":                attendance.Date,
-		"check_in_time":       attendance.CheckInTime,
-		"total_work_minutes":  gorm.Expr("make_interval(mins => ?)", attendance.TotalWorkMinutes),
-		"total_break_minutes": gorm.Expr("make_interval(mins => ?)", attendance.TotalBreakMinutes),
+		"check_out_time":      attendance.CheckOutTime,
+		"total_work_minutes":  attendance.TotalWorkMinutes,
+		"total_break_minutes": attendance.TotalBreakMinutes,
 		"status":              attendance.Status,
 		"updated_at":          attendance.UpdatedAt,
-	}
-
-	if attendance.CheckOutTime.IsZero() {
-		updates["check_out_time"] = nil
-	} else {
-		updates["check_out_time"] = attendance.CheckOutTime
 	}
 
 	return db.Table(attendance.TableName()).
@@ -45,12 +35,21 @@ func (r *AttendanceRepository) Update(db *gorm.DB, attendance *entity.Attendance
 		Error
 }
 
-func (r *AttendanceRepository) FindByEmployeeIDAndDate(db *gorm.DB, entity *entity.Attendance, employeeId string, date time.Time) error {
+func (r *AttendanceRepository) FindByEmployeeIDAndDate(db *gorm.DB, entity *entity.Attendance, employeeId string, date int64) error {
 	// Pastikan jamnya 00:00:00
-	dateOnly := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	t := time.UnixMilli(date)
+
+	// tanggal jam 00:00:00
+	startOfDay := time.Date(
+		t.Year(),
+		t.Month(),
+		t.Day(),
+		0, 0, 0, 0,
+		t.Location(),
+	).UnixMilli()
 
 	return db.
-		Where("employee_id = ? AND date = ?", employeeId, dateOnly).
+		Where("employee_id = ? AND date = ?", employeeId, startOfDay).
 		Take(entity).
 		Error
 }

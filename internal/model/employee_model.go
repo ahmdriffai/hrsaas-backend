@@ -1,5 +1,7 @@
 package model
 
+import "hr-sas/internal/entity"
+
 type EmployeeResponse struct {
 	ID             string `json:"id,omitempty"`
 	CompanyID      string `json:"company_id,omitempty"`
@@ -7,12 +9,14 @@ type EmployeeResponse struct {
 	EmployeeNumber string `json:"employee_number,omitempty"`
 	Fullname       string `json:"fullname,omitempty"`
 	BirthPlace     string `json:"birth_place,omitempty"`
-	BirthDate      string `json:"birth_date,omitempty"`
+	BirthDate      int64  `json:"birth_date,omitempty"`
 	BlodType       string `json:"blood_type,omitempty"`
 	MaritalStatus  string `json:"marital_status,omitempty"`
 	Religion       string `json:"religion,omitempty"`
 	Phone          string `json:"phone,omitempty"`
 	Timezone       string `json:"timezone,omitempty"`
+	CreatedAt      int64  `json:"created_at,omitempty"`
+	UpdatedAt      int64  `json:"updated_at,omitempty"`
 }
 
 type CreateEmployeeRequest struct {
@@ -35,4 +39,25 @@ type SearchEmployeeRequest struct {
 	Key       string `json:"key" validate:"max=100"`
 	Page      int    `json:"page" validate:"min=1"`
 	Size      int    `json:"size" validate:"min=1,max=100"`
+}
+
+func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
+	if employee == nil {
+		return nil
+	}
+
+	return &EmployeeResponse{
+		ID:             employee.ID,
+		CompanyID:      employee.CompanyID,
+		UserID:         employee.UserID,
+		Fullname:       employee.Fullname,
+		BirthPlace:     employee.BirthPlace,
+		BirthDate:      employee.BirthDate,
+		BlodType:       employee.BlodType,
+		MaritalStatus:  employee.MaritalStatus,
+		Religion:       employee.Religion,
+		Phone:          employee.Phone,
+		Timezone:       employee.Timezone,
+		EmployeeNumber: employee.EmployeeNumber,
+	}
 }

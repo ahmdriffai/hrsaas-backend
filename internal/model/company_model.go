@@ -1,24 +1,22 @@
 package model
 
-import "time"
-
 type CompanyResponse struct {
-	ID             string    `json:"id"`
-	Name           string    `json:"name"`
-	LogoUrl        *string   `json:"logo_url"`
-	BussinessField *string   `json:"bussiness_field"`
-	Address        *string   `json:"address"`
-	Province       *string   `json:"province"`
-	City           *string   `json:"city"`
-	District       *string   `json:"district"`
-	Village        *string   `json:"village"`
-	ZipCode        *string   `json:"zip_code"`
-	PhoneNumber    *string   `json:"phone_number"`
-	FaxNumber      *string   `json:"fax_number"`
-	Email          *string   `json:"email"`
-	Website        *string   `json:"website"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	LogoUrl        *string `json:"logo_url"`
+	BussinessField *string `json:"bussiness_field"`
+	Address        *string `json:"address"`
+	Province       *string `json:"province"`
+	City           *string `json:"city"`
+	District       *string `json:"district"`
+	Village        *string `json:"village"`
+	ZipCode        *string `json:"zip_code"`
+	PhoneNumber    *string `json:"phone_number"`
+	FaxNumber      *string `json:"fax_number"`
+	Email          *string `json:"email"`
+	Website        *string `json:"website"`
+	CreatedAt      int64   `json:"created_at"`
+	UpdatedAt      int64   `json:"updated_at"`
 }
 
 type CreateCompanyRequest struct {

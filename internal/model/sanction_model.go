@@ -1,5 +1,7 @@
 package model
 
+import "hr-sas/internal/entity"
+
 type SanctionResponse struct {
 	ID          string  `json:"id"`
 	CompanyID   string  `json:"company_id"`
@@ -7,8 +9,8 @@ type SanctionResponse struct {
 	Description *string `json:"description,omitempty"`
 	Level       int     `json:"level,omitempty"`
 	Note        *string `json:"note,omitempty"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	CreatedAt   int64   `json:"created_at"`
+	UpdatedAt   int64   `json:"updated_at"`
 }
 
 type CreateSanctionRequest struct {
@@ -24,4 +26,16 @@ type SearchSanctionRequest struct {
 	Key       string `json:"key"`
 	Page      int    `json:"page" validate:"min=1"`
 	Size      int    `json:"size" validate:"min=1,max=100"`
+}
+
+func SanctionToResponse(sanction *entity.Sanction) *SanctionResponse {
+	return &SanctionResponse{
+		ID:          sanction.ID,
+		CompanyID:   sanction.CompanyID,
+		Description: sanction.Description,
+		Note:        sanction.Note,
+		Name:        sanction.Name,
+		CreatedAt:   sanction.CreatedAt,
+		UpdatedAt:   sanction.UpdatedAt,
+	}
 }

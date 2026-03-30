@@ -2,11 +2,10 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"hr-sas/internal/entity"
+	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -59,24 +58,6 @@ func (c *ShiftUseCase) Create(ctx context.Context, request *model.CreateShiftReq
 		return nil, fiber.ErrInternalServerError
 	}
 
-	parseShiftTime := func(value string) (time.Time, error) {
-		if value == "" {
-			return time.Time{}, nil
-		}
-
-		t, err := time.Parse("15:04", value)
-		if err == nil {
-			return t, nil
-		}
-
-		t, err = time.Parse("15:04:05", value)
-		if err != nil {
-			return time.Time{}, err
-		}
-
-		return t, nil
-	}
-
 	if len(request.ShiftDayRequests) > 0 {
 		if len(request.ShiftDayRequests) != 7 {
 			c.Log.Error("Invalid shift days count: must provide exactly 7 weekdays")
@@ -99,31 +80,13 @@ func (c *ShiftUseCase) Create(ctx context.Context, request *model.CreateShiftReq
 
 		shiftDays := make([]entity.ShiftDays, 0, len(request.ShiftDayRequests))
 		for _, shiftDayRequest := range request.ShiftDayRequests {
-			checkIn, err := parseShiftTime(shiftDayRequest.CheckIn)
-			if err != nil {
-				c.Log.WithError(err).Error("Failed to parse check_in")
-				return nil, fiber.ErrBadRequest
-			}
+			checkIn, _ := lib.ParseDateToUnixMilli(shiftDayRequest.CheckIn)
 
-			checkOut, err := parseShiftTime(shiftDayRequest.CheckOut)
-			if err != nil {
-				c.Log.WithError(err).Error("Failed to parse check_out")
-				return nil, fiber.ErrBadRequest
-			}
+			checkOut, _ := lib.ParseDateToUnixMilli(shiftDayRequest.CheckOut)
 
-			breakStart, err := parseShiftTime(shiftDayRequest.BreakStart)
-			if err != nil {
-				c.Log.WithError(err).Error("Failed to parse break_start")
-				return nil, fiber.ErrBadRequest
-			}
+			breakStart, _ := lib.ParseDateToUnixMilli(shiftDayRequest.BreakStart)
 
-			breakEnd, err := parseShiftTime(shiftDayRequest.BreakEnd)
-			if err != nil {
-				c.Log.WithError(err).Error("Failed to parse break_end")
-				return nil, fiber.ErrBadRequest
-			}
-
-			fmt.Println(shift.ID)
+			breakEnd, _ := lib.ParseDateToUnixMilli(shiftDayRequest.BreakEnd)
 
 			shiftDays = append(shiftDays, entity.ShiftDays{
 				ShiftID:         shift.ID,
@@ -152,8 +115,8 @@ func (c *ShiftUseCase) Create(ctx context.Context, request *model.CreateShiftReq
 		CompanyID:     shift.CompanyID,
 		Name:          shift.Name,
 		LateTolerance: shift.LateTolerance,
-		CreatedAt:     shift.CreatedAt.Format(time.DateTime),
-		UpdatedAt:     shift.UpdatedAt.Format(time.DateTime),
+		CreatedAt:     shift.CreatedAt,
+		UpdatedAt:     shift.UpdatedAt,
 	}, nil
 }
 
@@ -249,13 +212,21 @@ func (c *ShiftUseCase) Search(ctx context.Context, request *model.SearchShiftReq
 		}
 
 		for _, day := range shiftDays {
+			checkIn, _ := lib.ParseDateToUnixMilli(day.CheckIn)
+
+			checkOut, _ := lib.ParseDateToUnixMilli(day.CheckOut)
+
+			breakStart, _ := lib.ParseDateToUnixMilli(day.BreakStart)
+
+			breakEnd, _ := lib.ParseDateToUnixMilli(day.BreakEnd)
+
 			shiftDaysByShiftID[day.ShiftID] = append(shiftDaysByShiftID[day.ShiftID], model.ShiftDayResponse{
 				Weekday:         day.Weekday,
 				DayType:         day.DayType,
-				CheckIn:         day.CheckIn,
-				CheckOut:        day.CheckOut,
-				BreakStart:      day.BreakStart,
-				BreakEnd:        day.BreakEnd,
+				CheckIn:         checkIn,
+				CheckOut:        checkOut,
+				BreakStart:      breakStart,
+				BreakEnd:        breakEnd,
 				MaxBreakMinutes: day.MaxBreakMinutes,
 			})
 		}
@@ -269,8 +240,8 @@ func (c *ShiftUseCase) Search(ctx context.Context, request *model.SearchShiftReq
 			Name:          shift.Name,
 			LateTolerance: shift.LateTolerance,
 			ShiftDays:     shiftDaysByShiftID[shift.ID],
-			CreatedAt:     shift.CreatedAt.Format(time.DateTime),
-			UpdatedAt:     shift.UpdatedAt.Format(time.DateTime),
+			CreatedAt:     shift.CreatedAt,
+			UpdatedAt:     shift.UpdatedAt,
 		})
 	}
 

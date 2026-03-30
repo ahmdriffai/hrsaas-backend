@@ -1,22 +1,22 @@
 package model
 
 type ShiftResponse struct {
-	ID            string `json:"id"`
-	CompanyID     string `json:"company_id"`
-	Name          string `json:"name"`
-	LateTolerance int    `json:"late_tolerance"`
+	ID            string             `json:"id"`
+	CompanyID     string             `json:"company_id"`
+	Name          string             `json:"name"`
+	LateTolerance int                `json:"late_tolerance"`
 	ShiftDays     []ShiftDayResponse `json:"shift_days"`
-	CreatedAt     string `json:"created_at"`
-	UpdatedAt     string `json:"updated_at"`
+	CreatedAt     int64              `json:"created_at"`
+	UpdatedAt     int64              `json:"updated_at"`
 }
 
 type ShiftDayResponse struct {
 	Weekday         int    `json:"weekday"`
 	DayType         string `json:"day_type"`
-	CheckIn         string `json:"check_in"`
-	CheckOut        string `json:"check_out"`
-	BreakStart      string `json:"break_start"`
-	BreakEnd        string `json:"break_end"`
+	CheckIn         int64  `json:"check_in"`
+	CheckOut        int64  `json:"check_out"`
+	BreakStart      int64  `json:"break_start"`
+	BreakEnd        int64  `json:"break_end"`
 	MaxBreakMinutes int    `json:"max_break_minutes"`
 }
 
