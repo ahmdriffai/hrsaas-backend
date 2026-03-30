@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: HR SaaS Backend - Time Off API
+  title: HR SaaS Backend API
   version: 1.0.0
   description: |
-    API spec for Time Off feature.
+    API spec for HR SaaS (Time Off + Visits).
 servers:
   - url: http://127.0.0.1:9000
     description: Local
@@ -15,6 +15,7 @@ tags:
   - name: Time Off Types
   - name: Time Off Balances
   - name: Time Off Approvals
+  - name: Visits
   - name: Common
 
 security:
@@ -298,6 +299,194 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /api/visits:
+    post:
+      tags: [Visits]
+      summary: Create visit (IN/OUT) for current user
+      operationId: createVisit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVisitRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessVisitResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Visits]
+      summary: List visits (admin)
+      operationId: listVisits
+      parameters:
+        - in: query
+          name: employee_id
+          schema:
+            type: string
+        - in: query
+          name: visit_type
+          schema:
+            $ref: '#/components/schemas/VisitType'
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum: [newest, oldest]
+            default: newest
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessVisitListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/visits/_current:
+    get:
+      tags: [Visits]
+      summary: List visits for current user
+      operationId: listCurrentVisits
+      parameters:
+        - in: query
+          name: visit_type
+          schema:
+            $ref: '#/components/schemas/VisitType'
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum: [newest, oldest]
+            default: newest
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessVisitListResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/visits/_current/can-do:
+    get:
+      tags: [Visits]
+      summary: Check if current user can do visit (IN/OUT)
+      operationId: canDoVisit
+      parameters:
+        - in: query
+          name: visit_type
+          required: true
+          schema:
+            $ref: '#/components/schemas/VisitType'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessCanDoVisitResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/visits/_current/unclosed:
+    get:
+      tags: [Visits]
+      summary: Get last unclosed visit for current user
+      operationId: getUnclosedVisit
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessVisitResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/visits/{id}:
+    get:
+      tags: [Visits]
+      summary: Get visit detail
+      operationId: getVisitById
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessVisitResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Visits]
+      summary: Delete visit by id (admin)
+      operationId: deleteVisitById
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEmptyResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/time-off-requests/{id}/attachments:
     get:
       tags: [Time Off Requests]
@@ -505,6 +694,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     NotFound:
       description: Not found
       content:
@@ -526,6 +721,10 @@ components:
     TimeOffCategory:
       type: string
       enum: [IZIN, SAKIT, CUTI]
+
+    VisitType:
+      type: string
+      enum: [IN, OUT]
 
     TimeOffRequest:
       type: object
@@ -656,6 +855,85 @@ components:
           type: string
           example: http://example.com/uploads/time-off/sakit/file.jpg
       required: [file_url]
+
+    Visit:
+      type: object
+      properties:
+        id:
+          type: string
+        employee_id:
+          type: string
+        company_id:
+          type: string
+        visit_type:
+          $ref: '#/components/schemas/VisitType'
+        note:
+          type: string
+          nullable: true
+        latitude:
+          type: string
+          nullable: true
+        longitude:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        file_name:
+          type: string
+          nullable: true
+        mime_type:
+          type: string
+          nullable: true
+        file_size:
+          type: integer
+          nullable: true
+        file_url:
+          type: string
+          nullable: true
+        created_at:
+          type: integer
+
+    CreateVisitRequest:
+      type: object
+      required:
+        - visit_type
+      properties:
+        visit_type:
+          $ref: '#/components/schemas/VisitType'
+        note:
+          type: string
+          nullable: true
+        latitude:
+          type: string
+          nullable: true
+        longitude:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        file_name:
+          type: string
+          nullable: true
+        mime_type:
+          type: string
+          nullable: true
+        file_size:
+          type: integer
+          nullable: true
+        file_url:
+          type: string
+          nullable: true
+
+    CanDoVisit:
+      type: object
+      properties:
+        can_do_visit:
+          type: boolean
+        message:
+          type: string
+          nullable: true
 
     TimeOffBalance:
       type: object
@@ -799,6 +1077,41 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffRequestApproval'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
+
+    SuccessVisitResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Visit'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
+
+    SuccessVisitListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Visit'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
+
+    SuccessCanDoVisitResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CanDoVisit'
         paging:
           $ref: '#/components/schemas/PageMetadata'
         errors:

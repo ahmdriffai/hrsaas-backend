@@ -43,6 +43,7 @@ func Bootstrap(config *BootstrapConfig) {
 	timeOffAttachmentRepository := repository.NewTimeOffAttachmentRepository(config.Log)
 	employeeContractRepository := repository.NewEmployeeContractRepository(config.Log)
 	divisionRepository := repository.NewDivisionRepository(config.Log)
+	visitRepository := repository.NewVisitRepository(config.Log)
 
 	// setup producer
 
@@ -68,6 +69,7 @@ func Bootstrap(config *BootstrapConfig) {
 	)
 	employeeContractUseCase := usecase.NewEmployeeContractUseCase(config.DB, config.Log, config.Validate, employeeContractRepository)
 	divisionUseCase := usecase.NewDivisionUseCase(config.DB, config.Log, config.Validate, divisionRepository)
+	visitUseCase := usecase.NewVisitUseCase(config.DB, config.Log, config.Validate, visitRepository)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
@@ -83,6 +85,7 @@ func Bootstrap(config *BootstrapConfig) {
 	uploadController := http.NewUploadController(config.Log)
 	employeeContractController := http.NewEmployeeContractController(employeeContractUseCase, config.Log)
 	divisionController := http.NewDivisionController(divisionUseCase, config.Log)
+	visitController := http.NewVisitController(visitUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
@@ -110,6 +113,7 @@ func Bootstrap(config *BootstrapConfig) {
 		UploadController:           uploadController,
 		EmployeeContractController: employeeContractController,
 		DivisionController:         divisionController,
+		VisitController:            visitController,
 	}
 
 	routeConfig.Setup()

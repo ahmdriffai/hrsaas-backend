@@ -5,6 +5,7 @@ import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
 	"math"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -70,7 +71,7 @@ func (c *TimeOffController) GetRequestByID(ctx *fiber.Ctx) error {
 // TODO: Add admin-only filters and company scoping.
 func (c *TimeOffController) ListRequests(ctx *fiber.Ctx) error {
 	user := middleware.GetUser(ctx)
-	if user.Role != "admin" {
+	if !strings.EqualFold(user.Role, "ADMIN") {
 		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 	}
 
@@ -391,7 +392,7 @@ func (c *TimeOffController) CreateAttachment(ctx *fiber.Ctx) error {
 
 func (c *TimeOffController) ensureOwnerOrAdmin(ctx *fiber.Ctx, requestID string) error {
 	user := middleware.GetUser(ctx)
-	if user.Role == "admin" {
+	if strings.EqualFold(user.Role, "ADMIN") {
 		return nil
 	}
 	if user.Employee == nil || user.Employee.ID == "" {

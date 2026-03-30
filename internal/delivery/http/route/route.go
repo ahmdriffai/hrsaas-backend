@@ -26,6 +26,7 @@ type RouteConfig struct {
 	UploadController           *http.UploadController
 	EmployeeContractController *http.EmployeeContractController
 	DivisionController         *http.DivisionController
+	VisitController            *http.VisitController
 }
 
 func (c *RouteConfig) Setup() {
@@ -44,6 +45,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupCommonRouter()
 	c.SetupEmployeeContractRouter()
 	c.SetupTimeOffApprovalRouter()
+	c.SetupVisitRouter()
 }
 
 /*
@@ -166,4 +168,18 @@ func (c *RouteConfig) SetupTimeOffApprovalRouter() {
 	employeeRoute.Get("/_current", c.TimeOffController.ListMyApprovals)
 	employeeRoute.Patch("/:approval_id/approve", c.TimeOffController.ApproveShort)
 	employeeRoute.Patch("/:approval_id/reject", c.TimeOffController.RejectShort)
+}
+
+func (c *RouteConfig) SetupVisitRouter() {
+	route := c.App.Group("/api/visits", c.AuthMiddleware)
+	route.Get("/", c.VisitController.List)
+
+	employeeRoute := route.Group("/", c.EmployeeMiddleware)
+	employeeRoute.Post("/", c.VisitController.Create)
+	employeeRoute.Get("/_current", c.VisitController.ListCurrent)
+	employeeRoute.Get("/_current/can-do", c.VisitController.CanDoVisit)
+	employeeRoute.Get("/_current/unclosed", c.VisitController.GetUnclosedVisit)
+
+	route.Get("/:id", c.VisitController.GetByID)
+	route.Delete("/:id", c.VisitController.Delete)
 }
