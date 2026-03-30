@@ -52,6 +52,10 @@ func (c *TimeOffController) GetRequestByID(ctx *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if err := c.ensureOwnerOrAdmin(ctx, requestID); err != nil {
+		return err
+	}
+
 	response, err := c.UseCase.GetRequestByID(ctx.UserContext(), requestID)
 	if err != nil {
 		c.Log.WithError(err).Error("failed to get time off request detail")
@@ -65,6 +69,11 @@ func (c *TimeOffController) GetRequestByID(ctx *fiber.Ctx) error {
 
 // TODO: Add admin-only filters and company scoping.
 func (c *TimeOffController) ListRequests(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+	if user.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+	}
+
 	request := new(model.SearchTimeOffRequest)
 	request.EmployeeID = ctx.Query("employee_id", "")
 	request.TimeOffTypeID = ctx.Query("time_off_type_id", "")
@@ -170,6 +179,10 @@ func (c *TimeOffController) ListApprovals(ctx *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if err := c.ensureOwnerOrAdmin(ctx, requestID); err != nil {
+		return err
+	}
+
 	responses, err := c.UseCase.ListApprovals(ctx.UserContext(), requestID)
 	if err != nil {
 		c.Log.WithError(err).Error("failed to list time off approvals")
@@ -210,6 +223,65 @@ func (c *TimeOffController) Approve(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Add filters for request status and date range if needed.
+func (c *TimeOffController) ListMyApprovals(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+	if user.Employee == nil || user.Employee.ID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Employee not found")
+	}
+
+	request := new(model.SearchTimeOffApprovalRequest)
+	request.Status = ctx.Query("status", "")
+	request.Page = ctx.QueryInt("page", 1)
+	request.Size = ctx.QueryInt("size", 10)
+
+	responses, total, err := c.UseCase.ListApprovalsByApprover(ctx.UserContext(), user.Employee.ID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list approvals for current user")
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.TimeOffApprovalResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+}
+
+// TODO: Add audit logging for approval actions.
+func (c *TimeOffController) ApproveShort(ctx *fiber.Ctx) error {
+	approvalID := ctx.Params("approval_id")
+	if approvalID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	user := middleware.GetUser(ctx)
+	if user.Employee == nil || user.Employee.ID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Employee not found")
+	}
+
+	request := new(model.ApproveTimeOffRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	if err := c.UseCase.ApproveByApprovalID(ctx.UserContext(), approvalID, user.Employee.ID, request); err != nil {
+		c.Log.WithError(err).Error("failed to approve time off request")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}
+
 // TODO: Add audit logging for reject actions.
 func (c *TimeOffController) Reject(ctx *fiber.Ctx) error {
 	requestID := ctx.Params("id")
@@ -239,11 +311,43 @@ func (c *TimeOffController) Reject(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Add audit logging for reject actions.
+func (c *TimeOffController) RejectShort(ctx *fiber.Ctx) error {
+	approvalID := ctx.Params("approval_id")
+	if approvalID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	user := middleware.GetUser(ctx)
+	if user.Employee == nil || user.Employee.ID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Employee not found")
+	}
+
+	request := new(model.RejectTimeOffRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	if err := c.UseCase.RejectByApprovalID(ctx.UserContext(), approvalID, user.Employee.ID, request); err != nil {
+		c.Log.WithError(err).Error("failed to reject time off request")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}
+
 // TODO: Restrict to request owner and approvers.
 func (c *TimeOffController) ListAttachments(ctx *fiber.Ctx) error {
 	requestID := ctx.Params("id")
 	if requestID == "" {
 		return fiber.ErrBadRequest
+	}
+
+	if err := c.ensureOwnerOrAdmin(ctx, requestID); err != nil {
+		return err
 	}
 
 	responses, err := c.UseCase.ListAttachments(ctx.UserContext(), requestID)
@@ -264,6 +368,10 @@ func (c *TimeOffController) CreateAttachment(ctx *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	if err := c.ensureOwnerOrAdmin(ctx, requestID); err != nil {
+		return err
+	}
+
 	request := new(model.CreateTimeOffAttachmentRequest)
 	if err := ctx.BodyParser(request); err != nil {
 		c.Log.WithError(err).Error("failed to parse request body")
@@ -279,4 +387,23 @@ func (c *TimeOffController) CreateAttachment(ctx *fiber.Ctx) error {
 	return ctx.JSON(model.WebResponse[*model.TimeOffAttachmentResponse]{
 		Data: response,
 	})
+}
+
+func (c *TimeOffController) ensureOwnerOrAdmin(ctx *fiber.Ctx, requestID string) error {
+	user := middleware.GetUser(ctx)
+	if user.Role == "admin" {
+		return nil
+	}
+	if user.Employee == nil || user.Employee.ID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Employee not found")
+	}
+
+	ownerID, err := c.UseCase.GetRequestOwner(ctx.UserContext(), requestID)
+	if err != nil {
+		return err
+	}
+	if ownerID != user.Employee.ID {
+		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+	}
+	return nil
 }

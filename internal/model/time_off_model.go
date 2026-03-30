@@ -82,6 +82,12 @@ type RejectTimeOffRequest struct {
 	ActionReason string `json:"action_reason" validate:"required,max=255"`
 }
 
+type SearchTimeOffApprovalRequest struct {
+	Status string `json:"status" validate:"max=20"`
+	Page   int    `json:"page" validate:"min=1"`
+	Size   int    `json:"size" validate:"min=1,max=100"`
+}
+
 type TimeOffApprovalPolicyResponse struct {
 	ID            string    `json:"id"`
 	CompanyID     string    `json:"company_id"`

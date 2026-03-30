@@ -23,3 +23,11 @@ func (r *TimeOffTypeRepository) List(db *gorm.DB) ([]entity.Time_Off_Type, error
 	}
 	return items, nil
 }
+
+func (r *TimeOffTypeRepository) FindByID(db *gorm.DB, id string) (*entity.Time_Off_Type, error) {
+	var item entity.Time_Off_Type
+	if err := db.Where("id = ?", id).Take(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}

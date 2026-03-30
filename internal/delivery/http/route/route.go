@@ -43,6 +43,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupTimeOffRouter()
 	c.SetupCommonRouter()
 	c.SetupEmployeeContractRouter()
+	c.SetupTimeOffApprovalRouter()
 }
 
 /*
@@ -157,4 +158,12 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 func (c *RouteConfig) SetupCommonRouter() {
 	route := c.App.Group("/api", c.AuthMiddleware)
 	route.Post("/upload", c.UploadController.Upload)
+}
+
+func (c *RouteConfig) SetupTimeOffApprovalRouter() {
+	route := c.App.Group("/api/time-off-approvals", c.AuthMiddleware)
+	employeeRoute := route.Group("/", c.EmployeeMiddleware)
+	employeeRoute.Get("/_current", c.TimeOffController.ListMyApprovals)
+	employeeRoute.Patch("/:approval_id/approve", c.TimeOffController.ApproveShort)
+	employeeRoute.Patch("/:approval_id/reject", c.TimeOffController.RejectShort)
 }

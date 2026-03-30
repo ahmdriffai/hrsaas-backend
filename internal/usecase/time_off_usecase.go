@@ -57,12 +57,50 @@ func (c *TimeOffUseCase) CreateRequest(ctx context.Context, employeeID string, r
 		return nil, fiber.ErrBadRequest
 	}
 
+	startDate := mustParseEpoch(request.StartDate)
+	endDate := mustParseEpoch(request.EndDate)
+	if startDate == 0 || endDate == 0 || startDate > endDate {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid start_date or end_date")
+	}
+
+	// TODO: Consider excluding rejected/cancelled requests from overlap check.
+	var overlapCount int64
+	if err := tx.Table("time_off_requests").
+		Where("employee_id = ?", employeeID).
+		Where("request_status IN ?", []string{"PENDING", "APPROVED"}).
+		Where("NOT (end_date < ? OR start_date > ?)", startDate, endDate).
+		Count(&overlapCount).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to check overlap dates")
+		return nil, fiber.ErrInternalServerError
+	}
+	if overlapCount > 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off request overlaps with existing request")
+	}
+
+	timeOffType, err := c.TimeOffTypeRepo.FindByID(tx, request.TimeOffTypeID)
+	if err != nil {
+		c.Log.WithError(err).Error("Time off type not found")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off type not found")
+	}
+	if timeOffType.IsQuotaBased {
+		// TODO: Use company timezone when deriving period year.
+		periodYear := time.UnixMilli(startDate).UTC().Year()
+		balance, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, employeeID, request.TimeOffTypeID, periodYear)
+		if err != nil {
+			c.Log.WithError(err).Error("Time off balance not found")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Time off balance not found")
+		}
+		if int(request.RequestedDays) > balance.RemainingDays {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Requested days exceed remaining balance")
+		}
+	}
+
 	item := &entity.Time_Off_Requests{
 		EmployeeId:    employeeID,
 		TimeOffTypeId: request.TimeOffTypeID,
 		RequestedDays: int(request.RequestedDays),
-		StartDate:     mustParseEpoch(request.StartDate),
-		EndDate:       mustParseEpoch(request.EndDate),
+		StartDate:     startDate,
+		EndDate:       endDate,
 		RequestReason: &request.RequestReason,
 		RequestStatus: "PENDING",
 		CreatedAt:     nowEpoch(),
@@ -187,6 +225,30 @@ func (c *TimeOffUseCase) GetRequestByID(ctx context.Context, id string) (*model.
 	}
 
 	return response, nil
+}
+
+// TODO: Add company scoping if needed.
+func (c *TimeOffUseCase) GetRequestOwner(ctx context.Context, id string) (string, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	var row struct {
+		EmployeeID string `gorm:"column:employee_id"`
+	}
+	if err := tx.Table("time_off_requests").
+		Select("employee_id").
+		Where("id = ?", id).
+		Take(&row).Error; err != nil {
+		c.Log.WithError(err).Error("Time off request not found")
+		return "", fiber.ErrNotFound
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return "", fiber.ErrInternalServerError
+	}
+
+	return row.EmployeeID, nil
 }
 
 // TODO: Add caching if types rarely change.
@@ -383,6 +445,64 @@ func (c *TimeOffUseCase) Approve(ctx context.Context, requestID, approvalID, app
 	return nil
 }
 
+// TODO: Consider audit logging for short approve path.
+func (c *TimeOffUseCase) ApproveByApprovalID(ctx context.Context, approvalID, approverID string, request *model.ApproveTimeOffRequest) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return fiber.ErrBadRequest
+	}
+
+	var approval entity.Time_Off_Approval
+	if err := tx.
+		Where("id = ? AND approver_id = ?", approvalID, approverID).
+		Take(&approval).Error; err != nil {
+		c.Log.WithError(err).Error("Approval not found")
+		return fiber.ErrNotFound
+	}
+
+	if approval.Status == "APPROVED" || approval.Status == "REJECTED" {
+		return fiber.NewError(fiber.StatusBadRequest, "Approval already processed")
+	}
+
+	updates := map[string]any{
+		"approval_status": "APPROVED",
+		"action_reason":   request.ActionReason,
+		"action_at":       nowEpoch(),
+	}
+	if err := tx.Table("time_off_approvals").Where("id = ?", approval.ID).Updates(updates).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to approve time off request")
+		return fiber.ErrInternalServerError
+	}
+
+	var pendingCount int64
+	if err := tx.
+		Table("time_off_approvals").
+		Where("time_off_request_id = ? AND approval_status = ?", approval.TimeOffRequestId, "PENDING").
+		Count(&pendingCount).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to count pending approvals")
+		return fiber.ErrInternalServerError
+	}
+
+	if pendingCount == 0 {
+		if err := tx.Table("time_off_requests").
+			Where("id = ?", approval.TimeOffRequestId).
+			Update("request_status", "APPROVED").Error; err != nil {
+			c.Log.WithError(err).Error("Failed to update time off request status")
+			return fiber.ErrInternalServerError
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
 // TODO: Add permission checks for approver role if needed.
 func (c *TimeOffUseCase) Reject(ctx context.Context, requestID, approvalID, approverID string, request *model.RejectTimeOffRequest) error {
 	tx := c.DB.WithContext(ctx).Begin()
@@ -428,6 +548,140 @@ func (c *TimeOffUseCase) Reject(ctx context.Context, requestID, approvalID, appr
 	}
 
 	return nil
+}
+
+// TODO: Consider audit logging for short reject path.
+func (c *TimeOffUseCase) RejectByApprovalID(ctx context.Context, approvalID, approverID string, request *model.RejectTimeOffRequest) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return fiber.ErrBadRequest
+	}
+
+	var approval entity.Time_Off_Approval
+	if err := tx.
+		Where("id = ? AND approver_id = ?", approvalID, approverID).
+		Take(&approval).Error; err != nil {
+		c.Log.WithError(err).Error("Approval not found")
+		return fiber.ErrNotFound
+	}
+
+	if approval.Status == "APPROVED" || approval.Status == "REJECTED" {
+		return fiber.NewError(fiber.StatusBadRequest, "Approval already processed")
+	}
+
+	updates := map[string]any{
+		"approval_status": "REJECTED",
+		"action_reason":   request.ActionReason,
+		"action_at":       nowEpoch(),
+	}
+	if err := tx.Table("time_off_approvals").Where("id = ?", approval.ID).Updates(updates).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to reject time off request")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Table("time_off_requests").
+		Where("id = ?", approval.TimeOffRequestId).
+		Update("request_status", "REJECTED").Error; err != nil {
+		c.Log.WithError(err).Error("Failed to update time off request status")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
+// TODO: Add authorization checks when admin views all approvals.
+func (c *TimeOffUseCase) ListApprovalsByApprover(ctx context.Context, approverID string, request *model.SearchTimeOffApprovalRequest) ([]model.TimeOffApprovalResponse, int64, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate search query")
+		return nil, 0, fiber.ErrBadRequest
+	}
+
+	type approvalRow struct {
+		ID               string  `gorm:"column:id"`
+		TimeOffRequestID string  `gorm:"column:time_off_request_id"`
+		ApproverID       string  `gorm:"column:approver_id"`
+		ApproverName     *string `gorm:"column:approver_name"`
+		Status           string  `gorm:"column:approval_status"`
+		ActionAt         *int64  `gorm:"column:action_at"`
+		ActionReason     *string `gorm:"column:action_reason"`
+	}
+
+	query := tx.Table("time_off_approvals AS a").
+		Select(`
+			a.id,
+			a.time_off_request_id,
+			a.approver_id,
+			a.approval_status,
+			a.action_at,
+			a.action_reason,
+			e.fullname AS approver_name
+		`).
+		Joins("LEFT JOIN employees e ON e.id = a.approver_id").
+		Where("a.approver_id = ?", approverID)
+
+	if request.Status != "" {
+		query = query.Where("a.approval_status = ?", request.Status)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to count approvals")
+		return nil, 0, fiber.ErrInternalServerError
+	}
+
+	var rows []approvalRow
+	if err := query.
+		Order("a.action_at IS NULL DESC, a.action_at DESC, a.id DESC").
+		Offset((request.Page - 1) * request.Size).
+		Limit(request.Size).
+		Find(&rows).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to list approvals")
+		return nil, 0, fiber.ErrInternalServerError
+	}
+
+	responses := make([]model.TimeOffApprovalResponse, len(rows))
+	for i, row := range rows {
+		var actionAt *time.Time
+		if row.ActionAt != nil && *row.ActionAt > 0 {
+			t := time.UnixMilli(*row.ActionAt)
+			actionAt = &t
+		}
+
+		approverName := ""
+		if row.ApproverName != nil {
+			approverName = *row.ApproverName
+		}
+
+		responses[i] = model.TimeOffApprovalResponse{
+			ID:                 row.ID,
+			TimeOffRequestID:   row.TimeOffRequestID,
+			ApproverEmployeeID: row.ApproverID,
+			ApproverName:       approverName,
+			ApproverPosition:   "",
+			ApproverDivision:   "",
+			Status:             row.Status,
+			ActionAt:           actionAt,
+			ActionReason:       row.ActionReason,
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, 0, fiber.ErrInternalServerError
+	}
+
+	return responses, total, nil
 }
 
 // TODO: Consider file validation (mime/size) and ownership checks.

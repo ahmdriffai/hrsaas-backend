@@ -34,3 +34,15 @@ func (r *TimeOffBalanceRepository) ListByEmployee(db *gorm.DB, employeeID string
 
 	return items, nil
 }
+
+func (r *TimeOffBalanceRepository) FindByEmployeeTypeYear(db *gorm.DB, employeeID, timeOffTypeID string, periodYear int) (*entity.Time_Off_Balance, error) {
+	var item entity.Time_Off_Balance
+	if err := db.
+		Where("employee_id = ?", employeeID).
+		Where("time_off_type_id = ?", timeOffTypeID).
+		Where("period_year = ?", periodYear).
+		Take(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
