@@ -615,9 +615,14 @@ paths:
   /api/time-off-balances:
     get:
       tags: [Time Off Balances]
-      summary: List balances
+      summary: List balances by employee (admin)
       operationId: listTimeOffBalances
       parameters:
+        - in: query
+          name: employee_id
+          required: true
+          schema:
+            type: string
         - in: query
           name: time_off_type_id
           schema:
@@ -635,6 +640,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessTimeOffBalanceListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/time-off-balances/_set:
+    post:
+      tags: [Time Off Balances]
+      summary: Set time off balance manually (admin)
+      operationId: setTimeOffBalance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetTimeOffBalanceRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffBalanceResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /api/time-off-balances/_current:
     get:
@@ -955,6 +983,33 @@ components:
         remaining_days:
           type: integer
 
+    SetTimeOffBalanceRequest:
+      type: object
+      required:
+        - employee_id
+        - time_off_type_id
+        - period_year
+        - entitled_days
+        - used_days
+      properties:
+        employee_id:
+          type: string
+        time_off_type_id:
+          type: string
+        period_year:
+          type: integer
+          minimum: 2000
+        entitled_days:
+          type: integer
+          minimum: 0
+        used_days:
+          type: integer
+          minimum: 0
+        remaining_days:
+          type: integer
+          minimum: 0
+          nullable: true
+
     ApprovalStatus:
       type: string
       enum: [PENDING, APPROVED, REJECTED, SKIPPED]
@@ -1064,6 +1119,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TimeOffBalance'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
+
+    SuccessTimeOffBalanceResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TimeOffBalance'
         paging:
           $ref: '#/components/schemas/PageMetadata'
         errors:

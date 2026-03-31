@@ -354,6 +354,75 @@ func (c *TimeOffUseCase) ListBalances(ctx context.Context, employeeID string, re
 	return responses, nil
 }
 
+// TODO: Add audit log for manual balance overrides.
+func (c *TimeOffUseCase) SetBalance(ctx context.Context, request *model.SetTimeOffBalanceRequest) (*model.TimeOffBalanceResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	if _, err := c.TimeOffTypeRepo.FindByID(tx, request.TimeOffTypeID); err != nil {
+		c.Log.WithError(err).Error("Time off type not found")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off type not found")
+	}
+
+	remainingDays := request.RemainingDays
+	if remainingDays == nil {
+		calculated := request.EntitledDays - request.UsedDays
+		if calculated < 0 {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Remaining days cannot be negative")
+		}
+		remainingDays = &calculated
+	}
+
+	item, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, request.EmployeeID, request.TimeOffTypeID, request.PeriodYear)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		c.Log.WithError(err).Error("Failed to check existing balance")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if item == nil || err == gorm.ErrRecordNotFound {
+		item = &entity.Time_Off_Balance{
+			EmployeeId:    request.EmployeeID,
+			TimeOffTypeId: request.TimeOffTypeID,
+			PeriodYear:    request.PeriodYear,
+			EntitledDays:  request.EntitledDays,
+			UsedDays:      request.UsedDays,
+			RemainingDays: *remainingDays,
+		}
+		if err := c.TimeOffBalanceRepo.Create(tx, item); err != nil {
+			c.Log.WithError(err).Error("Failed to create time off balance")
+			return nil, fiber.ErrInternalServerError
+		}
+	} else {
+		item.EntitledDays = request.EntitledDays
+		item.UsedDays = request.UsedDays
+		item.RemainingDays = *remainingDays
+		if err := c.TimeOffBalanceRepo.Update(tx, item); err != nil {
+			c.Log.WithError(err).Error("Failed to update time off balance")
+			return nil, fiber.ErrInternalServerError
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return &model.TimeOffBalanceResponse{
+		ID:            item.ID,
+		EmployeeID:    item.EmployeeId,
+		TimeOffTypeID: item.TimeOffTypeId,
+		PeriodYear:    item.PeriodYear,
+		EntitledDays:  float64(item.EntitledDays),
+		UsedDays:      float64(item.UsedDays),
+		RemainingDays: float64(item.RemainingDays),
+	}, nil
+}
+
 // TODO: Include approver position and division when those joins are available.
 func (c *TimeOffUseCase) ListApprovals(ctx context.Context, requestID string) ([]model.TimeOffApprovalResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()

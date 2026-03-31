@@ -192,6 +192,47 @@ func (c *TimeOffController) ListCurrentBalances(ctx *fiber.Ctx) error {
 	})
 }
 
+// TODO: Enforce admin-only access with middleware at router.
+func (c *TimeOffController) ListBalancesByEmployee(ctx *fiber.Ctx) error {
+	request := new(model.SearchTimeOffBalanceRequest)
+	request.TimeOffTypeID = ctx.Query("time_off_type_id", "")
+	request.PeriodYear = ctx.QueryInt("period_year", 0)
+
+	employeeID := ctx.Query("employee_id", "")
+	if employeeID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "employee_id is required")
+	}
+
+	responses, err := c.UseCase.ListBalances(ctx.UserContext(), employeeID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list time off balances")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.TimeOffBalanceResponse]{
+		Data: responses,
+	})
+}
+
+// TODO: Enforce admin-only access with middleware at router.
+func (c *TimeOffController) SetBalance(ctx *fiber.Ctx) error {
+	request := new(model.SetTimeOffBalanceRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	response, err := c.UseCase.SetBalance(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to set time off balance")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.TimeOffBalanceResponse]{
+		Data: response,
+	})
+}
+
 // TODO: Restrict access to request owner and approvers.
 func (c *TimeOffController) ListApprovals(ctx *fiber.Ctx) error {
 	requestID := ctx.Params("id")
