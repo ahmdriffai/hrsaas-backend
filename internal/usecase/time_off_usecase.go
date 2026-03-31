@@ -281,6 +281,42 @@ func (c *TimeOffUseCase) ListTypes(ctx context.Context) ([]model.TimeOffTypeResp
 	return responses, nil
 }
 
+// TODO: Add Create Type use case and restrict to admin users.
+func (c *TimeOffUseCase) CreateType(ctx context.Context, request *model.CreateTimeOffTypeRequest) (*model.TimeOffTypeResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	item := &entity.Time_Off_Type{
+		Name:             request.Name,
+		Category:         request.Category,
+		IsQuotaBased:     request.IsQuotaBased,
+		DefaultQuotaDays: int(request.DefaultQuotaDays),
+	}
+
+	if err := c.TimeOffTypeRepo.Create(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to create time off type")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return &model.TimeOffTypeResponse{
+		ID:               item.ID,
+		Name:             item.Name,
+		Category:         item.Category,
+		IsQuotaBased:     item.IsQuotaBased,
+		DefaultQuotaDays: float64(item.DefaultQuotaDays),
+	}, nil
+}
+
 // TODO: Enforce company scoping if balances are shared across tenants.
 func (c *TimeOffUseCase) ListBalances(ctx context.Context, employeeID string, request *model.SearchTimeOffBalanceRequest) ([]model.TimeOffBalanceResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
