@@ -23,9 +23,8 @@ func (c *Time_Off_Type) TableName() string {
 }
 
 type Time_Off_Requests struct {
-	ID         string `gorm:"column:id;primaryKey"`
-	EmployeeId string `gorm:"column:employee_id;not null"`
-	// CompanyId     string `gorm:"column:company_id;not null"`
+	ID            string  `gorm:"column:id;primaryKey"`
+	EmployeeId    string  `gorm:"column:employee_id;not null"`
 	TimeOffTypeId string  `gorm:"column:time_off_type_id;not null"`
 	RequestedDays int     `gorm:"column:requested_days;not null"`
 	StartDate     int64   `gorm:"column:start_date;not null"`
@@ -86,6 +85,7 @@ type Time_Off_Approval struct {
 	TimeOffRequestId string `gorm:"column:time_off_request_id;not null"`
 	ApproverId       string `gorm:"column:approver_id;not null"`
 	Status           string `gorm:"column:approval_status;not null"`
+	IsRequired       bool   `gorm:"column:is_required;not null"`
 	ActionReason     string `gorm:"column:action_reason"`
 	ActionAt         int64  `gorm:"column:action_at"`
 	// CreatedAt        int64   `gorm:"column:created_at;not null"`

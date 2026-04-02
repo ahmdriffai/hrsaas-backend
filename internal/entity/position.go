@@ -12,6 +12,7 @@ type Position struct {
 	Name      string    `gorm:"column:name;not null"`
 	CompanyID string    `gorm:"column:company_id"`
 	ParentID  *string   `gorm:"column:parent_id"`
+	IsApprover bool     `gorm:"column:is_approver;not null"`
 	Parent    *Position `gorm:"foreignKey:ParentID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
 	Company   Company   `gorm:"foreignKey:CompanyID;constraint:OnUpdate:CASCADE,OnDelete:DELETE"`
 	CreatedAt int64     `gorm:"column:created_at"`

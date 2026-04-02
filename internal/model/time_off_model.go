@@ -78,6 +78,7 @@ type TimeOffApprovalResponse struct {
 	ApproverName       string     `json:"approver_name"`
 	ApproverPosition   string     `json:"approver_position"`
 	ApproverDivision   string     `json:"approver_division"`
+	IsRequired         bool       `json:"is_required"`
 	Status             string     `json:"status"`
 	ActionAt           *time.Time `json:"action_at,omitempty"`
 	ActionReason       *string    `json:"action_reason,omitempty"`

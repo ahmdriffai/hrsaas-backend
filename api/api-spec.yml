@@ -1025,6 +1025,8 @@ components:
           type: integer
         approver_employee_id:
           type: string
+        is_required:
+          type: boolean
         approver_name:
           type: string
         approver_position:

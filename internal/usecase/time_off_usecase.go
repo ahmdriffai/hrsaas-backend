@@ -6,6 +6,7 @@ import (
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -434,6 +435,7 @@ func (c *TimeOffUseCase) ListApprovals(ctx context.Context, requestID string) ([
 		ApproverID       string  `gorm:"column:approver_id"`
 		ApproverName     *string `gorm:"column:approver_name"`
 		Status           string  `gorm:"column:approval_status"`
+		IsRequired       bool    `gorm:"column:is_required"`
 		ActionAt         *int64  `gorm:"column:action_at"`
 		ActionReason     *string `gorm:"column:action_reason"`
 	}
@@ -446,6 +448,7 @@ func (c *TimeOffUseCase) ListApprovals(ctx context.Context, requestID string) ([
 			a.time_off_request_id,
 			a.approver_id,
 			a.approval_status,
+			a.is_required,
 			a.action_at,
 			a.action_reason,
 			e.fullname AS approver_name
@@ -478,6 +481,7 @@ func (c *TimeOffUseCase) ListApprovals(ctx context.Context, requestID string) ([
 			ApproverName:       approverName,
 			ApproverPosition:   "",
 			ApproverDivision:   "",
+			IsRequired:         row.IsRequired,
 			Status:             row.Status,
 			ActionAt:           actionAt,
 			ActionReason:       row.ActionReason,
@@ -527,7 +531,7 @@ func (c *TimeOffUseCase) Approve(ctx context.Context, requestID, approvalID, app
 	var pendingCount int64
 	if err := tx.
 		Table("time_off_approvals").
-		Where("time_off_request_id = ? AND approval_status = ?", requestID, "PENDING").
+		Where("time_off_request_id = ? AND approval_status = ? AND is_required = ?", requestID, "PENDING", true).
 		Count(&pendingCount).Error; err != nil {
 		c.Log.WithError(err).Error("Failed to count pending approvals")
 		return fiber.ErrInternalServerError
@@ -585,7 +589,7 @@ func (c *TimeOffUseCase) ApproveByApprovalID(ctx context.Context, approvalID, ap
 	var pendingCount int64
 	if err := tx.
 		Table("time_off_approvals").
-		Where("time_off_request_id = ? AND approval_status = ?", approval.TimeOffRequestId, "PENDING").
+		Where("time_off_request_id = ? AND approval_status = ? AND is_required = ?", approval.TimeOffRequestId, "PENDING", true).
 		Count(&pendingCount).Error; err != nil {
 		c.Log.WithError(err).Error("Failed to count pending approvals")
 		return fiber.ErrInternalServerError
@@ -910,17 +914,20 @@ func (c *TimeOffUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, employeeID
 	type positionRow struct {
 		ID       string  `gorm:"column:id"`
 		ParentID *string `gorm:"column:parent_id"`
+		Name     string  `gorm:"column:name"`
+		IsApprover bool  `gorm:"column:is_approver"`
 	}
 
 	approvals := make([]entity.Time_Off_Approval, 0, 4)
 	var current positionRow
 	if err := tx.Table("positions").
-		Select("id, parent_id").
+		Select("id, parent_id, name, is_approver").
 		Where("id = ?", contract.PositionID).
 		Take(&current).Error; err != nil {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Position not found")
 	}
 
+	currentName := strings.TrimSpace(current.Name)
 	parentID := current.ParentID
 
 	const maxDepth = 20
@@ -929,11 +936,13 @@ func (c *TimeOffUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, employeeID
 		var parent positionRow
 		// Resolve parent position.
 		if err := tx.Table("positions").
-			Select("id, parent_id").
+			Select("id, parent_id, name, is_approver").
 			Where("id = ?", *parentID).
 			Take(&parent).Error; err != nil {
 			return nil, fiber.NewError(fiber.StatusBadRequest, "Parent position not found")
 		}
+
+		parentName := strings.TrimSpace(parent.Name)
 
 		var approver struct {
 			EmployeeID string `gorm:"column:employee_id"`
@@ -952,9 +961,25 @@ func (c *TimeOffUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, employeeID
 
 		// Avoid self-approval.
 		if approver.EmployeeID != employeeID {
-			approvals = append(approvals, entity.Time_Off_Approval{
-				ApproverId: approver.EmployeeID,
-			})
+		approvals = append(approvals, entity.Time_Off_Approval{
+			ApproverId: approver.EmployeeID,
+			IsRequired: parent.IsApprover,
+			Status:     "PENDING",
+		})
+		}
+
+		// Stop rules:
+		// 1) Below Direktur Operasional -> stop at Direktur Operasional.
+		// 2) Direktur Operasional -> only need Direktur Utama.
+		// 3) Direktur Utama -> only need Komisaris Utama.
+		if strings.EqualFold(parentName, "Direktur Operasional") && !strings.EqualFold(currentName, "Direktur Operasional") {
+			break
+		}
+		if strings.EqualFold(currentName, "Direktur Operasional") && strings.EqualFold(parentName, "Direktur Utama") {
+			break
+		}
+		if strings.EqualFold(currentName, "Direktur Utama") && strings.EqualFold(parentName, "Komisaris Utama") {
+			break
 		}
 
 		// Move to the next parent.
