@@ -150,3 +150,29 @@ func (c *OfficeLocationUseCase) AssignEmployee(ctx context.Context, request *mod
 
 	return nil
 }
+
+func (c *OfficeLocationUseCase) DetailOfficeLocation(ctx context.Context, request *model.DetailOfficeLocationRequest) (*model.OfficeLocationResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	// cek user exist
+	count, err := c.OfficeLocationRepository.CountByIDAndCompanyID(tx, request.OfficeLocationID, request.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to count user by email")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if count == 0 {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Ofi not found.")
+	}
+
+	var officeLocation = new(entity.OfficeLocation)
+
+	err = c.OfficeLocationRepository.FindByIdAndCompany(tx, officeLocation, request.OfficeLocationID, request.CompanyID, "Employees")
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to find ")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.OfficeLocationToResponse(officeLocation), nil
+}

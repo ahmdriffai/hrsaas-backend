@@ -19,7 +19,7 @@ type OfficeLocation struct {
 	CreatedAt int64  `gorm:"column:created_at"`
 	UpdatedAt int64  `gorm:"column:updated_at"`
 
-	Employee []Employee `gorm:"many2many:employee_office_locations;joinForeignKey:office_location_id;joinReferences:employee_id"`
+	Employees []Employee `gorm:"many2many:employee_office_locations;joinForeignKey:office_location_id;joinReferences:employee_id"`
 }
 
 // BeforeCreate hook to set UUID

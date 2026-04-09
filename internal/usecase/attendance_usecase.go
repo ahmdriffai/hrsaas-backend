@@ -72,7 +72,6 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	now := time.Now()
 	nowMilli := time.Now().UnixMilli()
 
-	fmt.Println(request.EmployeeID)
 	// Ambil shift karyawan (misalnya dari employee.shift_id → shifts)
 	// → Dapatkan start_time, late_tolerance
 	shifts, err := c.ShiftRepository.FindByEmployeeID(tx, request.EmployeeID)
@@ -167,7 +166,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		weekday = 7
 	}
 
-	var shiftDay entity.ShiftDays
+	var shiftDay entity.ShiftDay
 	if err := c.ShiftDayRepo.FindByShiftIDAndWeekday(tx, &shiftDay, shift.ID, weekday); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.NewError(fiber.StatusNotFound, "Shift hari ini tidak ditemukan")

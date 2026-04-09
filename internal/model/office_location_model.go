@@ -6,15 +6,16 @@ import (
 )
 
 type OfficeLocationResponse struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	Address   string  `json:"address"`
-	Lat       float64 `json:"lat"`
-	Lng       float64 `json:"lng"`
-	Radius    int     `json:"radius_meters"`
-	IsActive  bool    `json:"is_active"`
-	CreatedAt int64   `json:"created_at"`
-	UpdatedAt int64   `json:"updated_at"`
+	ID        string             `json:"id"`
+	Name      string             `json:"name"`
+	Address   string             `json:"address"`
+	Lat       float64            `json:"lat"`
+	Lng       float64            `json:"lng"`
+	Radius    int                `json:"radius_meters"`
+	IsActive  bool               `json:"is_active"`
+	Employees []EmployeeResponse `json:"employees,omitempty"`
+	CreatedAt int64              `json:"created_at"`
+	UpdatedAt int64              `json:"updated_at"`
 }
 
 type CreateOfficeLocationRequest struct {
@@ -39,10 +40,20 @@ type AssignEmployeeToOfficeLocationRequest struct {
 	OfficeLocationID string `json:"office_location_id" validate:"required"`
 }
 
+type DetailOfficeLocationRequest struct {
+	CompanyID        string `json:"-" validate:"required"`
+	OfficeLocationID string `json:"-" validate:"required"`
+}
+
 // converter
 func OfficeLocationToResponse(officeLocation *entity.OfficeLocation) *OfficeLocationResponse {
 	lat, _ := strconv.ParseFloat(officeLocation.Lat, 64)
 	lng, _ := strconv.ParseFloat(officeLocation.Lng, 64)
+
+	employees := make([]EmployeeResponse, len(officeLocation.Employees))
+	for i, employee := range officeLocation.Employees {
+		employees[i] = *EmployeeToResponse(&employee)
+	}
 
 	return &OfficeLocationResponse{
 		ID:        officeLocation.ID,
@@ -51,6 +62,7 @@ func OfficeLocationToResponse(officeLocation *entity.OfficeLocation) *OfficeLoca
 		Lat:       lat,
 		Lng:       lng,
 		Radius:    officeLocation.Radius,
+		Employees: employees,
 		IsActive:  officeLocation.IsActive,
 		CreatedAt: officeLocation.CreatedAt,
 		UpdatedAt: officeLocation.UpdatedAt,
