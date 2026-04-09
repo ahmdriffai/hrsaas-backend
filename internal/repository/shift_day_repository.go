@@ -9,7 +9,7 @@ import (
 )
 
 type ShiftDayRepository struct {
-	Repository[entity.ShiftDays]
+	Repository[entity.ShiftDay]
 	Log *logrus.Logger
 }
 
@@ -19,11 +19,11 @@ func NewShiftDayRepository(log *logrus.Logger) *ShiftDayRepository {
 	}
 }
 
-func (r *ShiftDayRepository) CreateBatch(db *gorm.DB, shiftDays []entity.ShiftDays) error {
+func (r *ShiftDayRepository) CreateBatch(db *gorm.DB, shiftDays []entity.ShiftDay) error {
 	return db.Create(&shiftDays).Error
 }
 
-func (r *ShiftDayRepository) FindByShiftIDAndWeekday(db *gorm.DB, shiftDay *entity.ShiftDays, shiftID string, weekday int) error {
+func (r *ShiftDayRepository) FindByShiftIDAndWeekday(db *gorm.DB, shiftDay *entity.ShiftDay, shiftID string, weekday int) error {
 	type shiftDayRow struct {
 		ID              int    `gorm:"column:id"`
 		ShiftID         string `gorm:"column:shift_id"`
@@ -54,7 +54,7 @@ func (r *ShiftDayRepository) FindByShiftIDAndWeekday(db *gorm.DB, shiftDay *enti
 
 	breakEnd, _ := lib.ParseTimeToUnixMilli(row.BreakEnd)
 
-	*shiftDay = entity.ShiftDays{
+	*shiftDay = entity.ShiftDay{
 		ID:              row.ID,
 		ShiftID:         row.ShiftID,
 		Weekday:         row.Weekday,

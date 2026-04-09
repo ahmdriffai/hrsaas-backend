@@ -74,15 +74,7 @@ func (r *ShiftRepository) AssignEmployeeToShift(db *gorm.DB, employeeID, shiftID
 
 func (r *ShiftRepository) Search(db *gorm.DB, request *model.SearchShiftRequest) ([]entity.Shift, int64, error) {
 	var shifts []entity.Shift
-	if err := db.Scopes(r.FilterSearch(request)).
-		Select(`
-			shifts.id,
-			shifts.company_id,
-			shifts.name,
-			shifts.late_tolerance,
-			shifts.created_at,
-			shifts.updated_at
-		`).
+	if err := db.Preload("ShiftDays").Scopes(r.FilterSearch(request)).
 		Offset((request.Page - 1) * request.Size).
 		Limit(request.Size).
 		Find(&shifts).Error; err != nil {

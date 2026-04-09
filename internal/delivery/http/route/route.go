@@ -116,6 +116,7 @@ func (c *RouteConfig) SetupOfficeLocationRouter() {
 	route := c.App.Group("/api/office-locations", c.AuthMiddleware, c.AdminMiddleware)
 	route.Get("/", c.OfficeLocationController.List)
 	route.Post("/", c.OfficeLocationController.Create)
+	route.Get("/:officeLocationID", c.OfficeLocationController.Detail)
 	route.Post("/assign-employee", c.OfficeLocationController.AssignEmployee)
 }
 
@@ -129,6 +130,7 @@ func (c *RouteConfig) SetupShiftRouter() {
 	route := c.App.Group("/api/shifts", c.AuthMiddleware, c.AdminMiddleware)
 	route.Get("/", c.ShiftController.List)
 	route.Post("/", c.ShiftController.Create)
+	route.Get("/:shiftID", c.ShiftController.Detail)
 	route.Post("/assign-employee", c.ShiftController.AssignEmployee)
 }
 

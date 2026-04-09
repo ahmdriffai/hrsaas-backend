@@ -78,17 +78,17 @@ func (c *ShiftUseCase) Create(ctx context.Context, request *model.CreateShiftReq
 			return nil, fiber.ErrBadRequest
 		}
 
-		shiftDays := make([]entity.ShiftDays, 0, len(request.ShiftDayRequests))
+		shiftDays := make([]entity.ShiftDay, 0, len(request.ShiftDayRequests))
 		for _, shiftDayRequest := range request.ShiftDayRequests {
-			checkIn, _ := lib.ParseDateToUnixMilli(shiftDayRequest.CheckIn)
+			checkIn, _ := lib.ParseTimeToUnixMilli(shiftDayRequest.CheckIn)
 
-			checkOut, _ := lib.ParseDateToUnixMilli(shiftDayRequest.CheckOut)
+			checkOut, _ := lib.ParseTimeToUnixMilli(shiftDayRequest.CheckOut)
 
-			breakStart, _ := lib.ParseDateToUnixMilli(shiftDayRequest.BreakStart)
+			breakStart, _ := lib.ParseTimeToUnixMilli(shiftDayRequest.BreakStart)
 
-			breakEnd, _ := lib.ParseDateToUnixMilli(shiftDayRequest.BreakEnd)
+			breakEnd, _ := lib.ParseTimeToUnixMilli(shiftDayRequest.BreakEnd)
 
-			shiftDays = append(shiftDays, entity.ShiftDays{
+			shiftDays = append(shiftDays, entity.ShiftDay{
 				ShiftID:         shift.ID,
 				Weekday:         shiftDayRequest.Weekday,
 				DayType:         shiftDayRequest.DayType,
@@ -182,64 +182,20 @@ func (c *ShiftUseCase) Search(ctx context.Context, request *model.SearchShiftReq
 		return nil, 0, fiber.ErrInternalServerError
 	}
 
-	shiftDaysByShiftID := make(map[string][]model.ShiftDayResponse, len(shifts))
-	if len(shifts) > 0 {
-		shiftIDs := make([]string, 0, len(shifts))
-		for _, shift := range shifts {
-			shiftIDs = append(shiftIDs, shift.ID)
-		}
-
-		type shiftDayRow struct {
-			ShiftID         string `gorm:"column:shift_id"`
-			Weekday         int    `gorm:"column:weekday"`
-			DayType         string `gorm:"column:day_type"`
-			CheckIn         string `gorm:"column:check_in"`
-			CheckOut        string `gorm:"column:check_out"`
-			BreakStart      string `gorm:"column:break_start"`
-			BreakEnd        string `gorm:"column:break_end"`
-			MaxBreakMinutes int    `gorm:"column:max_break_minutes"`
-		}
-
-		var shiftDays []shiftDayRow
-		if err := tx.
-			Table("shift_days").
-			Select("shift_id, weekday, day_type, check_in, check_out, break_start, break_end, max_break_minutes").
-			Where("shift_id IN ?", shiftIDs).
-			Order("shift_id ASC, weekday ASC").
-			Find(&shiftDays).Error; err != nil {
-			c.Log.WithError(err).Error("Failed to search shift days")
-			return nil, 0, fiber.ErrInternalServerError
-		}
-
-		for _, day := range shiftDays {
-			checkIn, _ := lib.ParseDateToUnixMilli(day.CheckIn)
-
-			checkOut, _ := lib.ParseDateToUnixMilli(day.CheckOut)
-
-			breakStart, _ := lib.ParseDateToUnixMilli(day.BreakStart)
-
-			breakEnd, _ := lib.ParseDateToUnixMilli(day.BreakEnd)
-
-			shiftDaysByShiftID[day.ShiftID] = append(shiftDaysByShiftID[day.ShiftID], model.ShiftDayResponse{
-				Weekday:         day.Weekday,
-				DayType:         day.DayType,
-				CheckIn:         checkIn,
-				CheckOut:        checkOut,
-				BreakStart:      breakStart,
-				BreakEnd:        breakEnd,
-				MaxBreakMinutes: day.MaxBreakMinutes,
-			})
-		}
-	}
-
 	responses := make([]model.ShiftResponse, 0, len(shifts))
+
 	for _, shift := range shifts {
+		shifDays := make([]model.ShiftDayResponse, len(shift.ShiftDays))
+		for i, shifDay := range shift.ShiftDays {
+			shifDays[i] = *model.ShiftDayToResponse(&shifDay)
+		}
+
 		responses = append(responses, model.ShiftResponse{
 			ID:            shift.ID,
 			CompanyID:     shift.CompanyID,
 			Name:          shift.Name,
 			LateTolerance: shift.LateTolerance,
-			ShiftDays:     shiftDaysByShiftID[shift.ID],
+			ShiftDays:     shifDays,
 			CreatedAt:     shift.CreatedAt,
 			UpdatedAt:     shift.UpdatedAt,
 		})
@@ -251,4 +207,30 @@ func (c *ShiftUseCase) Search(ctx context.Context, request *model.SearchShiftReq
 	}
 
 	return responses, total, nil
+}
+
+func (c *ShiftUseCase) DetailShift(ctx context.Context, request *model.DetailShifRequest) (*model.ShiftResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	// cek user exist
+	count, err := c.ShiftRepository.CountByIDAndCompanyID(tx, request.ShiftID, request.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to count user by email")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if count == 0 {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Shift not found.")
+	}
+
+	var shift = new(entity.Shift)
+
+	err = c.ShiftRepository.FindByIdAndCompany(tx, shift, request.ShiftID, request.CompanyID, "Employees", "ShiftDays")
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to find ")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.ShiftToResponse(shift), nil
 }

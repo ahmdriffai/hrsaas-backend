@@ -35,3 +35,13 @@ func (r *Repository[T]) FindById(db *gorm.DB, entity *T, id any, preloads ...str
 
 	return query.Where("id = ?", id).Take(entity).Error
 }
+
+func (r *Repository[T]) FindByIdAndCompany(db *gorm.DB, entity *T, id any, companyId any, preloads ...string) error {
+	query := db
+
+	for _, preload := range preloads {
+		query = query.Preload(preload)
+	}
+
+	return query.Where("id = ?", id).Where("company_id = ?", companyId).Take(entity).Error
+}
