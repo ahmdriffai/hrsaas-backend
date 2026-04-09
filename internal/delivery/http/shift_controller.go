@@ -88,3 +88,20 @@ func (c *ShiftController) List(ctx *fiber.Ctx) error {
 		Paging: paging,
 	})
 }
+
+func (c *ShiftController) Detail(ctx *fiber.Ctx) error {
+	request := new(model.DetailShifRequest)
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	request.ShiftID = ctx.Params("shiftID")
+
+
+	response, err := c.UseCase.DetailShift(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list shifts")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[model.ShiftResponse]{
+		Data: *response,
+	})
+}

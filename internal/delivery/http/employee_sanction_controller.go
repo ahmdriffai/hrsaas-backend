@@ -2,7 +2,6 @@ package http
 
 import (
 	"hr-sas/internal/delivery/http/middleware"
-	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
 	"math"
@@ -49,31 +48,16 @@ func (c *EmSancController) CurrentSearch(ctx *fiber.Ctx) error {
 	sanctionID := ctx.Query("sanction_id")
 
 	req := new(model.SearchEmSancRequest)
-	req.UserID = user.ID
+
+	req.EmployeeID = user.Employee.ID
 	req.SanctionID = sanctionID
 	req.CompanyID = companyID
 
 	// start_date
-	if v := ctx.Query("start_date"); v != "" {
-		d := &lib.DateOnly{}
-		if err := d.UnmarshalJSON([]byte(v)); err != nil {
-			return ctx.Status(400).JSON(fiber.Map{
-				"error": "invalid end_date format (YYYY-MM-DD)",
-			})
-		}
-		req.StartDate = d
-	}
+	req.StartDate = ctx.Query("start_date", "")
+	// start_date
+	req.StartDate = ctx.Query("end_date", "")
 
-	// end_date
-	if v := ctx.Query("end_date"); v != "" {
-		d := &lib.DateOnly{}
-		if err := d.UnmarshalJSON([]byte(v)); err != nil {
-			return ctx.Status(400).JSON(fiber.Map{
-				"error": "invalid end_date format (YYYY-MM-DD)",
-			})
-		}
-		req.EndDate = d
-	}
 	req.Reason = ctx.Query("reason", "")
 	req.Status = ctx.Query("status", "")
 
@@ -83,7 +67,7 @@ func (c *EmSancController) CurrentSearch(ctx *fiber.Ctx) error {
 
 	responses, total, err := c.EmSancUseCase.Search(ctx.UserContext(), req)
 	if err != nil {
-		c.Log.WithError(err).Error("error searching contact")
+		c.Log.WithError(err).Error("error searching employee sanction")
 		return err
 	}
 
@@ -106,26 +90,10 @@ func (c *EmSancController) Search(ctx *fiber.Ctx) error {
 	req.CompanyID = companyID
 
 	// start_date
-	if v := ctx.Query("start_date"); v != "" {
-		d := &lib.DateOnly{}
-		if err := d.UnmarshalJSON([]byte(v)); err != nil {
-			return ctx.Status(400).JSON(fiber.Map{
-				"error": "invalid end_date format (YYYY-MM-DD)",
-			})
-		}
-		req.StartDate = d
-	}
+	req.StartDate = ctx.Query("start_date", "")
+	// start_date
+	req.StartDate = ctx.Query("end_date", "")
 
-	// end_date
-	if v := ctx.Query("end_date"); v != "" {
-		d := &lib.DateOnly{}
-		if err := d.UnmarshalJSON([]byte(v)); err != nil {
-			return ctx.Status(400).JSON(fiber.Map{
-				"error": "invalid end_date format (YYYY-MM-DD)",
-			})
-		}
-		req.EndDate = d
-	}
 	// sanction id
 	req.SanctionID = ctx.Query("sanction_id", "")
 	req.Reason = ctx.Query("reason", "")

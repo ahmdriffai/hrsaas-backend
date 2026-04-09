@@ -3,8 +3,8 @@ package usecase
 import (
 	"context"
 	"hr-sas/internal/entity"
+	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
-	"hr-sas/internal/model/converter"
 	"hr-sas/internal/repository"
 
 	"github.com/go-playground/validator/v10"
@@ -67,14 +67,17 @@ func (c *EmSancUseCase) Create(ctx context.Context, request *model.CreateEmSancR
 		return nil, fiber.ErrBadRequest
 	}
 
+	startDate, _ := lib.ParseDateToUnixMilli(request.StartDate)
+	endDate, _ := lib.ParseDateToUnixMilli(request.EndDate)
+
 	status := "active"
 	employeeSanction := &entity.EmployeeSanction{
 		EmployeeID:  request.EmployeeID,
 		SanctionID:  request.SanctionID,
 		CompanyID:   request.CompanyID,
 		Reason:      &request.Reason,
-		StartDate:   request.StartDate.Time,
-		EndDate:     &request.EndDate.Time,
+		StartDate:   startDate,
+		EndDate:     &endDate,
 		Status:      &status,
 		DocumentUrl: request.DocumentUrl,
 	}
@@ -91,7 +94,7 @@ func (c *EmSancUseCase) Create(ctx context.Context, request *model.CreateEmSancR
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return converter.EmSancToResponse(employeeSanction), nil
+	return model.EmSancToResponse(employeeSanction), nil
 }
 
 /* Search Employee Sanction Usecase
@@ -119,7 +122,7 @@ func (c *EmSancUseCase) Search(ctx context.Context, request *model.SearchEmSancR
 
 	responses := make([]model.EmSancResponse, len(emSancs))
 	for i, contact := range emSancs {
-		responses[i] = *converter.EmSancToResponse(&contact)
+		responses[i] = *model.EmSancToResponse(&contact)
 	}
 
 	return responses, total, nil

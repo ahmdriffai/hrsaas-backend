@@ -2,6 +2,7 @@ package repository
 
 import (
 	"hr-sas/internal/entity"
+	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 
 	"github.com/sirupsen/logrus"
@@ -35,12 +36,10 @@ func (r *EmSancRepository) Search(db *gorm.DB, request *model.SearchEmSancReques
 
 func (r *EmSancRepository) FilterSearch(request *model.SearchEmSancRequest) func(tx *gorm.DB) *gorm.DB {
 	return func(tx *gorm.DB) *gorm.DB {
-		tx = tx.Joins("JOIN employees e ON e.id = employee_sanctions.employee_id").
-			Joins("JOIN sanctions s ON s.id = employee_sanctions.sanction_id").
-			Where("e.company_id = ?", request.CompanyID)
+		tx = tx.Where("company_id = ?", request.CompanyID)
 
-		if request.UserID != "" {
-			tx = tx.Where("e.user_id = ?", request.UserID)
+		if request.EmployeeID != "" {
+			tx = tx.Where("employee_id = ?", request.EmployeeID)
 		}
 
 		if reason := request.Reason; reason != "" {
@@ -56,17 +55,25 @@ func (r *EmSancRepository) FilterSearch(request *model.SearchEmSancRequest) func
 			tx = tx.Where("status = ?", status)
 		}
 
-		// ✅ start_date filter
-		if request.StartDate != nil && request.EndDate != nil {
+		startDate, _ := lib.ParseDateToUnixMilli(request.StartDate)
+		endDate, _ := lib.ParseDateToUnixMilli(request.EndDate)
+
+		if request.StartDate != "" && request.EndDate != "" {
 			tx = tx.Where(
 				"start_date >= ? AND end_date <= ?",
-				request.StartDate.Time,
-				request.EndDate.Time,
+				startDate,
+				endDate,
 			)
-		} else if request.StartDate != nil {
-			tx = tx.Where("start_date >= ?", request.StartDate.Time)
-		} else if request.EndDate != nil {
-			tx = tx.Where("end_date <= ?", request.EndDate.Time)
+		} else if request.StartDate != "" {
+			tx = tx.Where(
+				"start_date >= ?",
+				startDate,
+			)
+		} else if request.EndDate != "" {
+			tx = tx.Where(
+				"end_date <= ?",
+				endDate,
+			)
 		}
 
 		return tx

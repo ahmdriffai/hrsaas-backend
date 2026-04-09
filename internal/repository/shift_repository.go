@@ -3,6 +3,7 @@ package repository
 import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -63,23 +64,17 @@ func (r *ShiftRepository) DeleteEmployeeShiftsByEmployeeID(db *gorm.DB, employee
 
 func (r *ShiftRepository) AssignEmployeeToShift(db *gorm.DB, employeeID, shiftID string) error {
 	return db.Exec(
-		"INSERT INTO employee_shifts (employee_id, shift_id) VALUES (?, ?)",
+		"INSERT INTO employee_shifts (employee_id, shift_id, created_at, updated_at) VALUES (?, ?, ?, ?)",
 		employeeID,
 		shiftID,
+		int64(time.Now().UnixMilli()),
+		int64(time.Now().UnixMilli()),
 	).Error
 }
 
 func (r *ShiftRepository) Search(db *gorm.DB, request *model.SearchShiftRequest) ([]entity.Shift, int64, error) {
 	var shifts []entity.Shift
-	if err := db.Scopes(r.FilterSearch(request)).
-		Select(`
-			shifts.id,
-			shifts.company_id,
-			shifts.name,
-			shifts.late_tolerance,
-			shifts.created_at,
-			shifts.updated_at
-		`).
+	if err := db.Preload("ShiftDays").Scopes(r.FilterSearch(request)).
 		Offset((request.Page - 1) * request.Size).
 		Limit(request.Size).
 		Find(&shifts).Error; err != nil {

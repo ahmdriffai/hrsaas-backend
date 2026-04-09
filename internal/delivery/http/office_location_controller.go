@@ -91,3 +91,19 @@ func (c *OfficeLocationController) AssignEmployee(ctx *fiber.Ctx) error {
 		Data: nil,
 	})
 }
+
+func (c *OfficeLocationController) Detail(ctx *fiber.Ctx) error {
+	request := new(model.DetailOfficeLocationRequest)
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	request.OfficeLocationID = ctx.Params("officeLocationID")
+
+	response, err := c.UseCase.DetailOfficeLocation(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list shifts")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[model.OfficeLocationResponse]{
+		Data: *response,
+	})
+}

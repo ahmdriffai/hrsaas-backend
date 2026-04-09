@@ -8,8 +8,8 @@ CREATE TABLE users (
   image VARCHAR(255) NULL ,
   role VARCHAR(50) DEFAULT 'USER',
   company_id VARCHAR(36) NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at  BIGINT NOT NULL,
+  updated_at  BIGINT NOT NULL,
   PRIMARY KEY (id),
 
   CONSTRAINT fk_user_company_id 
@@ -23,9 +23,9 @@ CREATE TABLE sessions (
   ip_address VARCHAR(50),
   user_agent TEXT,
   user_id VARCHAR(36) NOT NULL,
-  expired_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expired_at BIGINT NOT NULL,
+  created_at  BIGINT NOT NULL,
+  updated_at  BIGINT NOT NULL,
   PRIMARY KEY (id),
   CONSTRAINT fk_session_user_id 
     FOREIGN KEY (user_id) REFERENCES users (id)

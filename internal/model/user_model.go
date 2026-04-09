@@ -1,7 +1,7 @@
 package model
 
 import (
-	"time"
+	"hr-sas/internal/entity"
 )
 
 type UserResponse struct {
@@ -13,8 +13,8 @@ type UserResponse struct {
 	CompanyID     string            `json:"company_id,omitempty"`
 	Role          string            `json:"role,omitempty"`
 	Employee      *EmployeeResponse `json:"employee,omitempty"`
-	CreatedAt     time.Time         `json:"created_at,omitempty"`
-	UpdatedAt     time.Time         `json:"updated_at,omitempty"`
+	CreatedAt     int64             `json:"created_at,omitempty"`
+	UpdatedAt     int64             `json:"updated_at,omitempty"`
 }
 
 type LoginUserResponse struct {
@@ -38,4 +38,26 @@ type LoginUserRequest struct {
 	Password  string `json:"password" validate:"required"`
 	Ip        string `json:"-"`
 	UserAgent string `json:"-"`
+}
+
+func UserToResponse(user *entity.User) *UserResponse {
+
+	var employeeResponse *EmployeeResponse
+
+	if user.Employee != nil {
+		employeeResponse = EmployeeToResponse(user.Employee)
+	}
+
+	return &UserResponse{
+		ID:            user.ID,
+		Name:          user.Name,
+		Email:         user.Email,
+		Image:         user.Image,
+		Role:          user.Role,
+		CompanyID:     user.CompanyID,
+		EmailVerified: user.EmailVerified,
+		Employee:      employeeResponse,
+		CreatedAt:     user.CreatedAt,
+		UpdatedAt:     user.UpdatedAt,
+	}
 }

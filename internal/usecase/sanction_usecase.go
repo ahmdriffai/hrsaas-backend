@@ -4,7 +4,6 @@ import (
 	"context"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
-	"hr-sas/internal/model/converter"
 	"hr-sas/internal/repository"
 
 	"github.com/go-playground/validator/v10"
@@ -62,18 +61,7 @@ func (c *SanctionUseCase) Create(ctx context.Context, request *model.CreateSanct
 		return nil, fiber.ErrInternalServerError
 	}
 
-	response := &model.SanctionResponse{
-		ID:          sanction.ID,
-		CompanyID:   sanction.CompanyID,
-		Name:        sanction.Name,
-		Description: sanction.Description,
-		Level:       sanction.Level,
-		Note:        sanction.Note,
-		CreatedAt:   sanction.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:   sanction.UpdatedAt.Format("2006-01-02 15:04:05"),
-	}
-
-	return response, nil
+	return model.SanctionToResponse(sanction), nil
 }
 
 /*
@@ -103,7 +91,7 @@ func (c *SanctionUseCase) Search(ctx context.Context, request *model.SearchSanct
 
 	responses := make([]model.SanctionResponse, len(sanctions))
 	for i, sanction := range sanctions {
-		responses[i] = *converter.SanctionToResponse(&sanction)
+		responses[i] = *model.SanctionToResponse(&sanction)
 	}
 
 	return responses, total, nil

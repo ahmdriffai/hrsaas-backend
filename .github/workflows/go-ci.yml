@@ -1,0 +1,72 @@
+name: Go CI/CD
+
+on:
+  push:
+    branches:
+      - development
+      - test
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22
+
+      - name: Download Dependencies
+        run: go mod download
+
+      - name: Run Test
+        run: go test ./...
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Environment
+        id: env
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "development" ]]; then
+            echo "ENV=dev" >> $GITHUB_OUTPUT
+          elif [[ "${GITHUB_REF_NAME}" == "test" ]]; then
+            echo "ENV=test" >> $GITHUB_OUTPUT
+          elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "ENV=prod" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+          -t ghcr.io/${{ github.repository }}:${{ steps.env.outputs.ENV }} \
+          -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
+
+      - name: Push Docker Image
+        run: |
+          docker push ghcr.io/${{ github.repository }}:${{ steps.env.outputs.ENV }}
+          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}

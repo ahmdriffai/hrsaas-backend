@@ -3,6 +3,7 @@ package repository
 import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -78,8 +79,10 @@ func (r *OfficeLocationRepository) DeleteEmployeeOfficeLocationsByEmployeeID(db 
 
 func (r *OfficeLocationRepository) AssignEmployeeToOfficeLocation(db *gorm.DB, employeeID, officeLocationID string) error {
 	return db.Exec(
-		"INSERT INTO employee_office_locations (employee_id, office_location_id) VALUES (?, ?)",
+		"INSERT INTO employee_office_locations (employee_id, office_location_id, created_at, updated_at) VALUES (?,?,?,?)",
 		employeeID,
 		officeLocationID,
+		int64(time.Now().UnixMilli()),
+		int64(time.Now().UnixMilli()),
 	).Error
 }
