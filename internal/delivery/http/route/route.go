@@ -155,8 +155,9 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 	typeAdminRoute.Post("/", c.TimeOffController.CreateType)
 
 	balanceRoute := c.App.Group("/api/time-off-balances", c.AuthMiddleware)
-	balanceEmployeeRoute := balanceRoute.Group("/", c.EmployeeMiddleware)
-	balanceEmployeeRoute.Get("/_current", c.TimeOffController.ListCurrentBalances)
+	balanceRoute.Post("/_set", c.AdminMiddleware, c.TimeOffController.SetBalance)
+	balanceRoute.Get("/", c.AdminMiddleware, c.TimeOffController.ListBalancesByEmployee)
+	balanceRoute.Get("/_current", c.EmployeeMiddleware, c.TimeOffController.ListCurrentBalances)
 }
 
 func (c *RouteConfig) SetupCommonRouter() {

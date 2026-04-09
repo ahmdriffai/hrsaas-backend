@@ -6,12 +6,14 @@ type PositionResponse struct {
 	CompanyID string            `json:"company_id"`
 	ParentID  *string           `json:"parent_id,omitempty"`
 	Parent    *PositionResponse `json:"parent,omitempty"`
+	IsApprover bool             `json:"is_approver"`
 }
 
 type CreatePositionRequest struct {
 	CompanyID string  `json:"-"`
 	Name      string  `json:"name" validate:"required"`
 	ParentID  *string `json:"parent_id,omitempty"`
+	IsApprover bool   `json:"is_approver"`
 }
 
 type SeachPositionRequest struct {

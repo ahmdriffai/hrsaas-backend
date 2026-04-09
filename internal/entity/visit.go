@@ -16,9 +16,6 @@ type Visit struct {
 	Latitude   *string `gorm:"column:latitude"`
 	Longitude  *string `gorm:"column:longitude"`
 	Address    *string `gorm:"column:address"`
-	FileName   *string `gorm:"column:file_name"`
-	MimeType   *string `gorm:"column:mime_type"`
-	FileSize   *int    `gorm:"column:file_size"`
 	FileURL    *string `gorm:"column:file_url"`
 	CreatedAt  int64   `gorm:"column:created_at;not null"`
 }

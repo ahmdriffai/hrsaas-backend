@@ -62,6 +62,15 @@ type SearchTimeOffBalanceRequest struct {
 	PeriodYear    int    `json:"period_year" validate:"min=2000"`
 }
 
+type SetTimeOffBalanceRequest struct {
+	EmployeeID    string `json:"employee_id" validate:"required"`
+	TimeOffTypeID string `json:"time_off_type_id" validate:"required"`
+	PeriodYear    int    `json:"period_year" validate:"required,min=2000"`
+	EntitledDays  int    `json:"entitled_days" validate:"min=0"`
+	UsedDays      int    `json:"used_days" validate:"min=0"`
+	RemainingDays *int   `json:"remaining_days,omitempty" validate:"omitempty,min=0"`
+}
+
 type TimeOffApprovalResponse struct {
 	ID                 string     `json:"id"`
 	TimeOffRequestID   string     `json:"time_off_request_id"`
@@ -69,6 +78,7 @@ type TimeOffApprovalResponse struct {
 	ApproverName       string     `json:"approver_name"`
 	ApproverPosition   string     `json:"approver_position"`
 	ApproverDivision   string     `json:"approver_division"`
+	IsRequired         bool       `json:"is_required"`
 	Status             string     `json:"status"`
 	ActionAt           *time.Time `json:"action_at,omitempty"`
 	ActionReason       *string    `json:"action_reason,omitempty"`

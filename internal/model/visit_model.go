@@ -22,9 +22,6 @@ type CreateVisitRequest struct {
 	Latitude  *string `json:"latitude,omitempty"`
 	Longitude *string `json:"longitude,omitempty"`
 	Address   *string `json:"address,omitempty"`
-	FileName  *string `json:"file_name,omitempty"`
-	MimeType  *string `json:"mime_type,omitempty"`
-	FileSize  *int    `json:"file_size,omitempty"`
 	FileUrl   *string `json:"file_url,omitempty"`
 }
 
