@@ -6,7 +6,6 @@ import (
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -113,19 +112,12 @@ func (c *EmployeeContractUseCase) Create(ctx context.Context, request *model.Cre
 		c.Log.WithError(err).Error("Failed to commit transaction")
 		return nil, fiber.ErrInternalServerError
 	}
-
-	var endDateStr *string
-	if endDate != nil {
-		str := time.UnixMilli(*endDate).Format("2006-01-02")
-		endDateStr = &str
-	}
-
 	return &model.EmployeeContractResponse{
 		ID:           item.ID,
 		EmployeeID:   item.EmployeeID,
 		ContractType: item.ContractType,
-		StartDate:    time.UnixMilli(item.StartDate).Format("2006-01-02"),
-		EndDate:      endDateStr,
+		StartDate:    item.StartDate,
+		EndDate:      item.EndDate,
 		DivisionID:   item.DivisionID,
 		PositionID:   item.PositionID,
 		Salary:       item.Salary,
@@ -142,7 +134,7 @@ func (c *EmployeeContractUseCase) List(ctx context.Context, request *model.Searc
 		return nil, 0, fiber.ErrBadRequest
 	}
 
-	items, total, err := c.Repo.List(tx, request)
+	items, total, err := c.Repo.List(tx, request, true)
 	if err != nil {
 		c.Log.WithError(err).Error("Failed to list employee contracts")
 		return nil, 0, fiber.ErrInternalServerError
@@ -150,22 +142,7 @@ func (c *EmployeeContractUseCase) List(ctx context.Context, request *model.Searc
 
 	responses := make([]model.EmployeeContractResponse, len(items))
 	for i, item := range items {
-		var endDateStr *string
-		if item.EndDate != nil {
-			str := time.UnixMilli(*item.EndDate).Format("2006-01-02")
-			endDateStr = &str
-		}
-
-		responses[i] = model.EmployeeContractResponse{
-			ID:           item.ID,
-			EmployeeID:   item.EmployeeID,
-			ContractType: item.ContractType,
-			StartDate:    time.UnixMilli(item.StartDate).Format("2006-01-02"),
-			EndDate:      endDateStr,
-			DivisionID:   item.DivisionID,
-			PositionID:   item.PositionID,
-			Salary:       item.Salary,
-		}
+		responses[i] = *model.EmployeeContractToResponse(&item)
 	}
 
 	if err := tx.Commit().Error; err != nil {

@@ -18,10 +18,13 @@ func NewEmployeeContractRepository(log *logrus.Logger) *EmployeeContractReposito
 	return &EmployeeContractRepository{Log: log}
 }
 
-func (r *EmployeeContractRepository) List(db *gorm.DB, request *model.SearchEmployeeContractRequest) ([]entity.EmployeeContract, int64, error) {
+func (r *EmployeeContractRepository) List(db *gorm.DB, request *model.SearchEmployeeContractRequest, withRelations bool) ([]entity.EmployeeContract, int64, error) {
 	var items []entity.EmployeeContract
 
 	query := db.Model(&entity.EmployeeContract{})
+	if withRelations {
+		query = query.Preload("Employee").Preload("Division").Preload("Position")
+	}
 	if request.EmployeeID != "" {
 		query = query.Where("employee_id = ?", request.EmployeeID)
 	}
@@ -46,4 +49,18 @@ func (r *EmployeeContractRepository) List(db *gorm.DB, request *model.SearchEmpl
 	}
 
 	return items, total, nil
+}
+
+func (r *EmployeeContractRepository) FindLatestActiveByEmployee(db *gorm.DB, employeeID string) (*entity.EmployeeContract, error) {
+	var item entity.EmployeeContract
+	now := time.Now().UnixMilli()
+	if err := db.
+		Where("employee_id = ?", employeeID).
+		Where("end_date IS NULL OR end_date >= ?", now).
+		Order("start_date DESC").
+		Limit(1).
+		Take(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
 }

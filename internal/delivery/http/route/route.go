@@ -22,7 +22,10 @@ type RouteConfig struct {
 	PositionController         *http.PositionController
 	AttendanceController       *http.AttendanceController
 	ShiftController            *http.ShiftController
-	TimeOffController          *http.TimeOffController
+	TimeOffRequestController   *http.TimeOffRequestController
+	TimeOffTypeController      *http.TimeOffTypeController
+	TimeOffBalanceController   *http.TimeOffBalanceController
+	TimeOffApprovalController  *http.TimeOffApprovalController
 	UploadController           *http.UploadController
 	EmployeeContractController *http.EmployeeContractController
 	DivisionController         *http.DivisionController
@@ -134,30 +137,26 @@ func (c *RouteConfig) SetupShiftRouter() {
 
 func (c *RouteConfig) SetupTimeOffRouter() {
 	route := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
-	route.Get("/", c.TimeOffController.ListRequests)
+	route.Get("/", c.TimeOffRequestController.ListRequests)
 
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
-	employeeRoute.Post("/", c.TimeOffController.CreateRequest)
-	employeeRoute.Get("/_current", c.TimeOffController.ListCurrentRequests)
+	employeeRoute.Post("/", c.TimeOffRequestController.CreateRequest)
+	employeeRoute.Get("/_current", c.TimeOffRequestController.ListCurrentRequests)
 
-	route.Get("/:id", c.TimeOffController.GetRequestByID)
-	route.Get("/:id/approvals", c.TimeOffController.ListApprovals)
+	route.Get("/:id", c.TimeOffRequestController.GetRequestByID)
+	route.Get("/:id/approvals", c.TimeOffApprovalController.ListApprovals)
 
-	employeeRoute.Patch("/:id/approvals/:approval_id/approve", c.TimeOffController.Approve)
-	employeeRoute.Patch("/:id/approvals/:approval_id/reject", c.TimeOffController.Reject)
-
-	route.Get("/:id/attachments", c.TimeOffController.ListAttachments)
-	employeeRoute.Post("/:id/attachments", c.TimeOffController.CreateAttachment)
+	employeeRoute.Patch("/:id/approvals/:approval_id", c.TimeOffApprovalController.Decide)
 
 	typeRoute := c.App.Group("/api/time-off-types", c.AuthMiddleware)
-	typeRoute.Get("/", c.TimeOffController.ListTypes)
+	typeRoute.Get("/", c.TimeOffTypeController.ListTypes)
 	typeAdminRoute := typeRoute.Group("/", c.AdminMiddleware)
-	typeAdminRoute.Post("/", c.TimeOffController.CreateType)
+	typeAdminRoute.Post("/", c.TimeOffTypeController.CreateType)
 
 	balanceRoute := c.App.Group("/api/time-off-balances", c.AuthMiddleware)
-	balanceRoute.Post("/_set", c.AdminMiddleware, c.TimeOffController.SetBalance)
-	balanceRoute.Get("/", c.AdminMiddleware, c.TimeOffController.ListBalancesByEmployee)
-	balanceRoute.Get("/_current", c.EmployeeMiddleware, c.TimeOffController.ListCurrentBalances)
+	balanceRoute.Post("/_set", c.AdminMiddleware, c.TimeOffBalanceController.SetBalance)
+	balanceRoute.Get("/", c.AdminMiddleware, c.TimeOffBalanceController.ListBalancesByEmployee)
+	balanceRoute.Get("/_current", c.EmployeeMiddleware, c.TimeOffBalanceController.ListCurrentBalances)
 }
 
 func (c *RouteConfig) SetupCommonRouter() {
@@ -168,9 +167,8 @@ func (c *RouteConfig) SetupCommonRouter() {
 func (c *RouteConfig) SetupTimeOffApprovalRouter() {
 	route := c.App.Group("/api/time-off-approvals", c.AuthMiddleware)
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
-	employeeRoute.Get("/_current", c.TimeOffController.ListMyApprovals)
-	employeeRoute.Patch("/:approval_id/approve", c.TimeOffController.ApproveShort)
-	employeeRoute.Patch("/:approval_id/reject", c.TimeOffController.RejectShort)
+	employeeRoute.Get("/_current", c.TimeOffApprovalController.ListMyApprovals)
+	employeeRoute.Patch("/:approval_id", c.TimeOffApprovalController.DecideShort)
 }
 
 func (c *RouteConfig) SetupVisitRouter() {

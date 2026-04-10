@@ -17,6 +17,7 @@ CREATE TABLE time_off_requests(
     end_date BIGINT NOT NULL,
     request_reason TEXT,
     request_status VARCHAR(50) NOT NULL,
+    file_url TEXT,
     created_at BIGINT NOT NULL,
     PRIMARY KEY(id),
 
@@ -50,22 +51,6 @@ CREATE TABLE time_off_balances
     CONSTRAINT fk_time_off_balance_time_off_type_id
         FOREIGN KEY (time_off_type_id)
         REFERENCES time_off_types(id)
-        ON DELETE CASCADE
-);
-
-CREATE TABLE time_off_attachments
-(
-    id VARCHAR(36) NOT NULL,
-    time_off_request_id VARCHAR(36) NOT NULL,
-    file_name VARCHAR(255) NOT NULL,
-    mime_type VARCHAR(100) NOT NULL,
-    file_size INT NOT NULL,
-    file_url TEXT NOT NULL,
-    PRIMARY KEY(id),
-
-    CONSTRAINT fk_time_off_attachment_request_id
-        FOREIGN KEY (time_off_request_id)
-        REFERENCES time_off_requests(id)
         ON DELETE CASCADE
 );
 

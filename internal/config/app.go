@@ -40,7 +40,6 @@ func Bootstrap(config *BootstrapConfig) {
 	timeOffRequestRepository := repository.NewTimeOffRequestRepository(config.Log)
 	timeOffBalanceRepository := repository.NewTimeOffBalanceRepository(config.Log)
 	timeOffApprovalRepository := repository.NewTimeOffApprovalRepository(config.Log)
-	timeOffAttachmentRepository := repository.NewTimeOffAttachmentRepository(config.Log)
 	employeeContractRepository := repository.NewEmployeeContractRepository(config.Log)
 	divisionRepository := repository.NewDivisionRepository(config.Log)
 	visitRepository := repository.NewVisitRepository(config.Log)
@@ -57,7 +56,7 @@ func Bootstrap(config *BootstrapConfig) {
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
 	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository)
 	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository, shiftDayRepository)
-	timeOffUseCase := usecase.NewTimeOffUseCase(
+	timeOffRequestUseCase := usecase.NewTimeOffRequestUseCase(
 		config.DB,
 		config.Log,
 		config.Validate,
@@ -65,7 +64,28 @@ func Bootstrap(config *BootstrapConfig) {
 		timeOffTypeRepository,
 		timeOffBalanceRepository,
 		timeOffApprovalRepository,
-		timeOffAttachmentRepository,
+		employeeContractRepository,
+	)
+	timeOffTypeUseCase := usecase.NewTimeOffTypeUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		timeOffTypeRepository,
+	)
+	timeOffBalanceUseCase := usecase.NewTimeOffBalanceUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		timeOffBalanceRepository,
+		timeOffTypeRepository,
+	)
+	timeOffApprovalUseCase := usecase.NewTimeOffApprovalUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		timeOffRequestRepository,
+		timeOffTypeRepository,
+		timeOffBalanceRepository,
 	)
 	employeeContractUseCase := usecase.NewEmployeeContractUseCase(
 		config.DB,
@@ -88,7 +108,10 @@ func Bootstrap(config *BootstrapConfig) {
 	officeLocationController := http.NewOfficeLocationController(officeLocationUseCase, config.Log)
 	attendaceController := http.NewAttendanceController(attendanceUseCase, config.Log)
 	shiftController := http.NewShifController(shiftUseCase, config.Log)
-	timeOffController := http.NewTimeOffController(timeOffUseCase, config.Log)
+	timeOffRequestController := http.NewTimeOffRequestController(timeOffRequestUseCase, config.Log)
+	timeOffTypeController := http.NewTimeOffTypeController(timeOffTypeUseCase, config.Log)
+	timeOffBalanceController := http.NewTimeOffBalanceController(timeOffBalanceUseCase, config.Log)
+	timeOffApprovalController := http.NewTimeOffApprovalController(timeOffApprovalUseCase, timeOffRequestUseCase, config.Log)
 	uploadController := http.NewUploadController(config.Log)
 	employeeContractController := http.NewEmployeeContractController(employeeContractUseCase, config.Log)
 	divisionController := http.NewDivisionController(divisionUseCase, config.Log)
@@ -116,7 +139,10 @@ func Bootstrap(config *BootstrapConfig) {
 		OfficeLocationController:   officeLocationController,
 		AttendanceController:       attendaceController,
 		ShiftController:            shiftController,
-		TimeOffController:          timeOffController,
+		TimeOffRequestController:   timeOffRequestController,
+		TimeOffTypeController:      timeOffTypeController,
+		TimeOffBalanceController:   timeOffBalanceController,
+		TimeOffApprovalController:  timeOffApprovalController,
 		UploadController:           uploadController,
 		EmployeeContractController: employeeContractController,
 		DivisionController:         divisionController,
