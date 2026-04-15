@@ -3,10 +3,10 @@ package usecase
 import (
 	"context"
 	"hr-sas/internal/entity"
+	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
 	"strings"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -45,7 +45,7 @@ func (c *VisitUseCase) Create(ctx context.Context, employeeID, companyID string,
 		return nil, fiber.NewError(fiber.StatusBadRequest, "visit_type must be IN or OUT")
 	}
 
-	lastVisit, err := c.Repo.FindLastByEmployee(tx, employeeID)
+	lastVisit, err := c.Repo.FindLastByEmployee(tx, employeeID, false)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		c.Log.WithError(err).Error("Failed to check last visit")
 		return nil, fiber.ErrInternalServerError
@@ -69,11 +69,16 @@ func (c *VisitUseCase) Create(ctx context.Context, employeeID, companyID string,
 		Longitude:  request.Longitude,
 		Address:    request.Address,
 		FileURL:    request.FileUrl,
-		CreatedAt:  time.Now().UnixMilli(),
+		CreatedAt:  nowEpoch(),
 	}
 
 	if err := c.Repo.Create(tx, item); err != nil {
 		c.Log.WithError(err).Error("Failed to create visit")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Preload("Employee").Preload("Company").First(item, "id = ?", item.ID).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to load visit relations")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -82,18 +87,7 @@ func (c *VisitUseCase) Create(ctx context.Context, employeeID, companyID string,
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return &model.VisitResponse{
-		ID:         item.ID,
-		EmployeeID: item.EmployeeID,
-		CompanyID:  item.CompanyID,
-		VisitType:  item.VisitType,
-		Note:       item.Note,
-		Latitude:   item.Latitude,
-		Longitude:  item.Longitude,
-		Address:    item.Address,
-		FileUrl:    item.FileURL,
-		CreatedAt:  item.CreatedAt,
-	}, nil
+	return model.VisitToResponse(item), nil
 }
 
 func (c *VisitUseCase) List(ctx context.Context, request *model.SearchVisitRequest) ([]model.VisitResponse, int64, error) {
@@ -104,8 +98,21 @@ func (c *VisitUseCase) List(ctx context.Context, request *model.SearchVisitReque
 		c.Log.WithError(err).Error("error validating request body")
 		return nil, 0, fiber.ErrBadRequest
 	}
+	if request.SortBy != "" && request.SortBy != "newest" && request.SortBy != "oldest" {
+		return nil, 0, fiber.NewError(fiber.StatusBadRequest, "sort_by must be newest or oldest")
+	}
+	if request.StartDate != "" {
+		if _, err := lib.ParseDateToUnixMilli(request.StartDate); err != nil {
+			return nil, 0, fiber.NewError(fiber.StatusBadRequest, "Invalid start_date")
+		}
+	}
+	if request.EndDate != "" {
+		if _, err := lib.ParseDateToUnixMilli(request.EndDate); err != nil {
+			return nil, 0, fiber.NewError(fiber.StatusBadRequest, "Invalid end_date")
+		}
+	}
 
-	items, total, err := c.Repo.List(tx, request)
+	items, total, err := c.Repo.List(tx, request, true)
 	if err != nil {
 		c.Log.WithError(err).Error("failed to list visits")
 		return nil, 0, fiber.ErrInternalServerError
@@ -117,19 +124,8 @@ func (c *VisitUseCase) List(ctx context.Context, request *model.SearchVisitReque
 	}
 
 	responses := make([]model.VisitResponse, len(items))
-	for i, item := range items {
-		responses[i] = model.VisitResponse{
-			ID:         item.ID,
-			EmployeeID: item.EmployeeID,
-			CompanyID:  item.CompanyID,
-			VisitType:  item.VisitType,
-			Note:       item.Note,
-			Latitude:   item.Latitude,
-			Longitude:  item.Longitude,
-			Address:    item.Address,
-			FileUrl:    item.FileURL,
-			CreatedAt:  item.CreatedAt,
-		}
+	for i := range items {
+		responses[i] = *model.VisitToResponse(&items[i])
 	}
 
 	return responses, total, nil
@@ -139,7 +135,7 @@ func (c *VisitUseCase) GetByID(ctx context.Context, id string) (*model.VisitResp
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	item, err := c.Repo.FindByID(tx, id)
+	item, err := c.Repo.FindByID(tx, id, true)
 	if err != nil {
 		c.Log.WithError(err).Error("visit not found")
 		return nil, fiber.ErrNotFound
@@ -150,18 +146,25 @@ func (c *VisitUseCase) GetByID(ctx context.Context, id string) (*model.VisitResp
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return &model.VisitResponse{
-		ID:         item.ID,
-		EmployeeID: item.EmployeeID,
-		CompanyID:  item.CompanyID,
-		VisitType:  item.VisitType,
-		Note:       item.Note,
-		Latitude:   item.Latitude,
-		Longitude:  item.Longitude,
-		Address:    item.Address,
-		FileUrl:    item.FileURL,
-		CreatedAt:  item.CreatedAt,
-	}, nil
+	return model.VisitToResponse(item), nil
+}
+
+func (c *VisitUseCase) GetVisitOwner(ctx context.Context, id string) (string, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item, err := c.Repo.FindByID(tx, id, false)
+	if err != nil {
+		c.Log.WithError(err).Error("visit not found")
+		return "", fiber.ErrNotFound
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return "", fiber.ErrInternalServerError
+	}
+
+	return item.EmployeeID, nil
 }
 
 func (c *VisitUseCase) CanDoVisit(ctx context.Context, employeeID, visitType string) (*model.CanDoVisitResponse, error) {
@@ -173,7 +176,7 @@ func (c *VisitUseCase) CanDoVisit(ctx context.Context, employeeID, visitType str
 		return nil, fiber.NewError(fiber.StatusBadRequest, "visit_type must be IN or OUT")
 	}
 
-	lastVisit, err := c.Repo.FindLastByEmployee(tx, employeeID)
+	lastVisit, err := c.Repo.FindLastByEmployee(tx, employeeID, false)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		c.Log.WithError(err).Error("Failed to check last visit")
 		return nil, fiber.ErrInternalServerError
@@ -208,7 +211,7 @@ func (c *VisitUseCase) GetUnclosedVisit(ctx context.Context, employeeID string) 
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	lastVisit, err := c.Repo.FindLastByEmployee(tx, employeeID)
+	lastVisit, err := c.Repo.FindLastByEmployee(tx, employeeID, true)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		c.Log.WithError(err).Error("Failed to check last visit")
 		return nil, fiber.ErrInternalServerError
@@ -227,18 +230,7 @@ func (c *VisitUseCase) GetUnclosedVisit(ctx context.Context, employeeID string) 
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return &model.VisitResponse{
-		ID:         lastVisit.ID,
-		EmployeeID: lastVisit.EmployeeID,
-		CompanyID:  lastVisit.CompanyID,
-		VisitType:  lastVisit.VisitType,
-		Note:       lastVisit.Note,
-		Latitude:   lastVisit.Latitude,
-		Longitude:  lastVisit.Longitude,
-		Address:    lastVisit.Address,
-		FileUrl:    lastVisit.FileURL,
-		CreatedAt:  lastVisit.CreatedAt,
-	}, nil
+	return model.VisitToResponse(lastVisit), nil
 }
 
 // TODO: Consider soft delete if audits are required.
@@ -246,7 +238,7 @@ func (c *VisitUseCase) Delete(ctx context.Context, id string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	item, err := c.Repo.FindByID(tx, id)
+	item, err := c.Repo.FindByID(tx, id, false)
 	if err != nil {
 		c.Log.WithError(err).Error("visit not found")
 		return fiber.ErrNotFound

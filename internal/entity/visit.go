@@ -8,16 +8,18 @@ import (
 )
 
 type Visit struct {
-	ID         string  `gorm:"column:id;primaryKey"`
-	EmployeeID string  `gorm:"column:employee_id;not null"`
-	CompanyID  string  `gorm:"column:company_id;not null"`
-	VisitType  string  `gorm:"column:visit_type;not null"`
-	Note       *string `gorm:"column:note"`
-	Latitude   *string `gorm:"column:latitude"`
-	Longitude  *string `gorm:"column:longitude"`
-	Address    *string `gorm:"column:address"`
-	FileURL    *string `gorm:"column:file_url"`
-	CreatedAt  int64   `gorm:"column:created_at;not null"`
+	ID         string   `gorm:"column:id;primaryKey"`
+	EmployeeID string   `gorm:"column:employee_id;not null"`
+	CompanyID  string   `gorm:"column:company_id;not null"`
+	VisitType  string   `gorm:"column:visit_type;not null"`
+	Note       *string  `gorm:"column:note"`
+	Latitude   *string  `gorm:"column:latitude"`
+	Longitude  *string  `gorm:"column:longitude"`
+	Address    *string  `gorm:"column:address"`
+	FileURL    *string  `gorm:"column:file_url"`
+	CreatedAt  int64    `gorm:"column:created_at;not null"`
+	Employee   Employee `gorm:"foreignKey:EmployeeID;references:ID"`
+	Company    Company  `gorm:"foreignKey:CompanyID;references:ID"`
 }
 
 func (u *Visit) BeforeCreate(tx *gorm.DB) (err error) {

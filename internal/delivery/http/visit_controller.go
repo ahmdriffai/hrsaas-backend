@@ -123,15 +123,26 @@ func (c *VisitController) GetByID(ctx *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
+	user := middleware.GetUser(ctx)
+	if !strings.EqualFold(user.Role, "ADMIN") {
+		if user.Employee == nil || user.Employee.ID == "" {
+			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+		}
+
+		ownerID, err := c.UseCase.GetVisitOwner(ctx.UserContext(), requestID)
+		if err != nil {
+			c.Log.WithError(err).Error("failed to get visit owner")
+			return err
+		}
+		if ownerID != user.Employee.ID {
+			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+		}
+	}
+
 	response, err := c.UseCase.GetByID(ctx.UserContext(), requestID)
 	if err != nil {
 		c.Log.WithError(err).Error("failed to get visit detail")
 		return err
-	}
-
-	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") && (user.Employee == nil || response.EmployeeID != user.Employee.ID) {
-		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 	}
 
 	return ctx.JSON(model.WebResponse[*model.VisitResponse]{
@@ -185,15 +196,20 @@ func (c *VisitController) Delete(ctx *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	response, err := c.UseCase.GetByID(ctx.UserContext(), requestID)
-	if err != nil {
-		c.Log.WithError(err).Error("failed to get visit detail")
-		return err
-	}
-
 	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") && (user.Employee == nil || response.EmployeeID != user.Employee.ID) {
-		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+	if !strings.EqualFold(user.Role, "ADMIN") {
+		if user.Employee == nil || user.Employee.ID == "" {
+			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+		}
+
+		ownerID, err := c.UseCase.GetVisitOwner(ctx.UserContext(), requestID)
+		if err != nil {
+			c.Log.WithError(err).Error("failed to get visit owner")
+			return err
+		}
+		if ownerID != user.Employee.ID {
+			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+		}
 	}
 
 	if err := c.UseCase.Delete(ctx.UserContext(), requestID); err != nil {
