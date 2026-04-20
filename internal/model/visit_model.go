@@ -1,19 +1,23 @@
 package model
 
+import "hr-sas/internal/entity"
+
 type VisitResponse struct {
-	ID         string  `json:"id"`
-	EmployeeID string  `json:"employee_id"`
-	CompanyID  string  `json:"company_id"`
-	VisitType  string  `json:"visit_type"`
-	Note       *string `json:"note,omitempty"`
-	Latitude   *string `json:"latitude,omitempty"`
-	Longitude  *string `json:"longitude,omitempty"`
-	Address    *string `json:"address,omitempty"`
-	FileName   *string `json:"file_name,omitempty"`
-	MimeType   *string `json:"mime_type,omitempty"`
-	FileSize   *int    `json:"file_size,omitempty"`
-	FileUrl    *string `json:"file_url,omitempty"`
-	CreatedAt  int64   `json:"created_at"`
+	ID         string           `json:"id"`
+	EmployeeID string           `json:"employee_id"`
+	CompanyID  string           `json:"company_id"`
+	VisitType  string           `json:"visit_type"`
+	Note       *string          `json:"note,omitempty"`
+	Latitude   *string          `json:"latitude,omitempty"`
+	Longitude  *string          `json:"longitude,omitempty"`
+	Address    *string          `json:"address,omitempty"`
+	FileName   *string          `json:"file_name,omitempty"`
+	MimeType   *string          `json:"mime_type,omitempty"`
+	FileSize   *int             `json:"file_size,omitempty"`
+	FileUrl    *string          `json:"file_url,omitempty"`
+	CreatedAt  int64            `json:"created_at"`
+	Employee   EmployeeResponse `json:"employee"`
+	Company    CompanyResponse  `json:"company"`
 }
 
 type CreateVisitRequest struct {
@@ -38,4 +42,25 @@ type SearchVisitRequest struct {
 type CanDoVisitResponse struct {
 	CanDoVisit bool   `json:"can_do_visit"`
 	Message    string `json:"message,omitempty"`
+}
+
+func VisitToResponse(visit *entity.Visit) *VisitResponse {
+	if visit == nil {
+		return nil
+	}
+
+	return &VisitResponse{
+		ID:         visit.ID,
+		EmployeeID: visit.EmployeeID,
+		CompanyID:  visit.CompanyID,
+		VisitType:  visit.VisitType,
+		Note:       visit.Note,
+		Latitude:   visit.Latitude,
+		Longitude:  visit.Longitude,
+		Address:    visit.Address,
+		FileUrl:    visit.FileURL,
+		CreatedAt:  visit.CreatedAt,
+		Employee:   *EmployeeToResponse(&visit.Employee),
+		Company:    *CompanyToResponse(&visit.Company),
+	}
 }

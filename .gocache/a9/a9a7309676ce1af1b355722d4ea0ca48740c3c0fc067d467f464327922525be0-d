@@ -1,0 +1,11 @@
+./attendance.go
+./auth.go
+./company.go
+./division.go
+./employee.go
+./office_location.go
+./position.go
+./sanction.go
+./shift.go
+./time_off.go
+./visit.go
