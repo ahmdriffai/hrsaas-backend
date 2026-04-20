@@ -48,6 +48,7 @@ func (c *PositionUseCase) Create(ctx context.Context, request *model.CreatePosit
 	position := &entity.Position{
 		Name:      request.Name,
 		CompanyID: request.CompanyID,
+		IsApprover: request.IsApprover,
 	}
 
 	if request.ParentID != nil {
@@ -66,9 +67,11 @@ func (c *PositionUseCase) Create(ctx context.Context, request *model.CreatePosit
 	}
 
 	return &model.PositionResponse{
+		ID:        position.ID,
 		Name:      position.Name,
 		CompanyID: position.CompanyID,
 		ParentID:  position.ParentID,
+		IsApprover: position.IsApprover,
 	}, nil
 
 }
@@ -125,6 +128,8 @@ func (c *PositionUseCase) buildTree(
 		ID:        pos.ID,
 		CompanyID: pos.CompanyID,
 		Name:      pos.Name,
+		ParentID:  pos.ParentID,
+		IsApprover: pos.IsApprover,
 	}
 
 	if pos.ParentID != nil {

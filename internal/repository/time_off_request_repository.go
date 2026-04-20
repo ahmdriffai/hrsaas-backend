@@ -10,7 +10,7 @@ import (
 )
 
 type TimeOffRequestRepository struct {
-	Repository[entity.Time_Off_Requests]
+	Repository[entity.TimeOffRequest]
 	Log *logrus.Logger
 }
 
@@ -18,10 +18,59 @@ func NewTimeOffRequestRepository(log *logrus.Logger) *TimeOffRequestRepository {
 	return &TimeOffRequestRepository{Log: log}
 }
 
-func (r *TimeOffRequestRepository) List(db *gorm.DB, request *model.SearchTimeOffRequest) ([]entity.Time_Off_Requests, int64, error) {
-	var items []entity.Time_Off_Requests
+func (r *TimeOffRequestRepository) List(db *gorm.DB, request *model.SearchTimeOffRequest, withRelations bool) ([]entity.TimeOffRequest, int64, error) {
+	var items []entity.TimeOffRequest
 
-	query := db.Model(&entity.Time_Off_Requests{})
+	query := db.Model(&entity.TimeOffRequest{})
+	query = r.applyFilters(query, request)
+	if withRelations {
+		query = query.
+			Preload("Employee").
+			Preload("TimeOffType").
+			Preload("Approvals").
+			Preload("Approvals.Employee").
+			Preload("Approvals.TimeOffRequest")
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := query.Offset((request.Page - 1) * request.Size).Limit(request.Size).Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
+}
+
+func (r *TimeOffRequestRepository) FindByID(db *gorm.DB, id string, withRelations bool) (*entity.TimeOffRequest, error) {
+	var item entity.TimeOffRequest
+	query := db.Model(&entity.TimeOffRequest{})
+	if withRelations {
+		query = query.
+			Preload("Employee").
+			Preload("TimeOffType").
+			Preload("Approvals").
+			Preload("Approvals.Employee").
+			Preload("Approvals.TimeOffRequest")
+	}
+	if err := query.Where("id = ?", id).Take(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (r *TimeOffRequestRepository) UpdateStatus(db *gorm.DB, id string, status string) error {
+	return db.Model(&entity.TimeOffRequest{}).
+		Where("id = ?", id).
+		Update("request_status", status).Error
+}
+
+func (r *TimeOffRequestRepository) applyFilters(query *gorm.DB, request *model.SearchTimeOffRequest) *gorm.DB {
+	if request == nil {
+		return query
+	}
 	if request.EmployeeID != "" {
 		query = query.Where("employee_id = ?", request.EmployeeID)
 	}
@@ -39,23 +88,5 @@ func (r *TimeOffRequestRepository) List(db *gorm.DB, request *model.SearchTimeOf
 		endDate, _ := lib.ParseDateToUnixMilli(request.EndDate)
 		query = query.Where("end_date <= ?", endDate)
 	}
-
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	if err := query.Offset((request.Page - 1) * request.Size).Limit(request.Size).Find(&items).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return items, total, nil
-}
-
-func (r *TimeOffRequestRepository) FindByID(db *gorm.DB, id string) (*entity.Time_Off_Requests, error) {
-	var item entity.Time_Off_Requests
-	if err := db.Where("id = ?", id).Take(&item).Error; err != nil {
-		return nil, err
-	}
-	return &item, nil
+	return query
 }

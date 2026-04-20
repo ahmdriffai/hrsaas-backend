@@ -1,5 +1,7 @@
 package model
 
+import "hr-sas/internal/entity"
+
 type DivisionResponse struct {
 	ID          string  `json:"id"`
 	CompanyID   string  `json:"company_id"`
@@ -18,4 +20,16 @@ type SearchDivisionRequest struct {
 	Name      string `json:"name"`
 	Page      int    `json:"page" validate:"min=1"`
 	Size      int    `json:"size" validate:"min=1,max=100"`
+}
+
+func DivisionToResponse(division *entity.Division) *DivisionResponse {
+	if division == nil {
+		return nil
+	}
+	return &DivisionResponse{
+		ID:          division.ID,
+		CompanyID:   division.CompanyID,
+		Name:        division.Name,
+		Description: division.Description,
+	}
 }

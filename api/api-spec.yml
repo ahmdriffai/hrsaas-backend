@@ -50,6 +50,10 @@ paths:
       operationId: listTimeOffRequests
       parameters:
         - in: query
+          name: employee_id
+          schema:
+            type: string
+        - in: query
           name: time_off_type_id
           schema:
             type: string
@@ -88,6 +92,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessTimeOffRequestListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /api/time-off-requests/{id}:
     get:
@@ -104,6 +109,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessTimeOffRequestResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /api/time-off-requests/_current:
@@ -167,38 +173,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessTimeOffApprovalListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  /api/time-off-requests/{id}/approvals/{approval_id}/approve:
+  /api/time-off-requests/{id}/approvals/{approval_id}:
     patch:
       tags: [Time Off Approvals]
-      summary: Approve a specific approval step
-      operationId: approveTimeOffApprovalStep
-      parameters:
-        - $ref: '#/components/parameters/IdPath'
-        - $ref: '#/components/parameters/ApprovalIdPath'
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApproveTimeOffRequest'
-      responses:
-        '200':
-          description: Approved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessEmptyResponse'
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /api/time-off-requests/{id}/approvals/{approval_id}/reject:
-    patch:
-      tags: [Time Off Approvals]
-      summary: Reject a specific approval step
-      operationId: rejectTimeOffApprovalStep
+      summary: Decide a specific approval step
+      operationId: decideTimeOffApprovalStep
       parameters:
         - $ref: '#/components/parameters/IdPath'
         - $ref: '#/components/parameters/ApprovalIdPath'
@@ -207,10 +189,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RejectTimeOffRequest'
+              $ref: '#/components/schemas/DecideTimeOffApprovalRequest'
       responses:
         '200':
-          description: Rejected
+          description: Success
           content:
             application/json:
               schema:
@@ -251,35 +233,11 @@ paths:
                 $ref: '#/components/schemas/SuccessTimeOffApprovalListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
 
-  /api/time-off-approvals/{approval_id}/approve:
+  /api/time-off-approvals/{approval_id}:
     patch:
       tags: [Time Off Approvals]
-      summary: Approve a specific approval by id (short path)
-      operationId: approveTimeOffApprovalShort
-      parameters:
-        - $ref: '#/components/parameters/ApprovalIdPath'
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApproveTimeOffRequest'
-      responses:
-        '200':
-          description: Approved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessEmptyResponse'
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /api/time-off-approvals/{approval_id}/reject:
-    patch:
-      tags: [Time Off Approvals]
-      summary: Reject a specific approval by id (short path)
-      operationId: rejectTimeOffApprovalShort
+      summary: Decide a specific approval by id
+      operationId: decideTimeOffApprovalShort
       parameters:
         - $ref: '#/components/parameters/ApprovalIdPath'
       requestBody:
@@ -287,10 +245,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RejectTimeOffRequest'
+              $ref: '#/components/schemas/DecideTimeOffApprovalRequest'
       responses:
         '200':
-          description: Rejected
+          description: Success
           content:
             application/json:
               schema:
@@ -370,6 +328,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessVisitListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /api/visits/_current:
     get:
@@ -457,7 +416,7 @@ paths:
   /api/visits/{id}:
     get:
       tags: [Visits]
-      summary: Get visit detail
+      summary: Get visit detail (owner or admin)
       operationId: getVisitById
       parameters:
         - $ref: '#/components/parameters/IdPath'
@@ -469,10 +428,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessVisitResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Visits]
-      summary: Delete visit by id (admin)
+      summary: Delete visit by id (owner or admin)
       operationId: deleteVisitById
       parameters:
         - $ref: '#/components/parameters/IdPath'
@@ -615,9 +575,14 @@ paths:
   /api/time-off-balances:
     get:
       tags: [Time Off Balances]
-      summary: List balances
+      summary: List balances by employee (admin)
       operationId: listTimeOffBalances
       parameters:
+        - in: query
+          name: employee_id
+          required: true
+          schema:
+            type: string
         - in: query
           name: time_off_type_id
           schema:
@@ -635,6 +600,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessTimeOffBalanceListResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/time-off-balances/_set:
+    post:
+      tags: [Time Off Balances]
+      summary: Set time off balance manually (admin)
+      operationId: setTimeOffBalance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetTimeOffBalanceRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessTimeOffBalanceResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /api/time-off-balances/_current:
     get:
@@ -726,6 +714,85 @@ components:
       type: string
       enum: [IN, OUT]
 
+    Employee:
+      type: object
+      properties:
+        id:
+          type: string
+        company_id:
+          type: string
+        user_id:
+          type: string
+        employee_number:
+          type: string
+        fullname:
+          type: string
+        birth_place:
+          type: string
+        birth_date:
+          type: integer
+          format: int64
+        blood_type:
+          type: string
+        marital_status:
+          type: string
+        religion:
+          type: string
+        phone:
+          type: string
+        timezone:
+          type: string
+
+    Company:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        bussiness_field:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        province:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        village:
+          type: string
+          nullable: true
+        zip_code:
+          type: string
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+        fax_number:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        created_at:
+          type: integer
+          format: int64
+        updated_at:
+          type: integer
+          format: int64
+
     TimeOffRequest:
       type: object
       properties:
@@ -736,31 +803,68 @@ components:
         time_off_type_id:
           type: string
         start_date:
-          type: string
-          format: date
+          type: integer
+          format: int64
         end_date:
-          type: string
-          format: date
+          type: integer
+          format: int64
+          nullable: true
         requested_days:
           type: integer
           minimum: 1
         request_reason:
           type: string
+          nullable: true
         request_status:
           $ref: '#/components/schemas/RequestStatus'
-        action_by:
-          type: string
-          nullable: true
-        action_at:
-          type: string
-          format: date-time
-          nullable: true
-        action_reason:
+        file_url:
           type: string
           nullable: true
         created_at:
+          type: integer
+          format: int64
+        employee:
+          $ref: '#/components/schemas/Employee'
+        time_off_type:
+          $ref: '#/components/schemas/TimeOffType'
+        approvals:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeOffRequestApprovalItem'
+
+    TimeOffRequestSummary:
+      type: object
+      properties:
+        id:
           type: string
-          format: date-time
+        employee_id:
+          type: string
+        time_off_type_id:
+          type: string
+        start_date:
+          type: integer
+          format: int64
+        end_date:
+          type: integer
+          format: int64
+          nullable: true
+        requested_days:
+          type: integer
+        request_reason:
+          type: string
+          nullable: true
+        request_status:
+          $ref: '#/components/schemas/RequestStatus'
+        file_url:
+          type: string
+          nullable: true
+        created_at:
+          type: integer
+          format: int64
+        employee:
+          $ref: '#/components/schemas/Employee'
+        time_off_type:
+          $ref: '#/components/schemas/TimeOffType'
 
     CreateTimeOffRequest:
       type: object
@@ -768,7 +872,6 @@ components:
         - time_off_type_id
         - start_date
         - end_date
-        - requested_days
         - request_reason
       properties:
         time_off_type_id:
@@ -779,29 +882,29 @@ components:
         end_date:
           type: string
           format: date
-        requested_days:
-          type: integer
-          minimum: 1
         request_reason:
           type: string
           maxLength: 255
-
-    ApproveTimeOffRequest:
-      type: object
-      properties:
-        action_reason:
+        request_status:
           type: string
-          maxLength: 255
-          description: Optional note when approving.
+          enum: [PENDING]
+          default: PENDING
 
-    RejectTimeOffRequest:
+    DecideTimeOffApprovalRequest:
       type: object
       required:
-        - action_reason
+        - action
       properties:
+        action:
+          type: string
+          enum: [APPROVE, REJECT]
         action_reason:
           type: string
           maxLength: 255
+        action_at:
+          type: integer
+          format: int64
+          description: Optional. If omitted, server uses current time.
 
     TimeOffType:
       type: object
@@ -893,6 +996,11 @@ components:
           nullable: true
         created_at:
           type: integer
+          format: int64
+        employee:
+          $ref: '#/components/schemas/Employee'
+        company:
+          $ref: '#/components/schemas/Company'
 
     CreateVisitRequest:
       type: object
@@ -912,15 +1020,6 @@ components:
           nullable: true
         address:
           type: string
-          nullable: true
-        file_name:
-          type: string
-          nullable: true
-        mime_type:
-          type: string
-          nullable: true
-        file_size:
-          type: integer
           nullable: true
         file_url:
           type: string
@@ -954,37 +1053,65 @@ components:
           minimum: 0
         remaining_days:
           type: integer
+        employee:
+          $ref: '#/components/schemas/Employee'
+        time_off_type:
+          $ref: '#/components/schemas/TimeOffType'
+
+    SetTimeOffBalanceRequest:
+      type: object
+      required:
+        - employee_id
+        - time_off_type_id
+        - period_year
+        - entitled_days
+        - used_days
+      properties:
+        employee_id:
+          type: string
+        time_off_type_id:
+          type: string
+        period_year:
+          type: integer
+          minimum: 2000
+        entitled_days:
+          type: integer
+          minimum: 0
+        used_days:
+          type: integer
+          minimum: 0
+        remaining_days:
+          type: integer
+          minimum: 0
+          nullable: true
 
     ApprovalStatus:
       type: string
       enum: [PENDING, APPROVED, REJECTED, SKIPPED]
 
-    TimeOffRequestApproval:
+    TimeOffRequestApprovalItem:
       type: object
       properties:
         id:
           type: string
         time_off_request_id:
           type: string
-        step_no:
-          type: integer
         approver_employee_id:
           type: string
-        approver_name:
-          type: string
-        approver_position:
-          type: string
-        approver_division:
-          type: string
+        is_required:
+          type: boolean
         status:
           $ref: '#/components/schemas/ApprovalStatus'
         action_at:
-          type: string
-          format: date-time
-          nullable: true
+          type: integer
+          format: int64
         action_reason:
           type: string
           nullable: true
+        employee:
+          $ref: '#/components/schemas/Employee'
+        time_off_request:
+          $ref: '#/components/schemas/TimeOffRequestSummary'
 
 
     PageMetadata:
@@ -1070,13 +1197,24 @@ components:
           type: string
           nullable: true
 
+    SuccessTimeOffBalanceResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TimeOffBalance'
+        paging:
+          $ref: '#/components/schemas/PageMetadata'
+        errors:
+          type: string
+          nullable: true
+
     SuccessTimeOffApprovalListResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/TimeOffRequestApproval'
+            $ref: '#/components/schemas/TimeOffRequestApprovalItem'
         paging:
           $ref: '#/components/schemas/PageMetadata'
         errors:
@@ -1122,7 +1260,7 @@ components:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/TimeOffRequestApproval'
+          $ref: '#/components/schemas/TimeOffRequestApprovalItem'
         paging:
           $ref: '#/components/schemas/PageMetadata'
         errors:
