@@ -1,21 +1,31 @@
 package model
 
-import "hr-sas/internal/entity"
+import (
+	"hr-sas/internal/entity"
+)
+
+type ApprovalResponse struct {
+	EmployeeName string `json:"employee_name"`
+	IsRequired   bool   `json:"is_required"`
+	Status       string `json:"status"`
+	ActionAt     int64  `json:"action_at"`
+	ActionReason string `json:"action_reason"`
+}
 
 type TimeOffRequestResponse struct {
-	ID            string                    `json:"id"`
-	EmployeeID    string                    `json:"employee_id"`
-	TimeOffTypeID string                    `json:"time_off_type_id"`
-	StartDate     int64                     `json:"start_date"`
-	EndDate       *int64                    `json:"end_date"`
-	RequestedDays int                       `json:"requested_days"`
-	RequestReason *string                   `json:"request_reason"`
-	RequestStatus *string                   `json:"request_status"`
-	FileUrl       *string                   `json:"file_url,omitempty"`
-	CreatedAt     int64                     `json:"created_at"`
-	Employee      EmployeeResponse          `json:"employee"`
-	TimeOffType   TimeOffTypeResponse       `json:"time_off_type"`
-	Approvals     []TimeOffApprovalResponse `json:"approvals"`
+	ID            string              `json:"id"`
+	EmployeeID    string              `json:"employee_id"`
+	TimeOffTypeID string              `json:"time_off_type_id"`
+	StartDate     int64               `json:"start_date"`
+	EndDate       *int64              `json:"end_date"`
+	RequestedDays int                 `json:"requested_days"`
+	RequestReason *string             `json:"request_reason"`
+	RequestStatus *string             `json:"request_status"`
+	FileUrl       *string             `json:"file_url,omitempty"`
+	CreatedAt     int64               `json:"created_at"`
+	Employee      EmployeeResponse    `json:"employee"`
+	TimeOffType   TimeOffTypeResponse `json:"time_off_type"`
+	Approvals     []ApprovalResponse  `json:"approvals"`
 }
 
 type CreateTimeOffRequest struct {
@@ -39,9 +49,16 @@ type SearchTimeOffRequest struct {
 }
 
 func TimeOffRequestToResponse(request *entity.TimeOffRequest) *TimeOffRequestResponse {
-	approvals := make([]TimeOffApprovalResponse, len(request.Approvals))
-	for i := range request.Approvals {
-		approvals[i] = *TimeOffApprovalToResponse(&request.Approvals[i])
+	approvals := make([]ApprovalResponse, len(request.Approvals))
+	for i, v := range request.Approvals {
+		approval := ApprovalResponse{
+			EmployeeName: v.Employee.Fullname,
+			IsRequired:   v.IsRequired,
+			Status:       v.Status,
+			ActionAt:     v.ActionAt,
+			ActionReason: v.ActionReason,
+		}
+		approvals[i] = approval
 	}
 
 	return &TimeOffRequestResponse{

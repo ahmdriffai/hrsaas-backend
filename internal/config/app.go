@@ -49,7 +49,16 @@ func Bootstrap(config *BootstrapConfig) {
 	// setup usecase
 	companyUsecase := usecase.NewCompanyUseCase(config.DB, config.Log, config.Validate, companyRepository, userRepository)
 	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository)
-	employeeUseCase := usecase.NewEmployeeUseCase(config.DB, config.Log, config.Validate, employeeRepository, userRepository)
+	employeeUseCase := usecase.NewEmployeeUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		employeeRepository,
+		userRepository,
+		employeeContractRepository,
+		positionRepository,
+		divisionRepository,
+	)
 	sanctionUseCase := usecase.NewSantionUseCase(config.DB, config.Log, config.Validate, sanctionRepository)
 	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)

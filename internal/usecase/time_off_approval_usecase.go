@@ -48,7 +48,6 @@ func (c *TimeOffApprovalUseCase) ListApprovals(ctx context.Context, requestID st
 
 	var items []entity.TimeOffApproval
 	if err := tx.
-		Preload("Employee").
 		Preload("TimeOffRequest").
 		Preload("TimeOffRequest.Employee").
 		Preload("TimeOffRequest.TimeOffType").
@@ -259,6 +258,9 @@ func (c *TimeOffApprovalUseCase) ListApprovalsByApprover(ctx context.Context, ap
 		Preload("Employee").
 		Preload("TimeOffRequest").
 		Preload("TimeOffRequest.Employee").
+		Preload("TimeOffRequest.Employee.EmployeeContract").
+		Preload("TimeOffRequest.Employee.EmployeeContract.Position").
+		Preload("TimeOffRequest.Employee.EmployeeContract.Division").
 		Preload("TimeOffRequest.TimeOffType")
 
 	if request.Status != "" {

@@ -29,7 +29,10 @@ func (r *TimeOffRequestRepository) List(db *gorm.DB, request *model.SearchTimeOf
 			Preload("TimeOffType").
 			Preload("Approvals").
 			Preload("Approvals.Employee").
-			Preload("Approvals.TimeOffRequest")
+			Preload("Approvals.TimeOffRequest").
+			Preload("Employee.EmployeeContract").
+			Preload("Employee.EmployeeContract.Position").
+			Preload("Employee.EmployeeContract.Division")
 	}
 
 	var total int64
