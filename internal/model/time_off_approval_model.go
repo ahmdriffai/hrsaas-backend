@@ -64,6 +64,7 @@ type CreateTimeOffApprovalPolicyStepRequest struct {
 }
 
 func TimeOffApprovalToResponse(approval *entity.TimeOffApproval) *TimeOffApprovalResponse {
+	timeoffRequest := TimeOffRequestToResponse(&approval.TimeOffRequest)
 	return &TimeOffApprovalResponse{
 		ID:                 approval.ID,
 		TimeOffRequestID:   approval.TimeOffRequestId,
@@ -73,6 +74,6 @@ func TimeOffApprovalToResponse(approval *entity.TimeOffApproval) *TimeOffApprova
 		ActionAt:           approval.ActionAt,
 		ActionReason:       &approval.ActionReason,
 		Employee:           *EmployeeToResponse(&approval.Employee),
-		TimeOffRequest:     nil,
+		TimeOffRequest:     timeoffRequest,
 	}
 }

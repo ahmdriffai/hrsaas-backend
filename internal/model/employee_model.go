@@ -1,22 +1,27 @@
 package model
 
-import "hr-sas/internal/entity"
+import (
+	"hr-sas/internal/entity"
+	"mime/multipart"
+)
 
 type EmployeeResponse struct {
-	ID             string `json:"id,omitempty"`
-	CompanyID      string `json:"company_id,omitempty"`
-	UserID         string `json:"user_id,omitempty"`
-	EmployeeNumber string `json:"employee_number,omitempty"`
-	Fullname       string `json:"fullname,omitempty"`
-	BirthPlace     string `json:"birth_place,omitempty"`
-	BirthDate      int64  `json:"birth_date,omitempty"`
-	BlodType       string `json:"blood_type,omitempty"`
-	MaritalStatus  string `json:"marital_status,omitempty"`
-	Religion       string `json:"religion,omitempty"`
-	Phone          string `json:"phone,omitempty"`
-	Timezone       string `json:"timezone,omitempty"`
-	CreatedAt      int64  `json:"created_at,omitempty"`
-	UpdatedAt      int64  `json:"updated_at,omitempty"`
+	ID             string                   `json:"id,omitempty"`
+	CompanyID      string                   `json:"company_id,omitempty"`
+	UserID         string                   `json:"user_id,omitempty"`
+	EmployeeNumber string                   `json:"employee_number,omitempty"`
+	Fullname       string                   `json:"fullname,omitempty"`
+	BirthPlace     string                   `json:"birth_place,omitempty"`
+	BirthDate      int64                    `json:"birth_date,omitempty"`
+	BlodType       string                   `json:"blood_type,omitempty"`
+	MaritalStatus  string                   `json:"marital_status,omitempty"`
+	Religion       string                   `json:"religion,omitempty"`
+	Phone          string                   `json:"phone,omitempty"`
+	Timezone       string                   `json:"timezone,omitempty"`
+	Contract       EmployeeContractResponse `json:"contract,omitempty"`
+	User           UserResponse             `json:"user,omitempty"`
+	CreatedAt      int64                    `json:"created_at,omitempty"`
+	UpdatedAt      int64                    `json:"updated_at,omitempty"`
 }
 
 type CreateEmployeeRequest struct {
@@ -41,10 +46,23 @@ type SearchEmployeeRequest struct {
 	Size      int    `json:"size" validate:"min=1,max=100"`
 }
 
+type ImportExcelEmployeeRequest struct {
+	CompanyID string                `json:"company_id" validate:"required"`
+	File      *multipart.FileHeader `form:"file" validate:"required"`
+}
+
+type DetailEmployeeRequest struct {
+	ID        string `json:"id" validate:"required"`
+	CompanyID string `json:"company_id" validate:"required"`
+}
+
 func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 	if employee == nil {
 		return nil
 	}
+
+	contract := EmployeeContractToResponse(&employee.EmployeeContract)
+	user := UserToResponse(&employee.User)
 
 	return &EmployeeResponse{
 		ID:             employee.ID,
@@ -59,5 +77,7 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		Phone:          employee.Phone,
 		Timezone:       employee.Timezone,
 		EmployeeNumber: employee.EmployeeNumber,
+		Contract:       *contract,
+		User:           *user,
 	}
 }

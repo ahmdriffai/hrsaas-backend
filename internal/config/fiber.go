@@ -13,7 +13,7 @@ func NewFiber(config *viper.Viper) *fiber.App {
 		ErrorHandler: NewErrorHandler(),
 		Prefork:      config.GetBool("app.prefork"),
 		// trust proxy settings
-		EnableTrustedProxyCheck: true,
+		EnableTrustedProxyCheck: false,
 		TrustedProxies: []string{
 			"127.0.0.1",
 			"::1",
@@ -22,13 +22,14 @@ func NewFiber(config *viper.Viper) *fiber.App {
 		// ProxyHeader: "CF-Connecting-IP",
 	})
 
-	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
-		AllowHeaders:     "*",
-		AllowOrigins:     "*",
-		AllowCredentials: false,
-		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		AllowOrigins:     "http://localhost:3000",
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowCredentials: true,
 	}))
+
+	app.Use(recover.New())
 
 	return app
 }

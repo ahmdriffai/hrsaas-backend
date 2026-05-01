@@ -55,3 +55,13 @@ func (r *PositionRepository) FilterSearch(request *model.SeachPositionRequest) f
 		return tx
 	}
 }
+
+func (r *PositionRepository) FindByName(db *gorm.DB, entity *entity.Position, name string, preloads ...string) error {
+	query := db
+
+	for _, preload := range preloads {
+		query = query.Preload(preload)
+	}
+
+	return query.Where("name = ?", name).Take(entity).Error
+}

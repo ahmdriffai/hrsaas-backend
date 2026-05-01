@@ -3,6 +3,7 @@ package http
 import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -65,6 +66,15 @@ func (c *UserController) Login(ctx *fiber.Ctx) error {
 		return err
 	}
 
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    response.Token,
+		HTTPOnly: true,
+		Secure:   false, // true kalau production (HTTPS)
+		SameSite: "None",
+		Path:     "/",
+	})
+
 	return ctx.JSON(model.WebResponse[*model.LoginUserResponse]{
 		Data: response,
 	})
@@ -90,6 +100,14 @@ func (c *UserController) Logout(ctx *fiber.Ctx) error {
 		c.Log.WithError(err).Error("failed to logout user")
 		return err
 	}
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HTTPOnly: true,
+		Path:     "/",
+	})
 
 	return ctx.JSON(model.WebResponse[any]{
 		Data: nil,

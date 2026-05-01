@@ -45,3 +45,13 @@ func (r *DivisionRepository) FilterSearch(request *model.SearchDivisionRequest) 
 		return tx
 	}
 }
+
+func (r *DivisionRepository) FindByName(db *gorm.DB, entity *entity.Division, name string, preloads ...string) error {
+	query := db
+
+	for _, preload := range preloads {
+		query = query.Preload(preload)
+	}
+
+	return query.Where("name = ?", name).Take(entity).Error
+}

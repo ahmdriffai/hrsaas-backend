@@ -24,7 +24,9 @@ type Employee struct {
 	CreatedAt      int64  `gorm:"column:created_at"`
 	UpdatedAt      int64  `gorm:"column:updated_at"`
 
-	OfficeLocations []OfficeLocation `gorm:"many2many:employee_office_locations"`
+	User             User 
+	EmployeeContract EmployeeContract
+	OfficeLocations  []OfficeLocation `gorm:"many2many:employee_office_locations"`
 }
 
 // BeforeCreate hook to set UUID
@@ -65,17 +67,17 @@ func (c *EmployeeIdentification) TableName() string {
 }
 
 type EmployeeContract struct {
-	ID           string   `gorm:"column:id;primaryKey"`
-	EmployeeID   string   `gorm:"column:employee_id;not null"`
-	ContractType string   `gorm:"column:contract_type;not null"`
-	StartDate    int64    `gorm:"column:start_date;not null"`
-	EndDate      *int64   `gorm:"column:end_date"`
-	DivisionID   string   `gorm:"column:division_id;not null"`
-	PositionID   string   `gorm:"column:position_id;not null"`
-	Salary       float64  `gorm:"column:salary;not null"`
-	Employee     Employee `gorm:"foreignKey:EmployeeID;references:ID"`
-	Division     Division `gorm:"foreignKey:DivisionID;references:ID"`
-	Position     Position `gorm:"foreignKey:PositionID;references:ID"`
+	ID           string  `gorm:"column:id;primaryKey"`
+	EmployeeID   string  `gorm:"column:employee_id;not null"`
+	ContractType string  `gorm:"column:contract_type;not null"`
+	StartDate    int64   `gorm:"column:start_date;not null"`
+	EndDate      *int64  `gorm:"column:end_date"`
+	DivisionID   string  `gorm:"column:division_id;not null"`
+	PositionID   string  `gorm:"column:position_id;not null"`
+	Salary       float64 `gorm:"column:salary;not null"`
+	// Employee     Employee `gorm:"foreignKey:EmployeeID;references:ID"`
+	Division Division `gorm:"foreignKey:DivisionID;references:ID"`
+	Position Position `gorm:"foreignKey:PositionID;references:ID"`
 }
 
 // BeforeCreate hook to set UUID

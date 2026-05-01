@@ -77,6 +77,8 @@ func (c *RouteConfig) SetupEmployeeRouter() {
 
 	adminRoute := route.Group("/", c.AdminMiddleware)
 	adminRoute.Post("/", c.EmployeeController.CreateEmployee)
+	adminRoute.Post("/import-excel", c.EmployeeController.ImportExcel)
+	adminRoute.Get("/:id", c.EmployeeController.DetailEmployee)
 }
 
 func (c *RouteConfig) SetupEmployeeContractRouter() {
