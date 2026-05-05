@@ -24,7 +24,7 @@ type Employee struct {
 	CreatedAt      int64  `gorm:"column:created_at"`
 	UpdatedAt      int64  `gorm:"column:updated_at"`
 
-	User             User 
+	User             User
 	EmployeeContract EmployeeContract
 	OfficeLocations  []OfficeLocation `gorm:"many2many:employee_office_locations"`
 }

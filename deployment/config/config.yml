@@ -1,5 +1,6 @@
 app:
   name: "HR SAS Backend Service"
+  cors_origins: "http://localhost:3000,https://devsaasp.bankwonosobo.co.id"
 web:
   port: 9000
   prefork: false
