@@ -22,8 +22,13 @@ func NewFiber(config *viper.Viper) *fiber.App {
 		// ProxyHeader: "CF-Connecting-IP",
 	})
 
+	allowOrigins := config.GetString("app.cors_origins")
+	if allowOrigins == "" {
+		allowOrigins = "http://localhost:3000"
+	}
+
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     config.GetString("app.cors_origins"),
+		AllowOrigins:     allowOrigins,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS,PATCH",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,

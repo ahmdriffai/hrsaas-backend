@@ -1,5 +1,7 @@
 app:
   name: "HR SAS Backend Service"
+  cors_origins: "http://localhost:3000"
+  cookie_secure: true
 web:
   port: 9000
   prefork: false
@@ -14,7 +16,7 @@ database:
   sslmode: "disable"
   timezone: "Asia/Jakarta"
   pool:
-    idle: 10  
+    idle: 10
     max: 100
     lifetime: 300
 # mail:

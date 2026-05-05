@@ -109,7 +109,7 @@ func Bootstrap(config *BootstrapConfig) {
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
-	userController := http.NewUserController(userUseCase, config.Log)
+	userController := http.NewUserController(userUseCase, config.Log, config.Config)
 	employeeController := http.NewEmployeeController(employeeUseCase, config.Log)
 	santionController := http.NewSanctionController(sanctionUseCase, config.Log)
 	emSangController := http.NewEmSancController(emSancUseCase, config.Log)

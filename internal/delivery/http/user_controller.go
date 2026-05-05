@@ -7,17 +7,20 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type UserController struct {
 	UserUseCase *usecase.UserUseCase
 	Log         *logrus.Logger
+	Viper       *viper.Viper
 }
 
-func NewUserController(userUseCase *usecase.UserUseCase, log *logrus.Logger) *UserController {
+func NewUserController(userUseCase *usecase.UserUseCase, log *logrus.Logger, viper *viper.Viper) *UserController {
 	return &UserController{
 		UserUseCase: userUseCase,
 		Log:         log,
+		Viper:       viper,
 	}
 }
 
@@ -70,7 +73,7 @@ func (c *UserController) Login(ctx *fiber.Ctx) error {
 		Name:     "token",
 		Value:    response.Token,
 		HTTPOnly: true,
-		Secure:   false, // true kalau production (HTTPS)
+		Secure:   c.Viper.GetBool("app.cookie_secure"), // true kalau production (HTTPS)
 		SameSite: "None",
 		Path:     "/",
 	})

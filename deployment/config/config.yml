@@ -1,6 +1,8 @@
 app:
   name: "HR SAS Backend Service"
-  cors_origins: "http://localhost:3000,https://devsaasp.bankwonosobo.co.id"
+  cors_origins: "http://localhost:3000,http://localhost:3001,https://devsaasp.bankwonosobo.co.id"
+  cookie_secure: false # true if https
+
 web:
   port: 9000
   prefork: false
