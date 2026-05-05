@@ -69,12 +69,20 @@ func (c *UserController) Login(ctx *fiber.Ctx) error {
 		return err
 	}
 
+	isProduction := viper.GetString("app.env") == "production"
+
+	sameSite := "Lax"
+	if isProduction {
+		sameSite = "None"
+	}
+
 	ctx.Cookie(&fiber.Cookie{
 		Name:     "token",
 		Value:    response.Token,
 		HTTPOnly: true,
 		Secure:   c.Viper.GetBool("app.cookie_secure"), // true kalau production (HTTPS)
-		SameSite: "None",
+		SameSite: sameSite,
+		Domain:   c.Viper.GetString("app.cookie_domain"), // ".bankwonosobo.co.id"
 		Path:     "/",
 	})
 
