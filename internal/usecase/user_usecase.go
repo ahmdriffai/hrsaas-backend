@@ -169,7 +169,7 @@ func (c *UserUseCase) Login(ctx context.Context, request *model.LoginUserRequest
 	if err != nil {
 		return nil, fiber.ErrInternalServerError
 	}
-	if totalSession > 3 {
+	if totalSession > 10000 {
 		return nil, fiber.NewError(fiber.StatusConflict, "User already logged in")
 	}
 

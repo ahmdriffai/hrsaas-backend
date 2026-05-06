@@ -45,7 +45,7 @@ func (r *EmployeeRepository) FilterSearch(request *model.SearchEmployeeRequest) 
 
 		if key := request.Key; key != "" {
 			key = "%" + key + "%"
-			tx = tx.Where("fullname LIKE ?", key).Or("employee_number LIKE ?", key)
+			tx = tx.Where("fullname ILIKE ?", key).Or("employee_number ILIKE ?", key)
 		}
 
 		return tx

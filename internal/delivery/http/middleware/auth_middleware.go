@@ -3,7 +3,6 @@ package middleware
 import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -11,18 +10,23 @@ import (
 func NewAuth(userUseCase *usecase.UserUseCase) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		// Ambil header Authorization
-		authHeader := ctx.Get("Authorization")
-		if authHeader == "" {
-			return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized: Missing Authorization header")
+		// authHeader := ctx.Get("Authorization")
+		// if authHeader == "" {
+		// 	return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized: Missing Authorization header")
+		// }
+
+		// // Harus format: Bearer <token>
+		// parts := strings.Split(authHeader, " ")
+		// if len(parts) != 2 || parts[0] != "Bearer" {
+		// 	return fiber.NewError(fiber.StatusUnauthorized, "Invalid token format")
+		// }
+
+		// token := parts[1]
+		token := ctx.Cookies("token")
+		if token == "" {
+			return ctx.Status(401).JSON(fiber.Map{"message": "Unauthorized No token provided"})
 		}
 
-		// Harus format: Bearer <token>
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			return fiber.NewError(fiber.StatusUnauthorized, "Invalid token format")
-		}
-
-		token := parts[1]
 		request := &model.VerifyUserRequest{Token: token}
 		userUseCase.Log.Debugf("Authorization : %s", request.Token)
 

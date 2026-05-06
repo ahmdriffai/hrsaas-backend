@@ -49,7 +49,16 @@ func Bootstrap(config *BootstrapConfig) {
 	// setup usecase
 	companyUsecase := usecase.NewCompanyUseCase(config.DB, config.Log, config.Validate, companyRepository, userRepository)
 	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository)
-	employeeUseCase := usecase.NewEmployeeUseCase(config.DB, config.Log, config.Validate, employeeRepository, userRepository)
+	employeeUseCase := usecase.NewEmployeeUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		employeeRepository,
+		userRepository,
+		employeeContractRepository,
+		positionRepository,
+		divisionRepository,
+	)
 	sanctionUseCase := usecase.NewSantionUseCase(config.DB, config.Log, config.Validate, sanctionRepository)
 	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
@@ -100,7 +109,7 @@ func Bootstrap(config *BootstrapConfig) {
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
-	userController := http.NewUserController(userUseCase, config.Log)
+	userController := http.NewUserController(userUseCase, config.Log, config.Config)
 	employeeController := http.NewEmployeeController(employeeUseCase, config.Log)
 	santionController := http.NewSanctionController(sanctionUseCase, config.Log)
 	emSangController := http.NewEmSancController(emSancUseCase, config.Log)

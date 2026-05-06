@@ -3,20 +3,24 @@ package http
 import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type UserController struct {
 	UserUseCase *usecase.UserUseCase
 	Log         *logrus.Logger
+	Viper       *viper.Viper
 }
 
-func NewUserController(userUseCase *usecase.UserUseCase, log *logrus.Logger) *UserController {
+func NewUserController(userUseCase *usecase.UserUseCase, log *logrus.Logger, viper *viper.Viper) *UserController {
 	return &UserController{
 		UserUseCase: userUseCase,
 		Log:         log,
+		Viper:       viper,
 	}
 }
 
@@ -65,6 +69,23 @@ func (c *UserController) Login(ctx *fiber.Ctx) error {
 		return err
 	}
 
+	isProduction := viper.GetString("app.env") == "production"
+
+	sameSite := "Lax"
+	if isProduction {
+		sameSite = "None"
+	}
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    response.Token,
+		HTTPOnly: true,
+		Secure:   c.Viper.GetBool("app.cookie_secure"), // true kalau production (HTTPS)
+		SameSite: sameSite,
+		Domain:   c.Viper.GetString("app.cookie_domain"), // ".bankwonosobo.co.id"
+		Path:     "/",
+	})
+
 	return ctx.JSON(model.WebResponse[*model.LoginUserResponse]{
 		Data: response,
 	})
@@ -90,6 +111,14 @@ func (c *UserController) Logout(ctx *fiber.Ctx) error {
 		c.Log.WithError(err).Error("failed to logout user")
 		return err
 	}
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HTTPOnly: true,
+		Path:     "/",
+	})
 
 	return ctx.JSON(model.WebResponse[any]{
 		Data: nil,

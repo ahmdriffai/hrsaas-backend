@@ -1,6 +1,0 @@
-./hash.go
-./password.go
-./responses.go
-./token.go
-./validation.go
-./verification.go

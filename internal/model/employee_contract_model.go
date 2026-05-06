@@ -3,17 +3,17 @@ package model
 import "hr-sas/internal/entity"
 
 type EmployeeContractResponse struct {
-	ID           string           `json:"id"`
-	EmployeeID   string           `json:"employee_id"`
-	ContractType string           `json:"contract_type"`
-	StartDate    int64            `json:"start_date"`
-	EndDate      *int64           `json:"end_date,omitempty"`
-	DivisionID   string           `json:"division_id"`
-	PositionID   string           `json:"position_id"`
-	Salary       float64          `json:"salary"`
-	Employee     EmployeeResponse `json:"employee"`
-	Division     DivisionResponse `json:"division"`
-	Position     PositionResponse `json:"position"`
+	ID           string  `json:"id"`
+	EmployeeID   string  `json:"employee_id"`
+	ContractType string  `json:"contract_type"`
+	StartDate    int64   `json:"start_date"`
+	EndDate      *int64  `json:"end_date,omitempty"`
+	DivisionID   string  `json:"division_id"`
+	PositionID   string  `json:"position_id"`
+	Salary       float64 `json:"salary"`
+	// Employee     EmployeeResponse `json:"employee"`
+	Division DivisionResponse `json:"division"`
+	Position PositionResponse `json:"position"`
 }
 
 type CreateEmployeeContractRequest struct {
@@ -45,8 +45,8 @@ func EmployeeContractToResponse(contract *entity.EmployeeContract) *EmployeeCont
 		DivisionID:   contract.DivisionID,
 		PositionID:   contract.PositionID,
 		Salary:       contract.Salary,
-		Employee:     *EmployeeToResponse(&contract.Employee),
-		Division:     *DivisionToResponse(&contract.Division),
-		Position:     *PositionToResponse(&contract.Position),
+		// Employee:     *EmployeeToResponse(&contract.Employee),
+		Division: *DivisionToResponse(&contract.Division),
+		Position: *PositionToResponse(&contract.Position),
 	}
 }

@@ -93,6 +93,19 @@ func ParseDateToUnixMilli(dateStr string) (int64, error) {
 	return t.UnixMilli(), nil
 }
 
+func ParseDateToUnixMilli2(dateStr string) (int64, error) {
+
+	// Parse the string into a time.Time object
+	t, err := time.Parse("02/01/2006", dateStr)
+	if err != nil {
+		fmt.Println("Error parsing date:", err)
+		return 0, err
+	}
+
+	// Convert to Unix epoch
+	return t.UnixMilli(), nil
+}
+
 func ParseTimeToUnixMilli(timeStr string) (int64, error) {
 	t, err := time.Parse("15:04", timeStr)
 	if err != nil {

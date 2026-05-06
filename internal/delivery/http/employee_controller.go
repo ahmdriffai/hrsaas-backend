@@ -22,8 +22,7 @@ func NewEmployeeController(employeeUseCase *usecase.EmployeeUseCase, log *logrus
 	}
 }
 
-/* Create Employee Controller
- */
+// Create Employee Controller
 func (c *EmployeeController) CreateEmployee(ctx *fiber.Ctx) error {
 
 	request := new(model.CreateEmployeeRequest)
@@ -46,8 +45,7 @@ func (c *EmployeeController) CreateEmployee(ctx *fiber.Ctx) error {
 	})
 }
 
-/* Search Employee Controller
- */
+// Search Employee Controller
 func (c *EmployeeController) ListEmployee(ctx *fiber.Ctx) error {
 	companyID := middleware.GetCompanyId(ctx)
 	request := new(model.SearchEmployeeRequest)
@@ -72,5 +70,51 @@ func (c *EmployeeController) ListEmployee(ctx *fiber.Ctx) error {
 	return ctx.JSON(model.WebResponse[[]model.EmployeeResponse]{
 		Data:   responses,
 		Paging: paging,
+	})
+}
+
+// Import Excel Employee Controller
+func (c *EmployeeController) ImportExcel(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to get file from form data")
+		return fiber.ErrBadRequest
+	}
+
+	request := &model.ImportExcelEmployeeRequest{
+		CompanyID: companyID,
+		File:      file,
+	}
+
+	totalData, err := c.EmployeeUseCase.ImportExcel(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to import excel employee")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[int64]{
+		Data: totalData,
+	})
+}
+
+// Detail Employee Controller
+func (c *EmployeeController) DetailEmployee(ctx *fiber.Ctx) error {
+	employeeID := ctx.Params("id")
+	companyID := middleware.GetCompanyId(ctx)
+
+	request := &model.DetailEmployeeRequest{
+		ID:        employeeID,
+		CompanyID: companyID,
+	}
+
+	response, err := c.EmployeeUseCase.Detail(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to get employee detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.EmployeeResponse]{
+		Data: response,
 	})
 }

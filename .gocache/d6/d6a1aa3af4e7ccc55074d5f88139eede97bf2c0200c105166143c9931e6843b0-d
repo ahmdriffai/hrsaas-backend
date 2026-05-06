@@ -1,7 +1,0 @@
-./app.go
-./auth.go
-./fiber.go
-./gorm.go
-./logrus.go
-./validator.go
-./viper.go
