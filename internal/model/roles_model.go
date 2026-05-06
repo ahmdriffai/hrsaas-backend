@@ -39,10 +39,8 @@ func RoleToResponse(role *entity.Role) *RoleResponse {
 	permissions := make([]PermissionResponse, len(role.Permissions))
 	for i, permission := range role.Permissions {
 		permissions[i] = PermissionResponse{
-			ID:        permission.ID,
-			Name:      permission.Name,
-			CreatedAt: permission.CreatedAt,
-			UpdatedAt: permission.UpdatedAt,
+			ID:   permission.ID,
+			Name: permission.Name,
 		}
 	}
 
@@ -50,7 +48,5 @@ func RoleToResponse(role *entity.Role) *RoleResponse {
 		ID:          role.ID,
 		Name:        role.Name,
 		Permissions: permissions,
-		CreatedAt:   role.CreatedAt,
-		UpdatedAt:   role.UpdatedAt,
 	}
 }
