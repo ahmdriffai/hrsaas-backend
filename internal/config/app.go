@@ -43,12 +43,14 @@ func Bootstrap(config *BootstrapConfig) {
 	employeeContractRepository := repository.NewEmployeeContractRepository(config.Log)
 	divisionRepository := repository.NewDivisionRepository(config.Log)
 	visitRepository := repository.NewVisitRepository(config.Log)
+	permissionRepository := repository.NewPermissionRepository(config.Log)
+	roleRepository := repository.NewRoleRepository(config.Log)
 
 	// setup producer
 
 	// setup usecase
 	companyUsecase := usecase.NewCompanyUseCase(config.DB, config.Log, config.Validate, companyRepository, userRepository)
-	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository)
+	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository, roleRepository)
 	employeeUseCase := usecase.NewEmployeeUseCase(
 		config.DB,
 		config.Log,
@@ -106,6 +108,8 @@ func Bootstrap(config *BootstrapConfig) {
 	)
 	divisionUseCase := usecase.NewDivisionUseCase(config.DB, config.Log, config.Validate, divisionRepository)
 	visitUseCase := usecase.NewVisitUseCase(config.DB, config.Log, config.Validate, visitRepository)
+	permissionUseCase := usecase.NewPermissionUseCase(config.DB, config.Log, config.Validate, permissionRepository)
+	roleUseCase := usecase.NewRoleUseCase(config.DB, config.Log, config.Validate, roleRepository, permissionRepository)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
@@ -125,6 +129,8 @@ func Bootstrap(config *BootstrapConfig) {
 	employeeContractController := http.NewEmployeeContractController(employeeContractUseCase, config.Log)
 	divisionController := http.NewDivisionController(divisionUseCase, config.Log)
 	visitController := http.NewVisitController(visitUseCase, config.Log)
+	permissionController := http.NewPermissionController(permissionUseCase, config.Log)
+	roleController := http.NewRoleController(roleUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
@@ -156,6 +162,8 @@ func Bootstrap(config *BootstrapConfig) {
 		EmployeeContractController: employeeContractController,
 		DivisionController:         divisionController,
 		VisitController:            visitController,
+		PermissionController:       permissionController,
+		RoleController:             roleController,
 	}
 
 	routeConfig.Setup()

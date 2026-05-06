@@ -15,10 +15,12 @@ func NewAdmin() fiber.Handler {
 			return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 		}
 
-		if !strings.EqualFold(user.Role, "ADMIN") {
-			return fiber.NewError(fiber.StatusForbidden, "Forbidden: Admin access required")
+		for _, role := range user.Roles {
+			if strings.EqualFold(role.Name, "ADMIN") {
+				return ctx.Next()
+			}
 		}
 
-		return ctx.Next()
+		return fiber.NewError(fiber.StatusForbidden, "Forbidden: Admin access required")
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
 	"math"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -49,8 +48,7 @@ func (c *VisitController) Create(ctx *fiber.Ctx) error {
 
 // TODO: Enforce admin-only access.
 func (c *VisitController) List(ctx *fiber.Ctx) error {
-	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") {
+	if !middleware.HasRole(ctx, "ADMIN") {
 		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 	}
 
@@ -124,7 +122,7 @@ func (c *VisitController) GetByID(ctx *fiber.Ctx) error {
 	}
 
 	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") {
+	if !middleware.HasRole(ctx, "ADMIN") {
 		if user.Employee == nil || user.Employee.ID == "" {
 			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 		}
@@ -197,7 +195,7 @@ func (c *VisitController) Delete(ctx *fiber.Ctx) error {
 	}
 
 	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") {
+	if !middleware.HasRole(ctx, "ADMIN") {
 		if user.Employee == nil || user.Employee.ID == "" {
 			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 		}
