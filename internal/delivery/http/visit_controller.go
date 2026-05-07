@@ -54,7 +54,6 @@ func (c *VisitController) List(ctx *fiber.Ctx) error {
 
 	request := new(model.SearchVisitRequest)
 	request.EmployeeID = ctx.Query("employee_id", "")
-	request.VisitType = ctx.Query("visit_type", "")
 	request.StartDate = ctx.Query("start_date", "")
 	request.EndDate = ctx.Query("end_date", "")
 	request.SortBy = ctx.Query("sort_by", "newest")
@@ -89,7 +88,6 @@ func (c *VisitController) ListCurrent(ctx *fiber.Ctx) error {
 	}
 
 	request.EmployeeID = user.Employee.ID
-	request.VisitType = ctx.Query("visit_type", "")
 	request.StartDate = ctx.Query("start_date", "")
 	request.EndDate = ctx.Query("end_date", "")
 	request.SortBy = ctx.Query("sort_by", "newest")

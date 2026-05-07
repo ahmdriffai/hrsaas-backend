@@ -5,9 +5,9 @@ import "hr-sas/internal/entity"
 type RoleResponse struct {
 	ID          string               `json:"id"`
 	Name        string               `json:"name"`
-	Permissions []PermissionResponse `json:"permissions"`
-	CreatedAt   int64                `json:"created_at"`
-	UpdatedAt   int64                `json:"updated_at"`
+	Permissions []PermissionResponse `json:"permissions,omitempty"`
+	CreatedAt   int64                `json:"created_at,omitempty"`
+	UpdatedAt   int64                `json:"updated_at,omitempty"`
 }
 
 type CreateRoleRequest struct {
