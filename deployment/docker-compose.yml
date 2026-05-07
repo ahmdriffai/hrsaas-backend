@@ -11,11 +11,11 @@ services:
     networks:
       - hrsaas-net
   panel:
-    image: ghcr.io/ahmdriffai/hrsaas-frontend:development
+    image: docker pull ghcr.io/ahmdriffai/hrsaas-admin:development
     container_name: hrsaas-panel
-    restart: always
     ports:
-      - 5173:5173
+      - "3000:3000"
+    restart: unless-stopped
     networks:
       - hrsaas-net
 

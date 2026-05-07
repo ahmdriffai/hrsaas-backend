@@ -43,7 +43,7 @@ type SearchEmployeeRequest struct {
 	CompanyID string `json:"company_id" validate:"required"`
 	Key       string `json:"key" validate:"max=100"`
 	Page      int    `json:"page" validate:"min=1"`
-	Size      int    `json:"size" validate:"min=1,max=100"`
+	Size      int    `json:"size" validate:"min=1,max=1000"`
 }
 
 type ImportExcelEmployeeRequest struct {
