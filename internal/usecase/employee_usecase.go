@@ -315,7 +315,7 @@ func (c *EmployeeUseCase) Detail(ctx context.Context, request *model.DetailEmplo
 	defer tx.Rollback()
 
 	employee := new(entity.Employee)
-	err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, request.ID, request.CompanyID, "EmployeeContract", "EmployeeContract.Position", "EmployeeContract.Division", "User", "User.RoleData")
+	err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, request.ID, request.CompanyID, "EmployeeContract", "EmployeeContract.Position", "EmployeeContract.Division", "User", "User.Roles")
 	if err != nil {
 		c.Log.WithError(err).Error("Failed to find employee by ID")
 		return nil, fiber.ErrNotFound
