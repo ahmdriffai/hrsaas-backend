@@ -6,22 +6,22 @@ import (
 )
 
 type EmployeeResponse struct {
-	ID             string                   `json:"id,omitempty"`
-	CompanyID      string                   `json:"company_id,omitempty"`
-	UserID         string                   `json:"user_id,omitempty"`
-	EmployeeNumber string                   `json:"employee_number,omitempty"`
-	Fullname       string                   `json:"fullname,omitempty"`
-	BirthPlace     string                   `json:"birth_place,omitempty"`
-	BirthDate      int64                    `json:"birth_date,omitempty"`
-	BlodType       string                   `json:"blood_type,omitempty"`
-	MaritalStatus  string                   `json:"marital_status,omitempty"`
-	Religion       string                   `json:"religion,omitempty"`
-	Phone          string                   `json:"phone,omitempty"`
-	Timezone       string                   `json:"timezone,omitempty"`
-	Contract       EmployeeContractResponse `json:"contract,omitempty"`
-	User           UserResponse             `json:"user,omitempty"`
-	CreatedAt      int64                    `json:"created_at,omitempty"`
-	UpdatedAt      int64                    `json:"updated_at,omitempty"`
+	ID             string                     `json:"id,omitempty"`
+	CompanyID      string                     `json:"company_id,omitempty"`
+	UserID         string                     `json:"user_id,omitempty"`
+	EmployeeNumber string                     `json:"employee_number,omitempty"`
+	Fullname       string                     `json:"fullname,omitempty"`
+	BirthPlace     string                     `json:"birth_place,omitempty"`
+	BirthDate      int64                      `json:"birth_date,omitempty"`
+	BlodType       string                     `json:"blood_type,omitempty"`
+	MaritalStatus  string                     `json:"marital_status,omitempty"`
+	Religion       string                     `json:"religion,omitempty"`
+	Phone          string                     `json:"phone,omitempty"`
+	Timezone       string                     `json:"timezone,omitempty"`
+	Contracts      []EmployeeContractResponse `json:"contracts,omitempty"`
+	User           *UserResponse              `json:"user,omitempty"`
+	CreatedAt      int64                      `json:"created_at,omitempty"`
+	UpdatedAt      int64                      `json:"updated_at,omitempty"`
 }
 
 type CreateEmployeeRequest struct {
@@ -61,10 +61,10 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		return nil
 	}
 
-	contract := EmployeeContractToResponse(&employee.EmployeeContract)
+	contracts := EmployeeContractsToResponse(employee.EmployeeContract)
 	user := UserToResponse(&employee.User)
 
-	return &EmployeeResponse{
+	response := &EmployeeResponse{
 		ID:             employee.ID,
 		CompanyID:      employee.CompanyID,
 		UserID:         employee.UserID,
@@ -77,7 +77,27 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		Phone:          employee.Phone,
 		Timezone:       employee.Timezone,
 		EmployeeNumber: employee.EmployeeNumber,
-		Contract:       *contract,
-		User:           *user,
+		Contracts:      contracts,
+		CreatedAt:      employee.CreatedAt,
+		UpdatedAt:      employee.UpdatedAt,
 	}
+
+	response.User = user
+
+	return response
+}
+
+func EmployeeSummaryToResponse(employee *entity.Employee) *EmployeeResponse {
+	if employee == nil {
+		return nil
+	}
+
+	response := &EmployeeResponse{
+		ID:             employee.ID,
+		UserID:         employee.UserID,
+		EmployeeNumber: employee.EmployeeNumber,
+		Fullname:       employee.Fullname,
+		BirthPlace:     employee.BirthPlace,
+	}
+	return response
 }

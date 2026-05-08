@@ -1,0 +1,2 @@
+ALTER TABLE employee_contracts
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;

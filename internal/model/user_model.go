@@ -51,7 +51,7 @@ type RemoveRoleRequest struct {
 }
 
 func UserToResponse(user *entity.User) *UserResponse {
-	if user == nil {
+	if user == nil || user.ID == "" {
 		return nil
 	}
 

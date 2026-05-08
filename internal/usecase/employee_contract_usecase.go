@@ -72,6 +72,12 @@ func (c *EmployeeContractUseCase) Create(ctx context.Context, request *model.Cre
 		DivisionID:   request.DivisionID,
 		PositionID:   request.PositionID,
 		Salary:       request.Salary,
+		IsActive:     true,
+	}
+
+	if err := c.Repo.DeactivateActiveByEmployee(tx, request.EmployeeID); err != nil {
+		c.Log.WithError(err).Error("Failed to deactivate previous active employee contracts")
+		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := c.Repo.Create(tx, item); err != nil {
@@ -121,6 +127,7 @@ func (c *EmployeeContractUseCase) Create(ctx context.Context, request *model.Cre
 		DivisionID:   item.DivisionID,
 		PositionID:   item.PositionID,
 		Salary:       item.Salary,
+		IsActive:     item.IsActive,
 	}, nil
 }
 
