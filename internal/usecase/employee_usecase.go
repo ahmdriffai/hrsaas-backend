@@ -75,7 +75,6 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 		Name:      request.Fullname,
 		Email:     request.Email,
 		Password:  string(passwordHash),
-		Role:      "USER",
 		CompanyID: request.CompanyID,
 	}
 
@@ -207,7 +206,6 @@ func (c *EmployeeUseCase) ImportExcel(ctx context.Context, request *model.Import
 			Name:      row[1],
 			Email:     row[10],
 			Password:  string(passwordHash),
-			Role:      "USER",
 			CompanyID: request.CompanyID,
 		}
 
@@ -317,7 +315,7 @@ func (c *EmployeeUseCase) Detail(ctx context.Context, request *model.DetailEmplo
 	defer tx.Rollback()
 
 	employee := new(entity.Employee)
-	err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, request.ID, request.CompanyID, "EmployeeContract", "EmployeeContract.Position", "EmployeeContract.Division", "User")
+	err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, request.ID, request.CompanyID, "EmployeeContract", "EmployeeContract.Position", "EmployeeContract.Division", "User", "User.RoleData")
 	if err != nil {
 		c.Log.WithError(err).Error("Failed to find employee by ID")
 		return nil, fiber.ErrNotFound

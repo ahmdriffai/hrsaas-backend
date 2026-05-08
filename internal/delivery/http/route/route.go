@@ -30,6 +30,8 @@ type RouteConfig struct {
 	EmployeeContractController *http.EmployeeContractController
 	DivisionController         *http.DivisionController
 	VisitController            *http.VisitController
+	PermissionController       *http.PermissionController
+	RoleController             *http.RoleController
 }
 
 func (c *RouteConfig) Setup() {
@@ -49,6 +51,8 @@ func (c *RouteConfig) Setup() {
 	c.SetupEmployeeContractRouter()
 	c.SetupTimeOffApprovalRouter()
 	c.SetupVisitRouter()
+	c.SetupPermissionRouter()
+	c.SetupRoleRouter()
 }
 
 /*
@@ -69,6 +73,10 @@ func (c *RouteConfig) SetupUserRouter() {
 	route := c.App.Group("/api/users", c.AuthMiddleware)
 	route.Get("/_current", c.UserController.GetCurrentUser)
 	c.App.Delete("/api/users/_logout", c.UserController.Logout)
+
+	adminRoute := route.Group("/", c.AdminMiddleware)
+	adminRoute.Post("/:id/roles", c.UserController.AssignRoles)
+	adminRoute.Delete("/:id/roles", c.UserController.RemoveRoles)
 }
 
 func (c *RouteConfig) SetupEmployeeRouter() {
@@ -173,6 +181,25 @@ func (c *RouteConfig) SetupTimeOffApprovalRouter() {
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Get("/_current", c.TimeOffApprovalController.ListMyApprovals)
 	employeeRoute.Patch("/:approval_id", c.TimeOffApprovalController.DecideShort)
+}
+
+func (c *RouteConfig) SetupPermissionRouter() {
+	route := c.App.Group("/api/permissions", c.AuthMiddleware, c.AdminMiddleware)
+	route.Get("/", c.PermissionController.List)
+	route.Post("/", c.PermissionController.Create)
+	route.Get("/:id", c.PermissionController.Detail)
+	route.Put("/:id", c.PermissionController.Update)
+	route.Delete("/:id", c.PermissionController.Delete)
+}
+
+func (c *RouteConfig) SetupRoleRouter() {
+	route := c.App.Group("/api/roles", c.AuthMiddleware, c.AdminMiddleware)
+	route.Get("/", c.RoleController.List)
+	route.Post("/", c.RoleController.Create)
+	route.Get("/:id", c.RoleController.Detail)
+	route.Put("/:id", c.RoleController.Update)
+	route.Delete("/:id", c.RoleController.Delete)
+	route.Post("/:id/permissions", c.RoleController.AssignPermissions)
 }
 
 func (c *RouteConfig) SetupVisitRouter() {

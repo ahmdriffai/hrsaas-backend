@@ -101,6 +101,46 @@ func (c *UserController) GetCurrentUser(ctx *fiber.Ctx) error {
 }
 
 /*
+Assign Roles to User Controller
+*/
+func (c *UserController) AssignRoles(ctx *fiber.Ctx) error {
+	request := new(model.AssignRoleRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	request.UserID = ctx.Params("id")
+
+	response, err := c.UserUseCase.AssignRoles(ctx.UserContext(), request)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.UserResponse]{Data: response})
+}
+
+/*
+Remove Roles from User Controller
+*/
+func (c *UserController) RemoveRoles(ctx *fiber.Ctx) error {
+	request := new(model.RemoveRoleRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	request.UserID = ctx.Params("id")
+
+	response, err := c.UserUseCase.RemoveRoles(ctx.UserContext(), request)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.UserResponse]{Data: response})
+}
+
+/*
 Logout User Controller
 */
 func (c *UserController) Logout(ctx *fiber.Ctx) error {

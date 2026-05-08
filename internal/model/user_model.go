@@ -11,7 +11,7 @@ type UserResponse struct {
 	EmailVerified bool              `json:"email_verified,omitempty"`
 	Image         *string           `json:"image,omitempty"`
 	CompanyID     string            `json:"company_id,omitempty"`
-	Role          string            `json:"role,omitempty"`
+	Roles         []RoleResponse    `json:"roles,omitempty"`
 	Employee      *EmployeeResponse `json:"employee,omitempty"`
 	CreatedAt     int64             `json:"created_at,omitempty"`
 	UpdatedAt     int64             `json:"updated_at,omitempty"`
@@ -40,12 +40,29 @@ type LoginUserRequest struct {
 	UserAgent string `json:"-"`
 }
 
+type AssignRoleRequest struct {
+	UserID string   `json:"-"`
+	Roles  []string `json:"roles" validate:"required"`
+}
+
+type RemoveRoleRequest struct {
+	UserID string   `json:"-"`
+	Roles  []string `json:"roles" validate:"required"`
+}
+
 func UserToResponse(user *entity.User) *UserResponse {
+	if user == nil {
+		return nil
+	}
 
 	var employeeResponse *EmployeeResponse
+	var roles []RoleResponse
 
 	if user.Employee != nil {
 		employeeResponse = EmployeeToResponse(user.Employee)
+	}
+	for _, r := range user.Roles {
+		roles = append(roles, *RoleToResponse(&r))
 	}
 
 	return &UserResponse{
@@ -53,7 +70,7 @@ func UserToResponse(user *entity.User) *UserResponse {
 		Name:          user.Name,
 		Email:         user.Email,
 		Image:         user.Image,
-		Role:          user.Role,
+		Roles:         roles,
 		CompanyID:     user.CompanyID,
 		EmailVerified: user.EmailVerified,
 		Employee:      employeeResponse,

@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS user_roles;
+
+ALTER TABLE users
+    ADD COLUMN role VARCHAR(50) DEFAULT 'USER';

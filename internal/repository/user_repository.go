@@ -33,3 +33,11 @@ func (r *UserRepository) FindByEmail(db *gorm.DB, entity *entity.User, email str
 
 	return query.Where("email = ?", email).Take(entity).Error
 }
+
+func (r *UserRepository) AssignRoles(db *gorm.DB, user *entity.User, roles []entity.Role) error {
+	return db.Model(user).Association("Roles").Append(roles)
+}
+
+func (r *UserRepository) RemoveRoles(db *gorm.DB, user *entity.User, roles []entity.Role) error {
+	return db.Model(user).Association("Roles").Delete(roles)
+}
