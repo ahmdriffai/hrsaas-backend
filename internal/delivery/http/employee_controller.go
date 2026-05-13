@@ -118,3 +118,37 @@ func (c *EmployeeController) DetailEmployee(ctx *fiber.Ctx) error {
 		Data: response,
 	})
 }
+
+func (c *EmployeeController) UpdateEmployee(ctx *fiber.Ctx) error {
+	request := new(model.UpdateEmployeeRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	request.ID = ctx.Params("id")
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.EmployeeUseCase.Update(ctx.UserContext(), companyID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to update employee")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.EmployeeResponse]{
+		Data: response,
+	})
+}
+
+func (c *EmployeeController) DeleteEmployee(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	if err := c.EmployeeUseCase.Delete(ctx.UserContext(), ctx.Params("id"), companyID); err != nil {
+		c.Log.WithError(err).Error("Failed to delete employee")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}

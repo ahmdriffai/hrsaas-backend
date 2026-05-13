@@ -6,6 +6,8 @@ import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -175,4 +177,79 @@ func (c *OfficeLocationUseCase) DetailOfficeLocation(ctx context.Context, reques
 	}
 
 	return model.OfficeLocationToResponse(officeLocation), nil
+}
+
+func (c *OfficeLocationUseCase) Update(ctx context.Context, requestID string, companyID string, request *model.UpdateOfficeLocationRequest) (*model.OfficeLocationResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	officeLocation := new(entity.OfficeLocation)
+	if err := c.OfficeLocationRepository.FindByIdAndCompany(tx, officeLocation, requestID, companyID); err != nil {
+		c.Log.WithError(err).Error("Office location not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if request.Name != nil {
+		name := strings.TrimSpace(*request.Name)
+		if name == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "name cannot be empty")
+		}
+		officeLocation.Name = name
+	}
+	if request.Address != nil {
+		officeLocation.Address = strings.TrimSpace(*request.Address)
+	}
+	if request.Lat != nil {
+		officeLocation.Lat = strconv.FormatFloat(*request.Lat, 'f', -1, 64)
+	}
+	if request.Lng != nil {
+		officeLocation.Lng = strconv.FormatFloat(*request.Lng, 'f', -1, 64)
+	}
+	if request.Radius != nil {
+		officeLocation.Radius = *request.Radius
+	}
+	if request.IsActive != nil {
+		officeLocation.IsActive = *request.IsActive
+	}
+	officeLocation.UpdatedAt = time.Now().UnixMilli()
+
+	if err := c.OfficeLocationRepository.Update(tx, officeLocation); err != nil {
+		c.Log.WithError(err).Error("Failed to update office location")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.OfficeLocationToResponse(officeLocation), nil
+}
+
+func (c *OfficeLocationUseCase) Delete(ctx context.Context, requestID string, companyID string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	officeLocation := new(entity.OfficeLocation)
+	if err := c.OfficeLocationRepository.FindByIdAndCompany(tx, officeLocation, requestID, companyID); err != nil {
+		c.Log.WithError(err).Error("Office location not found")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.OfficeLocationRepository.Delete(tx, officeLocation); err != nil {
+		c.Log.WithError(err).Error("Failed to delete office location")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }

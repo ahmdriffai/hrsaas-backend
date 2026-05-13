@@ -55,3 +55,11 @@ func (r *DivisionRepository) FindByName(db *gorm.DB, entity *entity.Division, na
 
 	return query.Where("name = ?", name).Take(entity).Error
 }
+
+func (r *DivisionRepository) FindByIDAndCompany(db *gorm.DB, id string, companyID string) (*entity.Division, error) {
+	var item entity.Division
+	if err := db.Where("id = ?", id).Where("company_id = ?", companyID).Take(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}

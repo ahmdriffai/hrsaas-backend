@@ -6,6 +6,8 @@ import (
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -126,4 +128,134 @@ func (c *EmSancUseCase) Search(ctx context.Context, request *model.SearchEmSancR
 	}
 
 	return responses, total, nil
+}
+
+func (c *EmSancUseCase) Detail(ctx context.Context, id string, companyID string) (*model.EmSancResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item := new(entity.EmployeeSanction)
+	if err := c.EmSancRepository.FindByIdAndCompany(tx, item, id, companyID, "Employee", "Sanction"); err != nil {
+		c.Log.WithError(err).Error("Employee sanction not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.EmSancToResponse(item), nil
+}
+
+func (c *EmSancUseCase) Update(ctx context.Context, id string, companyID string, request *model.UpdateEmSancRequest) (*model.EmSancResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	item := new(entity.EmployeeSanction)
+	if err := c.EmSancRepository.FindByIdAndCompany(tx, item, id, companyID, "Employee", "Sanction"); err != nil {
+		c.Log.WithError(err).Error("Employee sanction not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	var nextStartDate int64 = item.StartDate
+	var nextEndDate *int64 = item.EndDate
+
+	if request.Reason != nil {
+		reason := strings.TrimSpace(*request.Reason)
+		if reason == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "reason cannot be empty")
+		}
+		item.Reason = &reason
+	}
+
+	if request.StartDate != nil {
+		startDate := strings.TrimSpace(*request.StartDate)
+		if startDate == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "start_date cannot be empty")
+		}
+
+		parsedStartDate, err := lib.ParseDateToUnixMilli(startDate)
+		if err != nil {
+			c.Log.WithError(err).Error("Failed to parse sanction start date")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid start_date format")
+		}
+
+		nextStartDate = parsedStartDate
+		item.StartDate = parsedStartDate
+	}
+
+	if request.EndDate != nil {
+		endDate := strings.TrimSpace(*request.EndDate)
+		if endDate == "" {
+			nextEndDate = nil
+			item.EndDate = nil
+		} else {
+			parsedEndDate, err := lib.ParseDateToUnixMilli(endDate)
+			if err != nil {
+				c.Log.WithError(err).Error("Failed to parse sanction end date")
+				return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid end_date format")
+			}
+			nextEndDate = &parsedEndDate
+			item.EndDate = &parsedEndDate
+		}
+	}
+
+	if nextEndDate != nil && *nextEndDate < nextStartDate {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "end_date cannot be earlier than start_date")
+	}
+
+	if request.Status != nil {
+		status := strings.ToLower(strings.TrimSpace(*request.Status))
+		if status == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "status cannot be empty")
+		}
+		item.Status = &status
+	}
+
+	if request.DocumentUrl != nil {
+		item.DocumentUrl = strings.TrimSpace(*request.DocumentUrl)
+	}
+
+	item.UpdatedAt = time.Now().UnixMilli()
+
+	if err := c.EmSancRepository.Update(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to update employee sanction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.EmSancToResponse(item), nil
+}
+
+func (c *EmSancUseCase) Delete(ctx context.Context, id string, companyID string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item := new(entity.EmployeeSanction)
+	if err := c.EmSancRepository.FindByIdAndCompany(tx, item, id, companyID); err != nil {
+		c.Log.WithError(err).Error("Employee sanction not found")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.EmSancRepository.Delete(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to delete employee sanction")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }

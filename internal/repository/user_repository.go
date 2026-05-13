@@ -2,6 +2,7 @@ package repository
 
 import (
 	"hr-sas/internal/entity"
+	"hr-sas/internal/model"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -24,6 +25,15 @@ func (r *UserRepository) CountByEmail(db *gorm.DB, email string) (int64, error) 
 	return total, err
 }
 
+func (r *UserRepository) CountByEmailExcludeID(db *gorm.DB, email string, userID string) (int64, error) {
+	var total int64
+	err := db.Model(new(entity.User)).
+		Where("email = ?", email).
+		Where("id <> ?", userID).
+		Count(&total).Error
+	return total, err
+}
+
 func (r *UserRepository) FindByEmail(db *gorm.DB, entity *entity.User, email string, preloads ...string) error {
 	query := db
 
@@ -32,6 +42,27 @@ func (r *UserRepository) FindByEmail(db *gorm.DB, entity *entity.User, email str
 	}
 
 	return query.Where("email = ?", email).Take(entity).Error
+}
+
+func (r *UserRepository) Search(db *gorm.DB, request *model.SearchUserRequest) ([]entity.User, int64, error) {
+	var users []entity.User
+
+	query := db.Model(&entity.User{}).Preload("Roles").Preload("Employee")
+	if request.Key != "" {
+		key := "%" + request.Key + "%"
+		query = query.Where("name ILIKE ? OR email ILIKE ?", key, key)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := query.Offset((request.Page - 1) * request.Size).Limit(request.Size).Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
 }
 
 func (r *UserRepository) AssignRoles(db *gorm.DB, user *entity.User, roles []entity.Role) error {

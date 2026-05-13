@@ -146,6 +146,45 @@ func (c *VisitController) GetByID(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *VisitController) Update(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	request := new(model.UpdateVisitRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	user := middleware.GetUser(ctx)
+	if !middleware.HasRole(ctx, "ADMIN") {
+		if user.Employee == nil || user.Employee.ID == "" {
+			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+		}
+
+		ownerID, err := c.UseCase.GetVisitOwner(ctx.UserContext(), requestID)
+		if err != nil {
+			c.Log.WithError(err).Error("failed to get visit owner")
+			return err
+		}
+		if ownerID != user.Employee.ID {
+			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+		}
+	}
+
+	response, err := c.UseCase.Update(ctx.UserContext(), requestID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update visit")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.VisitResponse]{
+		Data: response,
+	})
+}
+
 func (c *VisitController) CanDoVisit(ctx *fiber.Ctx) error {
 	user := middleware.GetUser(ctx)
 	if user.Employee == nil || user.Employee.ID == "" {

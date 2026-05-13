@@ -54,7 +54,9 @@ func (r *VisitRepository) FindByID(db *gorm.DB, id string, withRelations bool) (
 	var item entity.Visit
 	query := db.Model(&entity.Visit{})
 	if withRelations {
-		query = query.Preload("Employee").Preload("Details")
+		query = query.Preload("Employee").Preload("Details", func(tx *gorm.DB) *gorm.DB {
+			return tx.Order("created_at DESC")
+		})
 	}
 	if err := query.Where("id = ?", id).Take(&item).Error; err != nil {
 		return nil, err
@@ -77,6 +79,19 @@ func (r *VisitRepository) FindLastOpenByEmployee(db *gorm.DB, employeeID string)
 		return nil, err
 	}
 	return &item, nil
+}
+
+func (r *VisitRepository) FindLatestDetailByVisitID(db *gorm.DB, visitID string) (*entity.VisitDetail, error) {
+	var detail entity.VisitDetail
+	if err := db.Model(&entity.VisitDetail{}).
+		Where("visit_id = ?", visitID).
+		Order("created_at DESC").
+		Limit(1).
+		Take(&detail).Error; err != nil {
+		return nil, err
+	}
+
+	return &detail, nil
 }
 
 func (r *VisitRepository) applyFilters(query *gorm.DB, request *model.SearchVisitRequest) (*gorm.DB, error) {

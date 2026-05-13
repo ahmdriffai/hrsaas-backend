@@ -19,6 +19,7 @@ type EmployeeResponse struct {
 	Phone          string                     `json:"phone,omitempty"`
 	Timezone       string                     `json:"timezone,omitempty"`
 	Contracts      []EmployeeContractResponse `json:"contracts,omitempty"`
+	EmployeeDocs   []EmployeeDocumentResponse `json:"employee_docs,omitempty"`
 	User           *UserResponse              `json:"user,omitempty"`
 	CreatedAt      int64                      `json:"created_at,omitempty"`
 	UpdatedAt      int64                      `json:"updated_at,omitempty"`
@@ -37,6 +38,20 @@ type CreateEmployeeRequest struct {
 	Timezone       string `json:"timezone" validate:"required"`
 	Email          string `json:"email" validate:"required,email"`
 	Password       string `json:"password" validate:"required,min=3"`
+}
+
+type UpdateEmployeeRequest struct {
+	ID             string  `json:"-"`
+	Fullname       *string `json:"fullname,omitempty"`
+	EmployeeNumber *string `json:"employee_number,omitempty"`
+	BirthPlace     *string `json:"birth_place,omitempty"`
+	BirthDate      *string `json:"birth_date,omitempty"`
+	BlodType       *string `json:"blood_type,omitempty"`
+	MaritalStatus  *string `json:"marital_status,omitempty"`
+	Religion       *string `json:"religion,omitempty"`
+	Phone          *string `json:"phone,omitempty"`
+	Timezone       *string `json:"timezone,omitempty"`
+	Email          *string `json:"email,omitempty" validate:"omitempty,email"`
 }
 
 type SearchEmployeeRequest struct {
@@ -62,6 +77,7 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 	}
 
 	contracts := EmployeeContractsToResponse(employee.EmployeeContract)
+	employeeDocs := EmployeeDocumentsToResponse(employee.EmployeeDocuments)
 	user := UserToResponse(&employee.User)
 
 	response := &EmployeeResponse{
@@ -78,6 +94,7 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		Timezone:       employee.Timezone,
 		EmployeeNumber: employee.EmployeeNumber,
 		Contracts:      contracts,
+		EmployeeDocs:   employeeDocs,
 		CreatedAt:      employee.CreatedAt,
 		UpdatedAt:      employee.UpdatedAt,
 	}

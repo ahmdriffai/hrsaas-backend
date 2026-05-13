@@ -27,6 +27,15 @@ type CreateOfficeLocationRequest struct {
 	CompanyID string  `json:"-" validate:"required"`
 }
 
+type UpdateOfficeLocationRequest struct {
+	Name     *string  `json:"name,omitempty"`
+	Address  *string  `json:"address,omitempty"`
+	Lat      *float64 `json:"lat,omitempty"`
+	Lng      *float64 `json:"lng,omitempty"`
+	Radius   *int     `json:"radius,omitempty" validate:"omitempty,min=0"`
+	IsActive *bool    `json:"is_active,omitempty"`
+}
+
 type SearchOfficeLocationRequest struct {
 	CompanyID string `json:"-" validate:"required"`
 	Key       string `json:"key" validate:"max=100"`

@@ -5,6 +5,8 @@ import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -95,4 +97,98 @@ func (c *SanctionUseCase) Search(ctx context.Context, request *model.SearchSanct
 	}
 
 	return responses, total, nil
+}
+
+func (c *SanctionUseCase) Detail(ctx context.Context, id string, companyID string) (*model.SanctionResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	sanction := new(entity.Sanction)
+	if err := c.SanctionRepository.FindByIdAndCompany(tx, sanction, id, companyID); err != nil {
+		c.Log.WithError(err).Error("Sanction not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.SanctionToResponse(sanction), nil
+}
+
+func (c *SanctionUseCase) Update(ctx context.Context, id string, companyID string, request *model.UpdateSanctionRequest) (*model.SanctionResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	sanction := new(entity.Sanction)
+	if err := c.SanctionRepository.FindByIdAndCompany(tx, sanction, id, companyID); err != nil {
+		c.Log.WithError(err).Error("Sanction not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if request.Name != nil {
+		name := strings.TrimSpace(*request.Name)
+		if name == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "name cannot be empty")
+		}
+		sanction.Name = name
+	}
+
+	if request.Description != nil {
+		sanction.Description = request.Description
+	}
+
+	if request.Level != nil {
+		sanction.Level = *request.Level
+	}
+
+	if request.Note != nil {
+		sanction.Note = request.Note
+	}
+
+	sanction.UpdatedAt = time.Now().UnixMilli()
+
+	if err := c.SanctionRepository.Update(tx, sanction); err != nil {
+		c.Log.WithError(err).Error("Failed to update sanction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.SanctionToResponse(sanction), nil
+}
+
+func (c *SanctionUseCase) Delete(ctx context.Context, id string, companyID string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	sanction := new(entity.Sanction)
+	if err := c.SanctionRepository.FindByIdAndCompany(tx, sanction, id, companyID); err != nil {
+		c.Log.WithError(err).Error("Sanction not found")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.SanctionRepository.Delete(tx, sanction); err != nil {
+		c.Log.WithError(err).Error("Failed to delete sanction")
+		if strings.Contains(strings.ToLower(err.Error()), "foreign key") || strings.Contains(err.Error(), "SQLSTATE 23503") {
+			return fiber.NewError(fiber.StatusConflict, "Sanction cannot be deleted because it is still used by employee sanctions")
+		}
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }

@@ -28,6 +28,16 @@ type CreateEmployeeContractRequest struct {
 	Salary       float64 `json:"salary" validate:"required,min=0"`
 }
 
+type UpdateEmployeeContractRequest struct {
+	ContractType *string  `json:"contract_type,omitempty"`
+	StartDate    *string  `json:"start_date,omitempty"`
+	EndDate      *string  `json:"end_date,omitempty"`
+	DivisionID   *string  `json:"division_id,omitempty"`
+	PositionID   *string  `json:"position_id,omitempty"`
+	Salary       *float64 `json:"salary,omitempty" validate:"omitempty,min=0"`
+	IsActive     *bool    `json:"is_active,omitempty"`
+}
+
 type SearchEmployeeContractRequest struct {
 	EmployeeID string `json:"employee_id" validate:"max=100"`
 	DivisionID string `json:"division_id" validate:"max=100"`

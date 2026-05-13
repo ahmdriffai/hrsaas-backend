@@ -24,9 +24,10 @@ type Employee struct {
 	CreatedAt      int64  `gorm:"column:created_at"`
 	UpdatedAt      int64  `gorm:"column:updated_at"`
 
-	User             User
-	EmployeeContract []EmployeeContract `gorm:"foreignKey:EmployeeID;references:ID"`
-	OfficeLocations  []OfficeLocation   `gorm:"many2many:employee_office_locations"`
+	User              User
+	EmployeeContract  []EmployeeContract  `gorm:"foreignKey:EmployeeID;references:ID"`
+	OfficeLocations   []OfficeLocation    `gorm:"many2many:employee_office_locations"`
+	EmployeeDocuments []EmployeeDocument  `gorm:"foreignKey:EmployeeID;references:ID"`
 }
 
 // BeforeCreate hook to set UUID

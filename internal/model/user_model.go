@@ -22,6 +22,21 @@ type LoginUserResponse struct {
 	Token string       `json:"token,omitempty"`
 }
 
+type SearchUserRequest struct {
+	Key  string `json:"key" validate:"max=100"`
+	Page int    `json:"page" validate:"min=1"`
+	Size int    `json:"size" validate:"min=1,max=100"`
+}
+
+type UpdateUserRequest struct {
+	ID            string  `json:"-"`
+	Name          *string `json:"name,omitempty"`
+	Email         *string `json:"email,omitempty" validate:"omitempty,email"`
+	Image         *string `json:"image,omitempty"`
+	CompanyID     *string `json:"company_id,omitempty"`
+	EmailVerified *bool   `json:"email_verified,omitempty"`
+}
+
 type VerifyUserRequest struct {
 	Token string `validate:"required"`
 }
@@ -38,6 +53,11 @@ type LoginUserRequest struct {
 	Password  string `json:"password" validate:"required"`
 	Ip        string `json:"-"`
 	UserAgent string `json:"-"`
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password" validate:"required,min=8"`
 }
 
 type AssignRoleRequest struct {

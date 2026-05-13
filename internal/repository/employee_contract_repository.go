@@ -66,6 +66,21 @@ func (r *EmployeeContractRepository) FindLatestActiveByEmployee(db *gorm.DB, emp
 	return &item, nil
 }
 
+func (r *EmployeeContractRepository) FindByID(db *gorm.DB, id string, withRelations bool) (*entity.EmployeeContract, error) {
+	var item entity.EmployeeContract
+
+	query := db.Model(&entity.EmployeeContract{})
+	if withRelations {
+		query = query.Preload("Employee").Preload("Employee.User").Preload("Division").Preload("Position")
+	}
+
+	if err := query.Where("id = ?", id).Take(&item).Error; err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
 func (r *EmployeeContractRepository) DeactivateActiveByEmployee(db *gorm.DB, employeeID string) error {
 	return db.Model(&entity.EmployeeContract{}).
 		Where("employee_id = ?", employeeID).

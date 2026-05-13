@@ -23,6 +23,24 @@ type CheckInAttendanceRequest struct {
 	DeviceInfo   string  `json:"device_info" validate:"required"`
 }
 
+type UpdateAttendanceRequest struct {
+	Date              *int64  `json:"date,omitempty"`
+	CheckInTime       *int64  `json:"check_in_time,omitempty"`
+	CheckOutTime      *int64  `json:"check_out_time,omitempty"`
+	TotalWorkMinutes  *int    `json:"total_work_minutes,omitempty"`
+	TotalBreakMinutes *int    `json:"total_break_minutes,omitempty"`
+	Status            *string `json:"status,omitempty" validate:"omitempty,oneof=CHECKED_IN CHECKED_OUT ON_BREAK"`
+}
+
+type SearchAttendanceRequest struct {
+	CompanyID  string `json:"-" validate:"required,uuid4"`
+	EmployeeID string `json:"employee_id,omitempty" validate:"uuid4"`
+	Date       string `json:"date,omitempty" validate:"max=20"`
+	Status     string `json:"status,omitempty" validate:"oneof=CHECKED_IN CHECKED_OUT ON_BREAK"`
+	Page       int    `json:"page,omitempty" validate:"min=1"`
+	Size       int    `json:"size,omitempty" validate:"min=1,max=100"`
+}
+
 // converter
 func AttendandeToResponse(officeLocation *entity.Attendance) *AttendanceResponse {
 	return &AttendanceResponse{

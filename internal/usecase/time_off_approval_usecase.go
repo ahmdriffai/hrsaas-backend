@@ -311,7 +311,7 @@ func (c *TimeOffApprovalUseCase) applyBalanceOnApproval(tx *gorm.DB, requestID s
 	}
 
 	periodYear := time.UnixMilli(request.StartDate).UTC().Year()
-	balance, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, request.EmployeeId, request.TimeOffTypeId, periodYear)
+	balance, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, request.EmployeeID, request.TimeOffTypeId, periodYear)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Time off balance not found")
 	}

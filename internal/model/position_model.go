@@ -18,7 +18,13 @@ type CreatePositionRequest struct {
 	IsApprover bool    `json:"is_approver"`
 }
 
-type SeachPositionRequest struct {
+type UpdatePositionRequest struct {
+	Name       *string `json:"name,omitempty"`
+	ParentID   *string `json:"parent_id,omitempty"`
+	IsApprover *bool   `json:"is_approver,omitempty"`
+}
+
+type SearchPositionRequest struct {
 	CompanyID string `json:"-" validate:"required"`
 	Name      string `json:"name"`
 	Page      int    `json:"page" validate:"min=1"`

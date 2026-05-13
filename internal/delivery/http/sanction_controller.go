@@ -73,3 +73,50 @@ func (c *SanctionController) ListSanction(ctx *fiber.Ctx) error {
 		Paging: paging,
 	})
 }
+
+func (c *SanctionController) Detail(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.SanctionUseCase.Detail(ctx.UserContext(), ctx.Params("id"), companyID)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to get sanction detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.SanctionResponse]{
+		Data: response,
+	})
+}
+
+func (c *SanctionController) Update(ctx *fiber.Ctx) error {
+	request := new(model.UpdateSanctionRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.SanctionUseCase.Update(ctx.UserContext(), ctx.Params("id"), companyID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update sanction")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.SanctionResponse]{
+		Data: response,
+	})
+}
+
+func (c *SanctionController) Delete(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	if err := c.SanctionUseCase.Delete(ctx.UserContext(), ctx.Params("id"), companyID); err != nil {
+		c.Log.WithError(err).Error("failed to delete sanction")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}
