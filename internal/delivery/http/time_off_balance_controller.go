@@ -83,3 +83,44 @@ func (c *TimeOffBalanceController) SetBalance(ctx *fiber.Ctx) error {
 		Data: response,
 	})
 }
+
+func (c *TimeOffBalanceController) Detail(ctx *fiber.Ctx) error {
+	response, err := c.BalanceUseCase.Detail(ctx.UserContext(), ctx.Params("id"))
+	if err != nil {
+		c.Log.WithError(err).Error("failed to get time off balance detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.TimeOffBalanceResponse]{
+		Data: response,
+	})
+}
+
+func (c *TimeOffBalanceController) Update(ctx *fiber.Ctx) error {
+	request := new(model.UpdateTimeOffBalanceRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	response, err := c.BalanceUseCase.Update(ctx.UserContext(), ctx.Params("id"), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update time off balance")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.TimeOffBalanceResponse]{
+		Data: response,
+	})
+}
+
+func (c *TimeOffBalanceController) Delete(ctx *fiber.Ctx) error {
+	if err := c.BalanceUseCase.Delete(ctx.UserContext(), ctx.Params("id")); err != nil {
+		c.Log.WithError(err).Error("failed to delete time off balance")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}

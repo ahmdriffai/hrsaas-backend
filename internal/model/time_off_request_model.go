@@ -14,6 +14,7 @@ type ApprovalResponse struct {
 
 type TimeOffRequestResponse struct {
 	ID            string              `json:"id"`
+	CompanyID     string              `json:"company_id"`
 	EmployeeID    string              `json:"employee_id"`
 	TimeOffTypeID string              `json:"time_off_type_id"`
 	StartDate     int64               `json:"start_date"`
@@ -48,6 +49,15 @@ type SearchTimeOffRequest struct {
 	Size          int    `json:"size" validate:"min=1,max=100"`
 }
 
+type UpdateTimeOffRequest struct {
+	TimeOffTypeID *string `json:"time_off_type_id,omitempty"`
+	StartDate     *string `json:"start_date,omitempty"`
+	EndDate       *string `json:"end_date,omitempty"`
+	RequestedDays *int    `json:"requested_days,omitempty"`
+	RequestReason *string `json:"request_reason,omitempty" validate:"max=255"`
+	RequestStatus *string `json:"request_status,omitempty" validate:"oneof=PENDING APPROVED REJECTED"`
+}
+
 func TimeOffRequestToResponse(request *entity.TimeOffRequest) *TimeOffRequestResponse {
 	approvals := make([]ApprovalResponse, len(request.Approvals))
 	for i, v := range request.Approvals {
@@ -63,7 +73,8 @@ func TimeOffRequestToResponse(request *entity.TimeOffRequest) *TimeOffRequestRes
 
 	return &TimeOffRequestResponse{
 		ID:            request.ID,
-		EmployeeID:    request.EmployeeId,
+		CompanyID:     request.CompanyID,
+		EmployeeID:    request.EmployeeID,
 		TimeOffTypeID: request.TimeOffTypeId,
 		StartDate:     request.StartDate,
 		EndDate:       request.EndDate,

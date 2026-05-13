@@ -97,7 +97,7 @@ func (c *TimeOffBalanceUseCase) SetBalance(ctx context.Context, request *model.S
 
 	if item == nil || err == gorm.ErrRecordNotFound {
 		item = &entity.TimeOffBalance{
-			EmployeeId:    request.EmployeeID,
+			EmployeeID:    request.EmployeeID,
 			TimeOffTypeId: request.TimeOffTypeID,
 			PeriodYear:    request.PeriodYear,
 			EntitledDays:  request.EntitledDays,
@@ -124,4 +124,99 @@ func (c *TimeOffBalanceUseCase) SetBalance(ctx context.Context, request *model.S
 	}
 
 	return model.TimeOffBalanceToResponse(item), nil
+}
+
+func (c *TimeOffBalanceUseCase) Detail(ctx context.Context, id string) (*model.TimeOffBalanceResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item, err := c.TimeOffBalanceRepo.FindByID(tx, id)
+	if err != nil {
+		c.Log.WithError(err).Error("Time off balance not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.TimeOffBalanceToResponse(item), nil
+}
+
+func (c *TimeOffBalanceUseCase) Update(ctx context.Context, id string, request *model.UpdateTimeOffBalanceRequest) (*model.TimeOffBalanceResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	item, err := c.TimeOffBalanceRepo.FindByID(tx, id)
+	if err != nil {
+		c.Log.WithError(err).Error("Time off balance not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if request.PeriodYear != nil {
+		item.PeriodYear = *request.PeriodYear
+	}
+	if request.EntitledDays != nil {
+		item.EntitledDays = *request.EntitledDays
+	}
+	if request.UsedDays != nil {
+		item.UsedDays = *request.UsedDays
+	}
+
+	if request.RemainingDays != nil {
+		item.RemainingDays = *request.RemainingDays
+	} else {
+		item.RemainingDays = item.EntitledDays - item.UsedDays
+	}
+
+	if item.RemainingDays < 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Remaining days cannot be negative")
+	}
+
+	if err := c.TimeOffBalanceRepo.Update(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to update time off balance")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	reloaded, err := c.TimeOffBalanceRepo.FindByID(tx, id)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to reload time off balance")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.TimeOffBalanceToResponse(reloaded), nil
+}
+
+func (c *TimeOffBalanceUseCase) Delete(ctx context.Context, id string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item, err := c.TimeOffBalanceRepo.FindByID(tx, id)
+	if err != nil {
+		c.Log.WithError(err).Error("Time off balance not found")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.TimeOffBalanceRepo.Delete(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to delete time off balance")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }

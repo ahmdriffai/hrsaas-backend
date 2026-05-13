@@ -185,6 +185,90 @@ func (c *VisitUseCase) GetByID(ctx context.Context, id string) (*model.VisitResp
 	return model.VisitToResponse(item), nil
 }
 
+func (c *VisitUseCase) Update(ctx context.Context, id string, request *model.UpdateVisitRequest) (*model.VisitResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	if _, err := c.Repo.FindByID(tx, id, true); err != nil {
+		c.Log.WithError(err).Error("visit not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if request.Latitude != nil || request.Longitude != nil {
+		if request.Latitude == nil || request.Longitude == nil {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "latitude and longitude must be provided together")
+		}
+	}
+
+	nowMilli := time.Now().UnixMilli()
+
+	visitUpdates := map[string]any{
+		"updated_at": nowMilli,
+	}
+	if request.ClientName != nil {
+		clientName := strings.TrimSpace(*request.ClientName)
+		if clientName == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "client_name cannot be empty")
+		}
+		visitUpdates["client_name"] = clientName
+	}
+
+	if len(visitUpdates) > 1 {
+		if err := tx.Model(&entity.Visit{}).Where("id = ?", id).Updates(visitUpdates).Error; err != nil {
+			c.Log.WithError(err).Error("Failed to update visit")
+			return nil, fiber.ErrInternalServerError
+		}
+	}
+
+	detail, err := c.Repo.FindLatestDetailByVisitID(tx, id)
+	if err != nil {
+		c.Log.WithError(err).Error("visit detail not found")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	detailUpdates := map[string]any{
+		"updated_at": nowMilli,
+	}
+	if request.FileUrl != nil {
+		detailUpdates["file_url"] = request.FileUrl
+	}
+	if request.Address != nil {
+		detailUpdates["address"] = request.Address
+	}
+	if request.Note != nil {
+		detailUpdates["note"] = request.Note
+	}
+	if request.Latitude != nil && request.Longitude != nil {
+		location := strings.TrimSpace(*request.Latitude) + ", " + strings.TrimSpace(*request.Longitude)
+		detailUpdates["location"] = location
+	}
+
+	if len(detailUpdates) > 1 {
+		if err := tx.Model(&entity.VisitDetail{}).Where("id = ?", detail.ID).Updates(detailUpdates).Error; err != nil {
+			c.Log.WithError(err).Error("Failed to update visit detail")
+			return nil, fiber.ErrInternalServerError
+		}
+	}
+
+	result, err := c.Repo.FindByID(tx, id, true)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to load updated visit")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.VisitToResponse(result), nil
+}
+
 func (c *VisitUseCase) GetVisitOwner(ctx context.Context, id string) (string, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()

@@ -6,6 +6,7 @@ import (
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -158,4 +159,127 @@ func (c *EmployeeContractUseCase) List(ctx context.Context, request *model.Searc
 	}
 
 	return responses, total, nil
+}
+
+func (c *EmployeeContractUseCase) Detail(ctx context.Context, id string) (*model.EmployeeContractResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item, err := c.Repo.FindByID(tx, id, true)
+	if err != nil {
+		c.Log.WithError(err).Error("Employee contract not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.EmployeeContractToResponse(item), nil
+}
+
+func (c *EmployeeContractUseCase) Update(ctx context.Context, id string, request *model.UpdateEmployeeContractRequest) (*model.EmployeeContractResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	item, err := c.Repo.FindByID(tx, id, true)
+	if err != nil {
+		c.Log.WithError(err).Error("Employee contract not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if request.ContractType != nil {
+		contractType := strings.TrimSpace(*request.ContractType)
+		if contractType == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "contract_type cannot be empty")
+		}
+		item.ContractType = contractType
+	}
+	if request.StartDate != nil {
+		startDate, err := lib.ParseDateToUnixMilli(strings.TrimSpace(*request.StartDate))
+		if err != nil {
+			return nil, fiber.ErrBadRequest
+		}
+		item.StartDate = startDate
+	}
+	if request.EndDate != nil {
+		if strings.TrimSpace(*request.EndDate) == "" {
+			item.EndDate = nil
+		} else {
+			endDate, err := lib.ParseDateToUnixMilli(strings.TrimSpace(*request.EndDate))
+			if err != nil {
+				return nil, fiber.ErrBadRequest
+			}
+			item.EndDate = &endDate
+		}
+	}
+	if request.DivisionID != nil {
+		item.DivisionID = strings.TrimSpace(*request.DivisionID)
+	}
+	if request.PositionID != nil {
+		item.PositionID = strings.TrimSpace(*request.PositionID)
+	}
+	if request.Salary != nil {
+		item.Salary = *request.Salary
+	}
+	if request.IsActive != nil {
+		if *request.IsActive {
+			if err := c.Repo.DeactivateActiveByEmployee(tx, item.EmployeeID); err != nil {
+				c.Log.WithError(err).Error("Failed to deactivate previous active employee contracts")
+				return nil, fiber.ErrInternalServerError
+			}
+		}
+		item.IsActive = *request.IsActive
+	}
+
+	if item.EndDate != nil && item.StartDate > *item.EndDate {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "start_date cannot be greater than end_date")
+	}
+
+	if err := c.Repo.Update(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to update employee contract")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	reloaded, err := c.Repo.FindByID(tx, id, true)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to reload employee contract")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.EmployeeContractToResponse(reloaded), nil
+}
+
+func (c *EmployeeContractUseCase) Delete(ctx context.Context, id string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item, err := c.Repo.FindByID(tx, id, false)
+	if err != nil {
+		c.Log.WithError(err).Error("Employee contract not found")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.Repo.Delete(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to delete employee contract")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }

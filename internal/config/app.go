@@ -45,6 +45,7 @@ func Bootstrap(config *BootstrapConfig) {
 	visitRepository := repository.NewVisitRepository(config.Log)
 	permissionRepository := repository.NewPermissionRepository(config.Log)
 	roleRepository := repository.NewRoleRepository(config.Log)
+	employeeDocumentRepository := repository.NewEmployeeDocumentRepository(config.Log)
 
 	// setup producer
 
@@ -110,6 +111,7 @@ func Bootstrap(config *BootstrapConfig) {
 	visitUseCase := usecase.NewVisitUseCase(config.DB, config.Log, config.Validate, visitRepository)
 	permissionUseCase := usecase.NewPermissionUseCase(config.DB, config.Log, config.Validate, permissionRepository)
 	roleUseCase := usecase.NewRoleUseCase(config.DB, config.Log, config.Validate, roleRepository, permissionRepository)
+	employeeDocumentUseCase := usecase.NewEmployeeDocumentUseCase(config.DB, config.Log, config.Validate, employeeDocumentRepository)
 
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
@@ -132,6 +134,7 @@ func Bootstrap(config *BootstrapConfig) {
 	visitController := http.NewVisitController(visitUseCase, config.Log)
 	permissionController := http.NewPermissionController(permissionUseCase, config.Log)
 	roleController := http.NewRoleController(roleUseCase, config.Log)
+	employeeDocumentController := http.NewEmployeeDocumentController(employeeDocumentUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
@@ -165,6 +168,7 @@ func Bootstrap(config *BootstrapConfig) {
 		VisitController:            visitController,
 		PermissionController:       permissionController,
 		RoleController:             roleController,
+		EmployeeDocumentController: employeeDocumentController,
 	}
 
 	routeConfig.Setup()

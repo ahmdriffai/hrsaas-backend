@@ -219,6 +219,153 @@ func (c *TimeOffRequestUseCase) GetRequestByID(ctx context.Context, id string) (
 	return response, nil
 }
 
+func (c *TimeOffRequestUseCase) UpdateRequest(ctx context.Context, id string, request *model.UpdateTimeOffRequest) (*model.TimeOffRequestResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	item, err := c.TimeOffRequestRepo.FindByID(tx, id, true)
+	if err != nil {
+		c.Log.WithError(err).Error("Time off request not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if item.RequestStatus == nil || strings.ToUpper(strings.TrimSpace(*item.RequestStatus)) != "PENDING" {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Only pending requests can be updated")
+	}
+	if request.RequestStatus != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "request_status cannot be updated from this endpoint")
+	}
+
+	startDate := item.StartDate
+	endDate := int64(0)
+	if item.EndDate != nil {
+		endDate = *item.EndDate
+	}
+	timeOffTypeID := item.TimeOffTypeId
+
+	if request.StartDate != nil {
+		startDate, err = lib.ParseDateToUnixMilli(strings.TrimSpace(*request.StartDate))
+		if err != nil || startDate == 0 {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid start_date")
+		}
+	}
+	if request.EndDate != nil {
+		endDate, err = lib.ParseDateToUnixMilli(strings.TrimSpace(*request.EndDate))
+		if err != nil || endDate == 0 {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid end_date")
+		}
+	}
+	if request.TimeOffTypeID != nil {
+		timeOffTypeID = strings.TrimSpace(*request.TimeOffTypeID)
+		if timeOffTypeID == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "time_off_type_id cannot be empty")
+		}
+	}
+
+	if startDate > endDate {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid start_date or end_date")
+	}
+
+	const dayMillis = 24 * 60 * 60 * 1000
+	requestedDays := int((endDate-startDate)/dayMillis) + 1
+	if request.RequestedDays != nil && *request.RequestedDays > 0 {
+		requestedDays = *request.RequestedDays
+	}
+	if requestedDays <= 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid date range")
+	}
+
+	var overlapCount int64
+	if err := tx.Table("time_off_requests").
+		Where("employee_id = ?", item.EmployeeId).
+		Where("id <> ?", item.ID).
+		Where("request_status IN ?", []string{"PENDING", "APPROVED"}).
+		Where("NOT (end_date < ? OR start_date > ?)", startDate, endDate).
+		Count(&overlapCount).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to check overlap dates")
+		return nil, fiber.ErrInternalServerError
+	}
+	if overlapCount > 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off request overlaps with existing request")
+	}
+
+	timeOffType, err := c.TimeOffTypeRepo.FindByID(tx, timeOffTypeID)
+	if err != nil {
+		c.Log.WithError(err).Error("Time off type not found")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off type not found")
+	}
+	if timeOffType.IsQuotaBased {
+		periodYear := time.UnixMilli(startDate).UTC().Year()
+		balance, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, item.EmployeeId, timeOffTypeID, periodYear)
+		if err != nil {
+			c.Log.WithError(err).Error("Time off balance not found")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Time off balance not found")
+		}
+		if requestedDays > balance.RemainingDays {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Requested days exceed remaining balance")
+		}
+	}
+
+	item.TimeOffTypeId = timeOffTypeID
+	item.StartDate = startDate
+	item.EndDate = &endDate
+	item.RequestedDays = requestedDays
+	if request.RequestReason != nil {
+		reason := strings.TrimSpace(*request.RequestReason)
+		item.RequestReason = &reason
+	}
+
+	if err := c.TimeOffRequestRepo.Update(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to update time off request")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	result, err := c.TimeOffRequestRepo.FindByID(tx, id, true)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to reload time off request")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.TimeOffRequestToResponse(result), nil
+}
+
+func (c *TimeOffRequestUseCase) DeleteRequest(ctx context.Context, id string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	item, err := c.TimeOffRequestRepo.FindByID(tx, id, false)
+	if err != nil {
+		c.Log.WithError(err).Error("Time off request not found")
+		return fiber.ErrNotFound
+	}
+
+	if item.RequestStatus == nil || strings.ToUpper(strings.TrimSpace(*item.RequestStatus)) != "PENDING" {
+		return fiber.NewError(fiber.StatusBadRequest, "Only pending requests can be deleted")
+	}
+
+	if err := c.TimeOffRequestRepo.Delete(tx, item); err != nil {
+		c.Log.WithError(err).Error("Failed to delete time off request")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
 // TODO: Add company scoping if needed.
 func (c *TimeOffRequestUseCase) GetRequestOwner(ctx context.Context, id string) (string, error) {
 	tx := c.DB.WithContext(ctx).Begin()

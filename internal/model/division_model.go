@@ -15,6 +15,11 @@ type CreateDivisionRequest struct {
 	Description *string `json:"description,omitempty"`
 }
 
+type UpdateDivisionRequest struct {
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
 type SearchDivisionRequest struct {
 	CompanyID string `json:"-" validate:"required"`
 	Name      string `json:"name"`

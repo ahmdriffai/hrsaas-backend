@@ -50,6 +50,18 @@ func (r *TimeOffBalanceRepository) FindByEmployeeTypeYear(db *gorm.DB, employeeI
 	return &item, nil
 }
 
+func (r *TimeOffBalanceRepository) FindByID(db *gorm.DB, id string) (*entity.TimeOffBalance, error) {
+	var item entity.TimeOffBalance
+	if err := db.Model(&entity.TimeOffBalance{}).
+		Preload("Employee").
+		Preload("TimeOffType").
+		Where("id = ?", id).
+		Take(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
 // TODO : create update balance function, which will be used to update balance after approval or cancellation of time off request. Need to check if balance is sufficient before approval, and update balance after approval or cancellation.
 func (r *TimeOffBalanceRepository) UpdateBalance(db *gorm.DB, employeeID, timeOffTypeID string, periodYear int, delta int) error {
 	var item entity.TimeOffBalance

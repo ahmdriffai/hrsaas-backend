@@ -54,6 +54,29 @@ type RegisterCompanyRequest struct {
 	Website        *string `json:"website,omitempty"`
 }
 
+type UpdateCompanyRequest struct {
+	Name           *string `json:"name,omitempty"`
+	LogoUrl        *string `json:"logo_url,omitempty"`
+	BussinessField *string `json:"bussiness_field,omitempty"`
+	Address        *string `json:"address,omitempty"`
+	Province       *string `json:"province,omitempty"`
+	City           *string `json:"city,omitempty"`
+	District       *string `json:"district,omitempty"`
+	Village        *string `json:"village,omitempty"`
+	ZipCode        *string `json:"zip_code,omitempty"`
+	PhoneNumber    *string `json:"phone_number,omitempty"`
+	FaxNumber      *string `json:"fax_number,omitempty"`
+	Email          *string `json:"email,omitempty"`
+	Website        *string `json:"website,omitempty"`
+}
+
+type SearchCompanyRequest struct {
+	CompanyId string `json:"-" validate:"required"`
+	Name      string `json:"name,omitempty" validate:"max=100"`
+	Page      int    `json:"page" validate:"min=1"`
+	Size      int    `json:"size" validate:"min=1,max=100"`
+}
+
 func CompanyToResponse(company *entity.Company) *CompanyResponse {
 	if company == nil {
 		return nil

@@ -26,7 +26,8 @@ func (c *TimeOffType) TableName() string {
 
 type TimeOffRequest struct {
 	ID            string            `gorm:"column:id;primaryKey"`
-	EmployeeId    string            `gorm:"column:employee_id;not null"`
+	CompanyID     string            `gorm:"column:company_id;not null"`
+	EmployeeID    string            `gorm:"column:employee_id;not null"`
 	TimeOffTypeId string            `gorm:"column:time_off_type_id;not null"`
 	RequestedDays int               `gorm:"column:requested_days;not null"`
 	StartDate     int64             `gorm:"column:start_date;not null"`
@@ -35,8 +36,8 @@ type TimeOffRequest struct {
 	RequestStatus *string           `gorm:"column:request_status;not null"`
 	FileUrl       *string           `gorm:"column:file_url"`
 	CreatedAt     int64             `gorm:"column:created_at;not null"`
-	Employee      Employee          `gorm:"foreignKey:EmployeeId"`
-	TimeOffType   TimeOffType       `gorm:"foreignKey:TimeOffTypeId"`
+	Employee      Employee          `gorm:"foreignKey:EmployeeID"`
+	TimeOffType   TimeOffType       `gorm:"foreignKey:TimeOffTypeID"`
 	Approvals     []TimeOffApproval `gorm:"foreignKey:TimeOffRequestId"`
 }
 
@@ -53,7 +54,8 @@ func (c *TimeOffRequest) TableName() string {
 
 type TimeOffBalance struct {
 	ID            string      `gorm:"column:id;primaryKey"`
-	EmployeeId    string      `gorm:"column:employee_id;not null"`
+	CompanyID     string      `gorm:"column:company_id;not null"`
+	EmployeeID    string      `gorm:"column:employee_id;not null"`
 	TimeOffTypeId string      `gorm:"column:time_off_type_id;not null"`
 	PeriodYear    int         `gorm:"column:period_year;not null"`
 	EntitledDays  int         `gorm:"column:entitled_days;not null"`

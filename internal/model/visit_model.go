@@ -5,6 +5,16 @@ import (
 	"strings"
 )
 
+type VisitResponse struct {
+	ID           string                `json:"id"`
+	EmployeeID   string                `json:"employee_id"`
+	EmployeeName string                `json:"employee_name"`
+	Date         string                `json:"date"`
+	ClientName   string                `json:"client_name"`
+	CreatedAt    int64                 `json:"created_at"`
+	Details      []VisitDetailResponse `json:"details"`
+}
+
 type VisitDetailResponse struct {
 	ID        string  `json:"id"`
 	VisitType string  `json:"visit_type"`
@@ -19,19 +29,18 @@ type VisitDetailResponse struct {
 	CreatedAt int64   `json:"created_at"`
 }
 
-type VisitResponse struct {
-	ID           string                `json:"id"`
-	EmployeeID   string                `json:"employee_id"`
-	EmployeeName string                `json:"employee_name"`
-	Date         string                `json:"date"`
-	ClientName   string                `json:"client_name"`
-	CreatedAt    int64                 `json:"created_at"`
-	Details      []VisitDetailResponse `json:"details"`
-}
-
 type CreateVisitRequest struct {
 	VisitType  string  `json:"visit_type" validate:"required,oneof=IN OUT"`
 	ClientName string  `json:"client_name"`
+	Note       *string `json:"note,omitempty"`
+	Latitude   *string `json:"latitude,omitempty"`
+	Longitude  *string `json:"longitude,omitempty"`
+	Address    *string `json:"address,omitempty"`
+	FileUrl    *string `json:"file_url,omitempty"`
+}
+
+type UpdateVisitRequest struct {
+	ClientName *string `json:"client_name,omitempty"`
 	Note       *string `json:"note,omitempty"`
 	Latitude   *string `json:"latitude,omitempty"`
 	Longitude  *string `json:"longitude,omitempty"`
