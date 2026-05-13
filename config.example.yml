@@ -22,14 +22,13 @@ database:
     idle: 10
     max: 100
     lifetime: 300
-
 s3:
-  endpoint: "https://is3.cloudhost.id" # kosongkan untuk AWS, isi untuk MinIO/Cloudflare R2 (contoh: http://localhost:9000)
+  endpoint: "" # kosongkan untuk AWS, isi untuk MinIO/Cloudflare R2 (contoh: http://localhost:9000)
   region: "us-east-1"
   bucket: "storage-main"
-  access_key: "3NOZV1CMLZXW8O96GA75"
-  secret_key: "GKwAXoAdaybFfk4cC92rJDtE3ArUH6zwpghjgD2r"
-  public_url: "https://is3.cloudhost.id/storage-main" # base URL publik, contoh: https://cdn.example.com atau https://<bucket>.s3.amazonaws.com
+  access_key: ""
+  secret_key: ""
+  public_url: "" # base URL publik, contoh: https://cdn.example.com atau https://<bucket>.s3.amazonaws.com
 
 
 # mail:

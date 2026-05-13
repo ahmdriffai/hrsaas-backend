@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/ahmdriffai/hrsaas-backend:dev
+    image: ghcr.io/ahmdriffai/hrsaas-backend:${API_TAG}
     container_name: hrsaas-api
     restart: always
     command: sh -c "apk add --no-cache tzdata && ./main"
@@ -11,7 +11,7 @@ services:
     networks:
       - hrsaas-net
   panel:
-    image: docker pull ghcr.io/ahmdriffai/hrsaas-admin:development
+    image: docker pull ghcr.io/ahmdriffai/hrsaas-admin:${PANEL_TAG}
     container_name: hrsaas-panel
     ports:
       - "3000:3000"
@@ -23,7 +23,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: hrsaas-api-tunnel
     restart: unless-stopped
-    command: tunnel --no-autoupdate run --token xxx
+    command: tunnel --no-autoupdate run --token ${CF_API_TOKEN}
     networks:
       - hrsaas-net
 
@@ -31,7 +31,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: hrsaas-panel-tunnel
     restart: unless-stopped
-    command: tunnel --no-autoupdate run --token xxx
+    command: tunnel --no-autoupdate run --token ${CF_PANEL_TOKEN}
     networks:
       - hrsaas-net
 
