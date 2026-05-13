@@ -119,7 +119,7 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 	}
 
 	item := &entity.TimeOffRequest{
-		EmployeeId:    employeeID,
+		EmployeeID:    employeeID,
 		TimeOffTypeId: request.TimeOffTypeID,
 		RequestedDays: request.RequestedDays,
 		StartDate:     startDate,
@@ -282,7 +282,7 @@ func (c *TimeOffRequestUseCase) UpdateRequest(ctx context.Context, id string, re
 
 	var overlapCount int64
 	if err := tx.Table("time_off_requests").
-		Where("employee_id = ?", item.EmployeeId).
+		Where("employee_id = ?", item.EmployeeID).
 		Where("id <> ?", item.ID).
 		Where("request_status IN ?", []string{"PENDING", "APPROVED"}).
 		Where("NOT (end_date < ? OR start_date > ?)", startDate, endDate).
@@ -301,7 +301,7 @@ func (c *TimeOffRequestUseCase) UpdateRequest(ctx context.Context, id string, re
 	}
 	if timeOffType.IsQuotaBased {
 		periodYear := time.UnixMilli(startDate).UTC().Year()
-		balance, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, item.EmployeeId, timeOffTypeID, periodYear)
+		balance, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, item.EmployeeID, timeOffTypeID, periodYear)
 		if err != nil {
 			c.Log.WithError(err).Error("Time off balance not found")
 			return nil, fiber.NewError(fiber.StatusBadRequest, "Time off balance not found")
