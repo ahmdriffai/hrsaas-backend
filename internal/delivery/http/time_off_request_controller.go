@@ -5,7 +5,6 @@ import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
 	"math"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -68,10 +67,56 @@ func (c *TimeOffRequestController) GetRequestByID(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *TimeOffRequestController) UpdateRequest(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	if err := ensureOwnerOrAdmin(ctx, c.RequestUseCase, requestID); err != nil {
+		return err
+	}
+
+	request := new(model.UpdateTimeOffRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	response, err := c.RequestUseCase.UpdateRequest(ctx.UserContext(), requestID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update time off request")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.TimeOffRequestResponse]{
+		Data: response,
+	})
+}
+
+func (c *TimeOffRequestController) DeleteRequest(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	if err := ensureOwnerOrAdmin(ctx, c.RequestUseCase, requestID); err != nil {
+		return err
+	}
+
+	if err := c.RequestUseCase.DeleteRequest(ctx.UserContext(), requestID); err != nil {
+		c.Log.WithError(err).Error("failed to delete time off request")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}
+
 // TODO: Add admin-only filters and company scoping.
 func (c *TimeOffRequestController) ListRequests(ctx *fiber.Ctx) error {
-	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") {
+	if !middleware.HasRole(ctx, "ADMIN") {
 		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 	}
 

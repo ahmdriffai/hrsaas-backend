@@ -30,6 +30,14 @@ type CreateEmSancRequest struct {
 	DocumentUrl string `json:"document_url"`
 }
 
+type UpdateEmSancRequest struct {
+	Reason      *string `json:"reason,omitempty"`
+	StartDate   *string `json:"start_date,omitempty"`
+	EndDate     *string `json:"end_date,omitempty"`
+	Status      *string `json:"status,omitempty" validate:"omitempty,oneof=active inactive ACTIVE INACTIVE"`
+	DocumentUrl *string `json:"document_url,omitempty"`
+}
+
 type SearchEmSancRequest struct {
 	EmployeeID string `json:"-"`
 	SanctionID string `json:"sanction_id" validate:"max=100"`
@@ -43,6 +51,11 @@ type SearchEmSancRequest struct {
 }
 
 func EmSancToResponse(emSanc *entity.EmployeeSanction) *EmSancResponse {
+	status := ""
+	if emSanc.Status != nil {
+		status = *emSanc.Status
+	}
+
 	return &EmSancResponse{
 		ID:          emSanc.ID,
 		EmployeeID:  emSanc.EmployeeID,
@@ -51,6 +64,7 @@ func EmSancToResponse(emSanc *entity.EmployeeSanction) *EmSancResponse {
 		StartDate:   emSanc.StartDate,
 		EndDate:     emSanc.EndDate,
 		CompanyID:   emSanc.CompanyID,
+		Status:      status,
 		Employee:    *EmployeeToResponse(&emSanc.Employee),
 		DocumentUrl: emSanc.DocumentUrl,
 		Sanction:    *SanctionToResponse(&emSanc.Sanction),

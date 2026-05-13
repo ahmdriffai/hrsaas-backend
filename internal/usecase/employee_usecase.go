@@ -8,6 +8,8 @@ import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -75,7 +77,6 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 		Name:      request.Fullname,
 		Email:     request.Email,
 		Password:  string(passwordHash),
-		Role:      "USER",
 		CompanyID: request.CompanyID,
 	}
 
@@ -207,7 +208,6 @@ func (c *EmployeeUseCase) ImportExcel(ctx context.Context, request *model.Import
 			Name:      row[1],
 			Email:     row[10],
 			Password:  string(passwordHash),
-			Role:      "USER",
 			CompanyID: request.CompanyID,
 		}
 
@@ -317,7 +317,7 @@ func (c *EmployeeUseCase) Detail(ctx context.Context, request *model.DetailEmplo
 	defer tx.Rollback()
 
 	employee := new(entity.Employee)
-	err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, request.ID, request.CompanyID, "EmployeeContract", "EmployeeContract.Position", "EmployeeContract.Division", "User")
+	err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, request.ID, request.CompanyID, "EmployeeContract", "EmployeeContract.Position", "EmployeeContract.Division", "EmployeeDocuments", "User", "User.Roles")
 	if err != nil {
 		c.Log.WithError(err).Error("Failed to find employee by ID")
 		return nil, fiber.ErrNotFound
@@ -329,4 +329,182 @@ func (c *EmployeeUseCase) Detail(ctx context.Context, request *model.DetailEmplo
 	}
 
 	return model.EmployeeToResponse(employee), nil
+}
+
+func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request *model.UpdateEmployeeRequest) (*model.EmployeeResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	employee := new(entity.Employee)
+	if err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, request.ID, companyID, "EmployeeContract", "EmployeeContract.Position", "EmployeeContract.Division", "EmployeeDocuments", "User", "User.Roles"); err != nil {
+		c.Log.WithError(err).Error("Failed to find employee by ID")
+		return nil, fiber.ErrNotFound
+	}
+
+	if request.EmployeeNumber != nil {
+		employeeNumber := strings.TrimSpace(*request.EmployeeNumber)
+		if employeeNumber == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "employee_number cannot be empty")
+		}
+
+		var count int64
+		if err := tx.Model(&entity.Employee{}).
+			Where("employee_number = ?", employeeNumber).
+			Where("company_id = ?", companyID).
+			Where("id <> ?", employee.ID).
+			Count(&count).Error; err != nil {
+			c.Log.WithError(err).Error("Failed to count employee by number and company")
+			return nil, fiber.ErrInternalServerError
+		}
+		if count > 0 {
+			return nil, fiber.NewError(fiber.StatusConflict, "Employee number already in use")
+		}
+
+		employee.EmployeeNumber = employeeNumber
+	}
+
+	if request.Fullname != nil {
+		fullname := strings.TrimSpace(*request.Fullname)
+		if fullname == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "fullname cannot be empty")
+		}
+		employee.Fullname = fullname
+		employee.User.Name = fullname
+	}
+
+	if request.BirthPlace != nil {
+		birthPlace := strings.TrimSpace(*request.BirthPlace)
+		if birthPlace == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "birth_place cannot be empty")
+		}
+		employee.BirthPlace = birthPlace
+	}
+
+	if request.BirthDate != nil {
+		birthDate := strings.TrimSpace(*request.BirthDate)
+		if birthDate == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "birth_date cannot be empty")
+		}
+
+		parsedBirthDate, err := lib.ParseDateToUnixMilli(birthDate)
+		if err != nil {
+			c.Log.WithError(err).Error("Failed to parse birth date")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid birth_date format")
+		}
+		employee.BirthDate = parsedBirthDate
+	}
+
+	if request.BlodType != nil {
+		employee.BlodType = strings.TrimSpace(*request.BlodType)
+	}
+
+	if request.MaritalStatus != nil {
+		maritalStatus := strings.TrimSpace(*request.MaritalStatus)
+		if maritalStatus == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "marital_status cannot be empty")
+		}
+		employee.MaritalStatus = maritalStatus
+	}
+
+	if request.Religion != nil {
+		religion := strings.TrimSpace(*request.Religion)
+		if religion == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "religion cannot be empty")
+		}
+		employee.Religion = religion
+	}
+
+	if request.Phone != nil {
+		phone := strings.TrimSpace(*request.Phone)
+		if phone == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "phone cannot be empty")
+		}
+		employee.Phone = phone
+	}
+
+	if request.Timezone != nil {
+		timezone := strings.TrimSpace(*request.Timezone)
+		if timezone == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "timezone cannot be empty")
+		}
+		employee.Timezone = timezone
+	}
+
+	if request.Email != nil {
+		email := strings.TrimSpace(*request.Email)
+		if email == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "email cannot be empty")
+		}
+
+		count, err := c.UserRepository.CountByEmailExcludeID(tx, email, employee.UserID)
+		if err != nil {
+			c.Log.WithError(err).Error("Failed to count user by email")
+			return nil, fiber.ErrInternalServerError
+		}
+		if count > 0 {
+			return nil, fiber.NewError(fiber.StatusConflict, "Email already registered")
+		}
+
+		employee.User.Email = email
+	}
+
+	nowMilli := time.Now().UnixMilli()
+	employee.UpdatedAt = nowMilli
+	employee.User.UpdatedAt = nowMilli
+
+	if err := c.UserRepository.Update(tx, &employee.User); err != nil {
+		c.Log.WithError(err).Error("Failed to update employee user")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := c.EmployeeRepository.Update(tx, employee); err != nil {
+		c.Log.WithError(err).Error("Failed to update employee")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.EmployeeToResponse(employee), nil
+}
+
+func (c *EmployeeUseCase) Delete(ctx context.Context, id string, companyID string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	employee := new(entity.Employee)
+	if err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, id, companyID, "User"); err != nil {
+		c.Log.WithError(err).Error("Failed to find employee by ID")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.EmployeeRepository.Delete(tx, employee); err != nil {
+		c.Log.WithError(err).Error("Failed to delete employee")
+		if strings.Contains(strings.ToLower(err.Error()), "foreign key") || strings.Contains(err.Error(), "SQLSTATE 23503") {
+			return fiber.NewError(fiber.StatusConflict, "Employee cannot be deleted because it is still used by other records")
+		}
+		return fiber.ErrInternalServerError
+	}
+
+	if err := c.UserRepository.Delete(tx, &employee.User); err != nil {
+		c.Log.WithError(err).Error("Failed to delete employee user")
+		if strings.Contains(strings.ToLower(err.Error()), "foreign key") || strings.Contains(err.Error(), "SQLSTATE 23503") {
+			return fiber.NewError(fiber.StatusConflict, "Employee user cannot be deleted because it is still used by other records")
+		}
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }

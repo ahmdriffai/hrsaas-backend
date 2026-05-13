@@ -23,7 +23,7 @@ func (r *EmployeeContractRepository) List(db *gorm.DB, request *model.SearchEmpl
 
 	query := db.Model(&entity.EmployeeContract{})
 	if withRelations {
-		query = query.Preload("Employee").Preload("Division").Preload("Position")
+		query = query.Preload("Employee").Preload("Employee.User").Preload("Division").Preload("Position")
 	}
 	if request.EmployeeID != "" {
 		query = query.Where("employee_id = ?", request.EmployeeID)
@@ -36,7 +36,7 @@ func (r *EmployeeContractRepository) List(db *gorm.DB, request *model.SearchEmpl
 	}
 	if request.ActiveOnly {
 		now := time.Now().UnixMilli()
-		query = query.Where("end_date IS NULL OR end_date >= ?", now)
+		query = query.Where("is_active = ?", true).Where("end_date IS NULL OR end_date >= ?", now)
 	}
 
 	var total int64
@@ -56,6 +56,7 @@ func (r *EmployeeContractRepository) FindLatestActiveByEmployee(db *gorm.DB, emp
 	now := time.Now().UnixMilli()
 	if err := db.
 		Where("employee_id = ?", employeeID).
+		Where("is_active = ?", true).
 		Where("end_date IS NULL OR end_date >= ?", now).
 		Order("start_date DESC").
 		Limit(1).
@@ -63,4 +64,26 @@ func (r *EmployeeContractRepository) FindLatestActiveByEmployee(db *gorm.DB, emp
 		return nil, err
 	}
 	return &item, nil
+}
+
+func (r *EmployeeContractRepository) FindByID(db *gorm.DB, id string, withRelations bool) (*entity.EmployeeContract, error) {
+	var item entity.EmployeeContract
+
+	query := db.Model(&entity.EmployeeContract{})
+	if withRelations {
+		query = query.Preload("Employee").Preload("Employee.User").Preload("Division").Preload("Position")
+	}
+
+	if err := query.Where("id = ?", id).Take(&item).Error; err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+func (r *EmployeeContractRepository) DeactivateActiveByEmployee(db *gorm.DB, employeeID string) error {
+	return db.Model(&entity.EmployeeContract{}).
+		Where("employee_id = ?", employeeID).
+		Where("is_active = ?", true).
+		Update("is_active", false).Error
 }

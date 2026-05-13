@@ -68,3 +68,49 @@ func (c *DivisionController) Create(ctx *fiber.Ctx) error {
 		Data: response,
 	})
 }
+
+func (c *DivisionController) Detail(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.DivisionUseCase.Detail(ctx.UserContext(), ctx.Params("id"), companyID)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to get division detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.DivisionResponse]{
+		Data: response,
+	})
+}
+
+func (c *DivisionController) Update(ctx *fiber.Ctx) error {
+	request := new(model.UpdateDivisionRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	companyID := middleware.GetCompanyId(ctx)
+	response, err := c.DivisionUseCase.Update(ctx.UserContext(), ctx.Params("id"), companyID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update division")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.DivisionResponse]{
+		Data: response,
+	})
+}
+
+func (c *DivisionController) Delete(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	if err := c.DivisionUseCase.Delete(ctx.UserContext(), ctx.Params("id"), companyID); err != nil {
+		c.Log.WithError(err).Error("failed to delete division")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}

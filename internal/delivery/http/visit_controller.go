@@ -5,7 +5,6 @@ import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
 	"math"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -49,14 +48,12 @@ func (c *VisitController) Create(ctx *fiber.Ctx) error {
 
 // TODO: Enforce admin-only access.
 func (c *VisitController) List(ctx *fiber.Ctx) error {
-	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") {
+	if !middleware.HasRole(ctx, "ADMIN") {
 		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 	}
 
 	request := new(model.SearchVisitRequest)
 	request.EmployeeID = ctx.Query("employee_id", "")
-	request.VisitType = ctx.Query("visit_type", "")
 	request.StartDate = ctx.Query("start_date", "")
 	request.EndDate = ctx.Query("end_date", "")
 	request.SortBy = ctx.Query("sort_by", "newest")
@@ -91,7 +88,6 @@ func (c *VisitController) ListCurrent(ctx *fiber.Ctx) error {
 	}
 
 	request.EmployeeID = user.Employee.ID
-	request.VisitType = ctx.Query("visit_type", "")
 	request.StartDate = ctx.Query("start_date", "")
 	request.EndDate = ctx.Query("end_date", "")
 	request.SortBy = ctx.Query("sort_by", "newest")
@@ -124,7 +120,7 @@ func (c *VisitController) GetByID(ctx *fiber.Ctx) error {
 	}
 
 	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") {
+	if !middleware.HasRole(ctx, "ADMIN") {
 		if user.Employee == nil || user.Employee.ID == "" {
 			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 		}
@@ -142,6 +138,45 @@ func (c *VisitController) GetByID(ctx *fiber.Ctx) error {
 	response, err := c.UseCase.GetByID(ctx.UserContext(), requestID)
 	if err != nil {
 		c.Log.WithError(err).Error("failed to get visit detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.VisitResponse]{
+		Data: response,
+	})
+}
+
+func (c *VisitController) Update(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	request := new(model.UpdateVisitRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	user := middleware.GetUser(ctx)
+	if !middleware.HasRole(ctx, "ADMIN") {
+		if user.Employee == nil || user.Employee.ID == "" {
+			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+		}
+
+		ownerID, err := c.UseCase.GetVisitOwner(ctx.UserContext(), requestID)
+		if err != nil {
+			c.Log.WithError(err).Error("failed to get visit owner")
+			return err
+		}
+		if ownerID != user.Employee.ID {
+			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
+		}
+	}
+
+	response, err := c.UseCase.Update(ctx.UserContext(), requestID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update visit")
 		return err
 	}
 
@@ -197,7 +232,7 @@ func (c *VisitController) Delete(ctx *fiber.Ctx) error {
 	}
 
 	user := middleware.GetUser(ctx)
-	if !strings.EqualFold(user.Role, "ADMIN") {
+	if !middleware.HasRole(ctx, "ADMIN") {
 		if user.Employee == nil || user.Employee.ID == "" {
 			return fiber.NewError(fiber.StatusForbidden, "Forbidden")
 		}

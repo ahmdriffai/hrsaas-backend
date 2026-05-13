@@ -2,9 +2,7 @@ package repository
 
 import (
 	"hr-sas/internal/entity"
-	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -37,7 +35,7 @@ func (r *VisitRepository) List(db *gorm.DB, request *model.SearchVisitRequest, w
 		return nil, 0, err
 	}
 	if withRelations {
-		dataQuery = dataQuery.Preload("Employee").Preload("Company")
+		dataQuery = dataQuery.Preload("Employee").Preload("Details")
 	}
 	if request.SortBy == "oldest" {
 		dataQuery = dataQuery.Order("created_at ASC")
@@ -56,7 +54,9 @@ func (r *VisitRepository) FindByID(db *gorm.DB, id string, withRelations bool) (
 	var item entity.Visit
 	query := db.Model(&entity.Visit{})
 	if withRelations {
-		query = query.Preload("Employee").Preload("Company")
+		query = query.Preload("Employee").Preload("Details", func(tx *gorm.DB) *gorm.DB {
+			return tx.Order("created_at DESC")
+		})
 	}
 	if err := query.Where("id = ?", id).Take(&item).Error; err != nil {
 		return nil, err
@@ -64,16 +64,34 @@ func (r *VisitRepository) FindByID(db *gorm.DB, id string, withRelations bool) (
 	return &item, nil
 }
 
-func (r *VisitRepository) FindLastByEmployee(db *gorm.DB, employeeID string, withRelations bool) (*entity.Visit, error) {
+// FindLastOpenByEmployee returns the most recent visit that has an IN detail but no OUT detail.
+func (r *VisitRepository) FindLastOpenByEmployee(db *gorm.DB, employeeID string) (*entity.Visit, error) {
 	var item entity.Visit
-	query := db.Model(&entity.Visit{})
-	if withRelations {
-		query = query.Preload("Employee").Preload("Company")
-	}
-	if err := query.Where("employee_id = ?", employeeID).Order("created_at DESC").Limit(1).Take(&item).Error; err != nil {
+	err := db.Model(&entity.Visit{}).
+		Preload("Details").
+		Where("employee_id = ?", employeeID).
+		Where("EXISTS (SELECT 1 FROM visit_details WHERE visit_details.visit_id = visits.id AND visit_details.visit_type = 'IN')").
+		Where("NOT EXISTS (SELECT 1 FROM visit_details WHERE visit_details.visit_id = visits.id AND visit_details.visit_type = 'OUT')").
+		Order("created_at DESC").
+		Limit(1).
+		Take(&item).Error
+	if err != nil {
 		return nil, err
 	}
 	return &item, nil
+}
+
+func (r *VisitRepository) FindLatestDetailByVisitID(db *gorm.DB, visitID string) (*entity.VisitDetail, error) {
+	var detail entity.VisitDetail
+	if err := db.Model(&entity.VisitDetail{}).
+		Where("visit_id = ?", visitID).
+		Order("created_at DESC").
+		Limit(1).
+		Take(&detail).Error; err != nil {
+		return nil, err
+	}
+
+	return &detail, nil
 }
 
 func (r *VisitRepository) applyFilters(query *gorm.DB, request *model.SearchVisitRequest) (*gorm.DB, error) {
@@ -83,23 +101,11 @@ func (r *VisitRepository) applyFilters(query *gorm.DB, request *model.SearchVisi
 	if request.EmployeeID != "" {
 		query = query.Where("employee_id = ?", request.EmployeeID)
 	}
-	if request.VisitType != "" {
-		query = query.Where("visit_type = ?", request.VisitType)
-	}
 	if request.StartDate != "" {
-		startDate, err := lib.ParseDateToUnixMilli(request.StartDate)
-		if err != nil {
-			return nil, err
-		}
-		query = query.Where("created_at >= ?", startDate)
+		query = query.Where("date >= ?", request.StartDate)
 	}
 	if request.EndDate != "" {
-		endDate, err := lib.ParseDateToUnixMilli(request.EndDate)
-		if err != nil {
-			return nil, err
-		}
-		endDate = endDate + int64(24*time.Hour/time.Millisecond) - 1
-		query = query.Where("created_at <= ?", endDate)
+		query = query.Where("date <= ?", request.EndDate)
 	}
 	return query, nil
 }

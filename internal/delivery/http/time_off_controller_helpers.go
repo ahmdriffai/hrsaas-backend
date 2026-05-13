@@ -3,14 +3,12 @@ package http
 import (
 	"hr-sas/internal/delivery/http/middleware"
 	"hr-sas/internal/usecase"
-	"strings"
-
 	"github.com/gofiber/fiber/v2"
 )
 
 func ensureOwnerOrAdmin(ctx *fiber.Ctx, requestUseCase *usecase.TimeOffRequestUseCase, requestID string) error {
 	user := middleware.GetUser(ctx)
-	if strings.EqualFold(user.Role, "ADMIN") {
+	if middleware.HasRole(ctx, "ADMIN") {
 		return nil
 	}
 	if user.Employee == nil || user.Employee.ID == "" {

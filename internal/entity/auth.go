@@ -14,9 +14,9 @@ type User struct {
 	EmailVerified bool   `gorm:"column:email_verified;default:false"`
 	Image         *string
 	CompanyID     string `gorm:"column:company_id"`
-	Role          string `gorm:"column:role;not null"`
 	Password      string `gorm:"column:password;not null"`
 
+	Roles     []Role    `gorm:"many2many:user_roles;"`
 	Employee  *Employee
 	CreatedAt int64     `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt int64     `gorm:"column:updated_at;autoUpdateTime"`

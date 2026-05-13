@@ -4,6 +4,7 @@ import "hr-sas/internal/entity"
 
 type TimeOffBalanceResponse struct {
 	ID            string              `json:"id"`
+	CompanyID     string              `json:"company_id"`
 	EmployeeID    string              `json:"employee_id"`
 	TimeOffTypeID string              `json:"time_off_type_id"`
 	PeriodYear    int                 `json:"period_year"`
@@ -28,10 +29,18 @@ type SetTimeOffBalanceRequest struct {
 	RemainingDays *int   `json:"remaining_days,omitempty" validate:"omitempty,min=0"`
 }
 
+type UpdateTimeOffBalanceRequest struct {
+	PeriodYear    *int `json:"period_year,omitempty" validate:"min=2000"`
+	EntitledDays  *int `json:"entitled_days,omitempty" validate:"omitempty,min=0"`
+	UsedDays      *int `json:"used_days,omitempty" validate:"omitempty,min=0"`
+	RemainingDays *int `json:"remaining_days,omitempty" validate:"omitempty,min=0"`
+}
+
 func TimeOffBalanceToResponse(balance *entity.TimeOffBalance) *TimeOffBalanceResponse {
 	return &TimeOffBalanceResponse{
 		ID:            balance.ID,
-		EmployeeID:    balance.EmployeeId,
+		CompanyID:     balance.CompanyID,
+		EmployeeID:    balance.EmployeeID,
 		TimeOffTypeID: balance.TimeOffTypeId,
 		PeriodYear:    balance.PeriodYear,
 		EntitledDays:  balance.EntitledDays,

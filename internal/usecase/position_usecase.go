@@ -5,6 +5,8 @@ import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -46,8 +48,8 @@ func (c *PositionUseCase) Create(ctx context.Context, request *model.CreatePosit
 	}
 
 	position := &entity.Position{
-		Name:      request.Name,
-		CompanyID: request.CompanyID,
+		Name:       request.Name,
+		CompanyID:  request.CompanyID,
 		IsApprover: request.IsApprover,
 	}
 
@@ -67,10 +69,10 @@ func (c *PositionUseCase) Create(ctx context.Context, request *model.CreatePosit
 	}
 
 	return &model.PositionResponse{
-		ID:        position.ID,
-		Name:      position.Name,
-		CompanyID: position.CompanyID,
-		ParentID:  position.ParentID,
+		ID:         position.ID,
+		Name:       position.Name,
+		CompanyID:  position.CompanyID,
+		ParentID:   position.ParentID,
 		IsApprover: position.IsApprover,
 	}, nil
 
@@ -81,7 +83,7 @@ List Position Usecase
 */
 func (c *PositionUseCase) Search(
 	ctx context.Context,
-	request *model.SeachPositionRequest,
+	request *model.SearchPositionRequest,
 ) ([]model.PositionResponse, int64, error) {
 
 	tx := c.DB.WithContext(ctx).Begin()
@@ -119,16 +121,126 @@ func (c *PositionUseCase) Search(
 	return result, total, nil
 }
 
+func (c *PositionUseCase) Detail(ctx context.Context, id string) (*model.PositionResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	position, err := c.PositionRepository.FindByID(tx, id, "Parent")
+	if err != nil {
+		c.Log.WithError(err).Error("Position not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	response := model.PositionToResponse(position)
+	if position.Parent != nil {
+		response.Parent = model.PositionToResponse(position.Parent)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return response, nil
+}
+
+func (c *PositionUseCase) Update(ctx context.Context, id string, request *model.UpdatePositionRequest) (*model.PositionResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	position, err := c.PositionRepository.FindByID(tx, id, "Parent")
+	if err != nil {
+		c.Log.WithError(err).Error("Position not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if request.Name != nil {
+		name := strings.TrimSpace(*request.Name)
+		if name == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "name cannot be empty")
+		}
+		position.Name = name
+	}
+
+	if request.ParentID != nil {
+		if *request.ParentID == id {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "parent_id cannot be the same as position id")
+		}
+		if strings.TrimSpace(*request.ParentID) == "" {
+			position.ParentID = nil
+		} else {
+			position.ParentID = request.ParentID
+		}
+	}
+
+	if request.IsApprover != nil {
+		position.IsApprover = *request.IsApprover
+	}
+
+	position.UpdatedAt = time.Now().UnixMilli()
+
+	if err := c.PositionRepository.Update(tx, position); err != nil {
+		c.Log.WithError(err).Error("Failed to update position")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	reloaded, err := c.PositionRepository.FindByID(tx, id, "Parent")
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to reload position")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	response := model.PositionToResponse(reloaded)
+	if reloaded.Parent != nil {
+		response.Parent = model.PositionToResponse(reloaded.Parent)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return response, nil
+}
+
+func (c *PositionUseCase) Delete(ctx context.Context, id string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	position, err := c.PositionRepository.FindByID(tx, id)
+	if err != nil {
+		c.Log.WithError(err).Error("Position not found")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.PositionRepository.Delete(tx, position); err != nil {
+		c.Log.WithError(err).Error("Failed to delete position")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
 func (c *PositionUseCase) buildTree(
 	pos entity.Position,
 	posMap map[string]entity.Position,
 ) model.PositionResponse {
 
 	response := model.PositionResponse{
-		ID:        pos.ID,
-		CompanyID: pos.CompanyID,
-		Name:      pos.Name,
-		ParentID:  pos.ParentID,
+		ID:         pos.ID,
+		CompanyID:  pos.CompanyID,
+		Name:       pos.Name,
+		ParentID:   pos.ParentID,
 		IsApprover: pos.IsApprover,
 	}
 

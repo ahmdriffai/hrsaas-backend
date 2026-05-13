@@ -68,3 +68,44 @@ func (c *EmployeeContractController) List(ctx *fiber.Ctx) error {
 		Paging: paging,
 	})
 }
+
+func (c *EmployeeContractController) Detail(ctx *fiber.Ctx) error {
+	response, err := c.UseCase.Detail(ctx.UserContext(), ctx.Params("id"))
+	if err != nil {
+		c.Log.WithError(err).Error("failed to get employee contract detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.EmployeeContractResponse]{
+		Data: response,
+	})
+}
+
+func (c *EmployeeContractController) Update(ctx *fiber.Ctx) error {
+	request := new(model.UpdateEmployeeContractRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	response, err := c.UseCase.Update(ctx.UserContext(), ctx.Params("id"), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update employee contract")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.EmployeeContractResponse]{
+		Data: response,
+	})
+}
+
+func (c *EmployeeContractController) Delete(ctx *fiber.Ctx) error {
+	if err := c.UseCase.Delete(ctx.UserContext(), ctx.Params("id")); err != nil {
+		c.Log.WithError(err).Error("failed to delete employee contract")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}

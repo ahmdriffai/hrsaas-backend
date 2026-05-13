@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"hr-sas/internal/delivery/http/middleware"
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
@@ -47,7 +46,6 @@ func (c *ShiftController) AssignEmployee(ctx *fiber.Ctx) error {
 	request := new(model.AssignEmployeeToShiftRequest)
 	if err := ctx.BodyParser(request); err != nil {
 		c.Log.WithError(err).Error("failed to parse request body")
-		fmt.Println("error y ages")
 		return fiber.ErrBadRequest
 	}
 
@@ -94,7 +92,6 @@ func (c *ShiftController) Detail(ctx *fiber.Ctx) error {
 	request.CompanyID = middleware.GetCompanyId(ctx)
 	request.ShiftID = ctx.Params("shiftID")
 
-
 	response, err := c.UseCase.DetailShift(ctx.UserContext(), request)
 	if err != nil {
 		c.Log.WithError(err).Error("failed to list shifts")
@@ -103,5 +100,38 @@ func (c *ShiftController) Detail(ctx *fiber.Ctx) error {
 
 	return ctx.JSON(model.WebResponse[model.ShiftResponse]{
 		Data: *response,
+	})
+}
+
+func (c *ShiftController) Update(ctx *fiber.Ctx) error {
+	request := new(model.UpdateShiftRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.UseCase.Update(ctx.UserContext(), ctx.Params("shiftID"), companyID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update shift")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.ShiftResponse]{
+		Data: response,
+	})
+}
+
+func (c *ShiftController) Delete(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	if err := c.UseCase.Delete(ctx.UserContext(), ctx.Params("shiftID"), companyID); err != nil {
+		c.Log.WithError(err).Error("failed to delete shift")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
 	})
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"hr-sas/internal/entity"
+	"hr-sas/internal/model"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -16,12 +17,27 @@ func NewTimeOffTypeRepository(log *logrus.Logger) *TimeOffTypeRepository {
 	return &TimeOffTypeRepository{Log: log}
 }
 
-func (r *TimeOffTypeRepository) List(db *gorm.DB) ([]entity.TimeOffType, error) {
+func (r *TimeOffTypeRepository) List(db *gorm.DB, request *model.SearchTimeOffTypeRequest) ([]entity.TimeOffType, int64, error) {
 	var items []entity.TimeOffType
-	if err := db.Find(&items).Error; err != nil {
-		return nil, err
+
+	query := db.Model(&entity.TimeOffType{})
+	if request != nil && request.Name != "" {
+		query = query.Where("name ILIKE ?", "%"+request.Name+"%")
 	}
-	return items, nil
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if request != nil {
+		query = query.Offset((request.Page - 1) * request.Size).Limit(request.Size)
+	}
+
+	if err := query.Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
 
 func (r *TimeOffTypeRepository) ListQuotaBased(db *gorm.DB) ([]entity.TimeOffType, error) {
@@ -38,4 +54,8 @@ func (r *TimeOffTypeRepository) FindByID(db *gorm.DB, id string) (*entity.TimeOf
 		return nil, err
 	}
 	return &item, nil
+}
+
+func (r *TimeOffTypeRepository) DeleteByID(db *gorm.DB, id string) error {
+	return db.Where("id = ?", id).Delete(&entity.TimeOffType{}).Error
 }

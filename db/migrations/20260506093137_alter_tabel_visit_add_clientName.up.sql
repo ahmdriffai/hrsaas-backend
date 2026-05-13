@@ -1,0 +1,2 @@
+ALTER TABLE visits
+ADD COLUMN client_name VARCHAR(255) NOT NULL DEFAULT '';

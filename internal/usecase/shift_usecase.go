@@ -6,6 +6,8 @@ import (
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -232,5 +234,126 @@ func (c *ShiftUseCase) DetailShift(ctx context.Context, request *model.DetailShi
 		return nil, fiber.ErrInternalServerError
 	}
 
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
 	return model.ShiftToResponse(shift), nil
+}
+
+func (c *ShiftUseCase) Update(ctx context.Context, shiftID string, companyID string, request *model.UpdateShiftRequest) (*model.ShiftResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	shift := new(entity.Shift)
+	if err := c.ShiftRepository.FindByIdAndCompany(tx, shift, shiftID, companyID, "Employees", "ShiftDays"); err != nil {
+		c.Log.WithError(err).Error("Shift not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	if request.Name != nil {
+		name := strings.TrimSpace(*request.Name)
+		if name == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "name cannot be empty")
+		}
+		shift.Name = name
+	}
+
+	if request.LateTolerance != nil {
+		shift.LateTolerance = *request.LateTolerance
+	}
+
+	if request.ShiftDayRequests != nil {
+		if len(*request.ShiftDayRequests) != 7 {
+			c.Log.Error("Invalid shift days count: must provide exactly 7 weekdays")
+			return nil, fiber.ErrBadRequest
+		}
+
+		var weekdayMask uint8
+		shiftDays := make([]entity.ShiftDay, 0, len(*request.ShiftDayRequests))
+		for _, shiftDayRequest := range *request.ShiftDayRequests {
+			bit := uint8(1 << (shiftDayRequest.Weekday - 1))
+			if weekdayMask&bit != 0 {
+				c.Log.Error("Invalid shift days: duplicate weekday")
+				return nil, fiber.ErrBadRequest
+			}
+			weekdayMask |= bit
+
+			checkIn, _ := lib.ParseTimeToUnixMilli(shiftDayRequest.CheckIn)
+			checkOut, _ := lib.ParseTimeToUnixMilli(shiftDayRequest.CheckOut)
+			breakStart, _ := lib.ParseTimeToUnixMilli(shiftDayRequest.BreakStart)
+			breakEnd, _ := lib.ParseTimeToUnixMilli(shiftDayRequest.BreakEnd)
+
+			shiftDays = append(shiftDays, entity.ShiftDay{
+				ShiftID:         shift.ID,
+				Weekday:         shiftDayRequest.Weekday,
+				DayType:         shiftDayRequest.DayType,
+				CheckIn:         checkIn,
+				CheckOut:        checkOut,
+				BreakStart:      breakStart,
+				BreakEnd:        breakEnd,
+				MaxBreakMinutes: shiftDayRequest.MaxBreakMinutes,
+			})
+		}
+
+		if weekdayMask != 0b1111111 {
+			c.Log.Error("Invalid shift days: weekdays must cover 1 to 7")
+			return nil, fiber.ErrBadRequest
+		}
+
+		if err := c.ShiftDayRepo.DeleteByShiftID(tx, shift.ID); err != nil {
+			c.Log.WithError(err).Error("Failed to delete previous shift days")
+			return nil, fiber.ErrInternalServerError
+		}
+
+		if err := c.ShiftDayRepo.CreateBatch(tx, shiftDays); err != nil {
+			c.Log.WithError(err).Error("Failed to create shift days")
+			return nil, fiber.ErrInternalServerError
+		}
+
+		shift.ShiftDays = shiftDays
+	}
+
+	shift.UpdatedAt = time.Now().UnixMilli()
+
+	if err := c.ShiftRepository.Update(tx, shift); err != nil {
+		c.Log.WithError(err).Error("Failed to update shift")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.ShiftToResponse(shift), nil
+}
+
+func (c *ShiftUseCase) Delete(ctx context.Context, shiftID string, companyID string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	shift := new(entity.Shift)
+	if err := c.ShiftRepository.FindByIdAndCompany(tx, shift, shiftID, companyID); err != nil {
+		c.Log.WithError(err).Error("Shift not found")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.ShiftRepository.Delete(tx, shift); err != nil {
+		c.Log.WithError(err).Error("Failed to delete shift")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }

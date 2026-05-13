@@ -107,3 +107,35 @@ func (c *OfficeLocationController) Detail(ctx *fiber.Ctx) error {
 		Data: *response,
 	})
 }
+
+func (c *OfficeLocationController) Update(ctx *fiber.Ctx) error {
+	request := new(model.UpdateOfficeLocationRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	companyID := middleware.GetCompanyId(ctx)
+	response, err := c.UseCase.Update(ctx.UserContext(), ctx.Params("officeLocationID"), companyID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update office location")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.OfficeLocationResponse]{
+		Data: response,
+	})
+}
+
+func (c *OfficeLocationController) Delete(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	if err := c.UseCase.Delete(ctx.UserContext(), ctx.Params("officeLocationID"), companyID); err != nil {
+		c.Log.WithError(err).Error("failed to delete office location")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}

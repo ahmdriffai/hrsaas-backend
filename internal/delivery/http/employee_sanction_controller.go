@@ -55,8 +55,7 @@ func (c *EmSancController) CurrentSearch(ctx *fiber.Ctx) error {
 
 	// start_date
 	req.StartDate = ctx.Query("start_date", "")
-	// start_date
-	req.StartDate = ctx.Query("end_date", "")
+	req.EndDate = ctx.Query("end_date", "")
 
 	req.Reason = ctx.Query("reason", "")
 	req.Status = ctx.Query("status", "")
@@ -91,8 +90,7 @@ func (c *EmSancController) Search(ctx *fiber.Ctx) error {
 
 	// start_date
 	req.StartDate = ctx.Query("start_date", "")
-	// start_date
-	req.StartDate = ctx.Query("end_date", "")
+	req.EndDate = ctx.Query("end_date", "")
 
 	// sanction id
 	req.SanctionID = ctx.Query("sanction_id", "")
@@ -119,5 +117,52 @@ func (c *EmSancController) Search(ctx *fiber.Ctx) error {
 	return ctx.JSON(model.WebResponse[[]model.EmSancResponse]{
 		Data:   responses,
 		Paging: paging,
+	})
+}
+
+func (c *EmSancController) Detail(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.EmSancUseCase.Detail(ctx.UserContext(), ctx.Params("id"), companyID)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to get employee sanction detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.EmSancResponse]{
+		Data: response,
+	})
+}
+
+func (c *EmSancController) Update(ctx *fiber.Ctx) error {
+	request := new(model.UpdateEmSancRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("Failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.EmSancUseCase.Update(ctx.UserContext(), ctx.Params("id"), companyID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update employee sanction")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.EmSancResponse]{
+		Data: response,
+	})
+}
+
+func (c *EmSancController) Delete(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	if err := c.EmSancUseCase.Delete(ctx.UserContext(), ctx.Params("id"), companyID); err != nil {
+		c.Log.WithError(err).Error("failed to delete employee sanction")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
 	})
 }

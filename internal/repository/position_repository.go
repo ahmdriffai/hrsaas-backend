@@ -29,7 +29,7 @@ func (c *PositionRepository) FindAllByCompany(tx *gorm.DB, companyID string) ([]
 	return positions, nil
 }
 
-func (r *PositionRepository) Search(db *gorm.DB, request *model.SeachPositionRequest) ([]entity.Position, int64, error) {
+func (r *PositionRepository) Search(db *gorm.DB, request *model.SearchPositionRequest) ([]entity.Position, int64, error) {
 	var positions []entity.Position
 	if err := db.Scopes(r.FilterSearch(request)).Offset((request.Page - 1) * request.Size).Limit(request.Size).Find(&positions).Error; err != nil {
 		return nil, 0, err
@@ -43,7 +43,7 @@ func (r *PositionRepository) Search(db *gorm.DB, request *model.SeachPositionReq
 	return positions, total, nil
 }
 
-func (r *PositionRepository) FilterSearch(request *model.SeachPositionRequest) func(tx *gorm.DB) *gorm.DB {
+func (r *PositionRepository) FilterSearch(request *model.SearchPositionRequest) func(tx *gorm.DB) *gorm.DB {
 	return func(tx *gorm.DB) *gorm.DB {
 		tx = tx.Where("company_id = ?", request.CompanyID)
 
@@ -64,4 +64,19 @@ func (r *PositionRepository) FindByName(db *gorm.DB, entity *entity.Position, na
 	}
 
 	return query.Where("name = ?", name).Take(entity).Error
+}
+
+func (r *PositionRepository) FindByID(db *gorm.DB, id string, preloads ...string) (*entity.Position, error) {
+	var item entity.Position
+	query := db
+
+	for _, preload := range preloads {
+		query = query.Preload(preload)
+	}
+
+	if err := query.Where("id = ?", id).Take(&item).Error; err != nil {
+		return nil, err
+	}
+
+	return &item, nil
 }

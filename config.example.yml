@@ -1,0 +1,45 @@
+app:
+  name: "HR SAS Backend Service"
+  env: development
+  cors_origins: http://localhost:3000
+  cookie_secure: false
+  cookie_domain:
+
+web:
+  port: 9000
+  prefork: false
+log:
+  level: 6
+database:
+  username: postgres
+  password: postgres
+  host: localhost
+  port: 5432
+  name: "hr_saas"
+  sslmode: "disable"
+  timezone: "Asia/Jakarta"
+  pool:
+    idle: 10
+    max: 100
+    lifetime: 300
+s3:
+  endpoint: "" # kosongkan untuk AWS, isi untuk MinIO/Cloudflare R2 (contoh: http://localhost:9000)
+  region: "us-east-1"
+  bucket: "storage-main"
+  access_key: ""
+  secret_key: ""
+  public_url: "" # base URL publik, contoh: https://cdn.example.com atau https://<bucket>.s3.amazonaws.com
+
+
+# mail:
+#   smtp:
+#     host: smtp.gmail.com
+#     port: 587
+#     username: itbawon@gmail.com
+#     password: "ctog pmjh tmff gnsj"
+#     from: "Bank Wonosobo <itbawon@gmail.com>"
+# jwt:
+#   secret: "supersecret"
+#   issuer: "bw-auth-serice"
+#   audience: "bw-users"
+#   expires_in: 30000 # menit

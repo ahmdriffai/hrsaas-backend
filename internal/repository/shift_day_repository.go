@@ -23,6 +23,10 @@ func (r *ShiftDayRepository) CreateBatch(db *gorm.DB, shiftDays []entity.ShiftDa
 	return db.Create(&shiftDays).Error
 }
 
+func (r *ShiftDayRepository) DeleteByShiftID(db *gorm.DB, shiftID string) error {
+	return db.Where("shift_id = ?", shiftID).Delete(&entity.ShiftDay{}).Error
+}
+
 func (r *ShiftDayRepository) FindByShiftIDAndWeekday(db *gorm.DB, shiftDay *entity.ShiftDay, shiftID string, weekday int) error {
 	type shiftDayRow struct {
 		ID              int    `gorm:"column:id"`

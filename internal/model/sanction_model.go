@@ -21,6 +21,13 @@ type CreateSanctionRequest struct {
 	Note        *string `json:"note,omitempty"`
 }
 
+type UpdateSanctionRequest struct {
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Level       *int    `json:"level,omitempty"`
+	Note        *string `json:"note,omitempty"`
+}
+
 type SearchSanctionRequest struct {
 	CompanyID string `json:"-" validate:"required"` // Added CompanyID field
 	Key       string `json:"key"`
@@ -33,6 +40,7 @@ func SanctionToResponse(sanction *entity.Sanction) *SanctionResponse {
 		ID:          sanction.ID,
 		CompanyID:   sanction.CompanyID,
 		Description: sanction.Description,
+		Level:       sanction.Level,
 		Note:        sanction.Note,
 		Name:        sanction.Name,
 		CreatedAt:   sanction.CreatedAt,

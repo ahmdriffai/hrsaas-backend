@@ -2,22 +2,22 @@ package http
 
 import (
 	"hr-sas/internal/model"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"time"
+	"hr-sas/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 )
 
 type UploadController struct {
-	Log *logrus.Logger
+	UseCase *usecase.UploadUseCase
+	Log     *logrus.Logger
 }
 
-func NewUploadController(log *logrus.Logger) *UploadController {
-	return &UploadController{Log: log}
+func NewUploadController(useCase *usecase.UploadUseCase, log *logrus.Logger) *UploadController {
+	return &UploadController{
+		UseCase: useCase,
+		Log:     log,
+	}
 }
 
 func (c *UploadController) Upload(ctx *fiber.Ctx) error {
@@ -27,38 +27,36 @@ func (c *UploadController) Upload(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "file is required")
 	}
 
-	pathPrefix := strings.TrimSpace(ctx.FormValue("path", ""))
-	cleanPrefix := filepath.Clean(pathPrefix)
-	if strings.Contains(cleanPrefix, "..") {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid path")
-	}
-	if cleanPrefix == "." {
-		cleanPrefix = ""
-	}
+	request := &model.UploadRequest{File: file}
 
-	baseDir := "uploads"
-	fileName := filepath.Base(file.Filename)
-	timestamp := time.Now().UnixMilli()
-	storedName := strings.Join([]string{strconv.FormatInt(timestamp, 10), fileName}, "_")
-	relativePath := filepath.Join(cleanPrefix, storedName)
-	fullDir := filepath.Join(baseDir, cleanPrefix)
-	fullPath := filepath.Join(baseDir, relativePath)
-
-	if err := os.MkdirAll(fullDir, 0o755); err != nil {
-		c.Log.WithError(err).Error("failed to create upload directory")
-		return fiber.ErrInternalServerError
+	response, err := c.UseCase.Upload(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to upload file")
+		return err
 	}
 
-	if err := ctx.SaveFile(file, fullPath); err != nil {
-		c.Log.WithError(err).Error("failed to save uploaded file")
-		return fiber.ErrInternalServerError
+	return ctx.JSON(model.WebResponse[*model.UploadResponse]{Data: response})
+}
+
+func (c *UploadController) Uploads(ctx *fiber.Ctx) error {
+	form, err := ctx.MultipartForm()
+	if err != nil {
+		c.Log.WithError(err).Error("failed to parse multipart form")
+		return fiber.NewError(fiber.StatusBadRequest, "multipart form is required")
 	}
 
-	fileURL := ctx.Protocol() + "://" + ctx.Hostname() + "/" + filepath.ToSlash(fullPath)
+	files := form.File["file"]
+	if len(files) == 0 {
+		return fiber.NewError(fiber.StatusBadRequest, "at least one file is required")
+	}
 
-	return ctx.JSON(model.WebResponse[map[string]string]{
-		Data: map[string]string{
-			"file_url": fileURL,
-		},
-	})
+	request := &model.UploadsRequest{Files: files}
+
+	response, err := c.UseCase.Uploads(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to upload files")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.UploadResponses]{Data: response})
 }

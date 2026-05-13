@@ -32,6 +32,12 @@ type CreateShiftRequest struct {
 	ShiftDayRequests []ShiftDayRequest `json:"shift_days" validate:"dive"`
 }
 
+type UpdateShiftRequest struct {
+	Name             *string            `json:"name,omitempty"`
+	LateTolerance    *int               `json:"late_tolerance,omitempty"`
+	ShiftDayRequests *[]ShiftDayRequest `json:"shift_days,omitempty" validate:"omitempty,dive"`
+}
+
 type ShiftDayRequest struct {
 	Weekday         int    `json:"weekday" validate:"required,min=1,max=7"`
 	DayType         string `json:"day_type" validate:"required,oneof=workday offday"`
