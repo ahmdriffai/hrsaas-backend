@@ -49,7 +49,7 @@ func (c *UserUseCase) Verify(ctx context.Context, request *model.VerifyUserReque
 	// find session
 	session := new(entity.Session)
 	if err := c.SessionRepository.FindByToken(tx, session, request.Token); err != nil {
-		c.Log.Warnf("Failed find user by token : %+v", err)
+		c.Log.Warnf("Gagal menemukan user by token : %+v", err)
 		return nil, fiber.ErrUnauthorized
 	}
 
@@ -58,7 +58,7 @@ func (c *UserUseCase) Verify(ctx context.Context, request *model.VerifyUserReque
 	// Check expiry
 	if expiredAt.Before(time.Now()) {
 		if err := c.SessionRepository.Delete(tx, session); err != nil {
-			c.Log.WithError(err).Error("Failed to delete session by user id")
+			c.Log.WithError(err).Error("Gagal menghapus session by user id")
 			return nil, fiber.ErrInternalServerError
 		}
 		return nil, fiber.NewError(fiber.StatusUnauthorized, "Session expired")
@@ -67,16 +67,16 @@ func (c *UserUseCase) Verify(ctx context.Context, request *model.VerifyUserReque
 	// find user
 	user := new(entity.User)
 	if err := c.UserRepository.FindById(tx, user, session.UserID, "Roles", "Employee"); err != nil {
-		c.Log.Warnf("Failed find user by token : %+v", err)
+		c.Log.Warnf("Gagal menemukan user by token : %+v", err)
 		return nil, fiber.ErrUnauthorized
 	}
 
 	if user.CompanyID == "" {
-		return nil, fiber.NewError(fiber.StatusForbidden, "User not associated with any company")
+		return nil, fiber.NewError(fiber.StatusForbidden, "User tidak terasosiasi dengan perusahaan manapun")
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.Warnf("Failed commit transaction : %+v", err)
+		c.Log.Warnf("Gagal menyelesaikan transaksi : %+v", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -168,8 +168,8 @@ func (c *UserUseCase) Login(ctx context.Context, request *model.LoginUserRequest
 	// find user by email
 	user := new(entity.User)
 	if err := c.UserRepository.FindByEmail(tx, user, request.Email, "Roles"); err != nil {
-		c.Log.Warnf("Failed find user by email : %+v", err)
-		return nil, fiber.NewError(fiber.StatusConflict, "email or password not match")
+		c.Log.Warnf("Gagal menemukan user by email : %+v", err)
+		return nil, fiber.NewError(fiber.StatusConflict, "email dan password tidak valid")
 	}
 
 	// find session by user id
@@ -179,13 +179,13 @@ func (c *UserUseCase) Login(ctx context.Context, request *model.LoginUserRequest
 		return nil, fiber.ErrInternalServerError
 	}
 	if totalSession > 10000 {
-		return nil, fiber.NewError(fiber.StatusConflict, "User already logged in")
+		return nil, fiber.NewError(fiber.StatusConflict, "User sudah login di perangkat lain")
 	}
 
 	// compare password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)); err != nil {
-		c.Log.Warnf("Failed compare password : %+v", err)
-		return nil, fiber.NewError(fiber.StatusConflict, "email or password not match")
+		c.Log.Warnf("Password tidak valid : %+v", err)
+		return nil, fiber.NewError(fiber.StatusConflict, "email dan password tidak valid")
 	}
 
 	// create token
@@ -224,13 +224,13 @@ func (c *UserUseCase) List(ctx context.Context, request *model.SearchUserRequest
 	defer tx.Rollback()
 
 	if err := c.Validate.Struct(request); err != nil {
-		c.Log.WithError(err).Error("Failed to validate search query")
+		c.Log.WithError(err).Error("Gagal memvalidasi query pencarian")
 		return nil, 0, fiber.ErrBadRequest
 	}
 
 	users, total, err := c.UserRepository.Search(tx, request)
 	if err != nil {
-		c.Log.WithError(err).Error("Failed to search users")
+		c.Log.WithError(err).Error("Gagal mencari user")
 		return nil, 0, fiber.ErrInternalServerError
 	}
 
@@ -240,7 +240,7 @@ func (c *UserUseCase) List(ctx context.Context, request *model.SearchUserRequest
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, 0, fiber.ErrInternalServerError
 	}
 
@@ -253,12 +253,12 @@ func (c *UserUseCase) Detail(ctx context.Context, id string) (*model.UserRespons
 
 	user := new(entity.User)
 	if err := c.UserRepository.FindById(tx, user, id, "Roles", "Employee"); err != nil {
-		c.Log.WithError(err).Error("User not found")
+		c.Log.WithError(err).Error("User tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -276,14 +276,14 @@ func (c *UserUseCase) Update(ctx context.Context, request *model.UpdateUserReque
 
 	user := new(entity.User)
 	if err := c.UserRepository.FindById(tx, user, request.ID, "Roles", "Employee"); err != nil {
-		c.Log.WithError(err).Error("User not found")
+		c.Log.WithError(err).Error("User tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
 
 	if request.Name != nil {
 		name := strings.TrimSpace(*request.Name)
 		if name == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "name cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Nama tidak boleh kosong")
 		}
 		user.Name = name
 	}
@@ -291,16 +291,16 @@ func (c *UserUseCase) Update(ctx context.Context, request *model.UpdateUserReque
 	if request.Email != nil {
 		email := strings.TrimSpace(*request.Email)
 		if email == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "email cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Email tidak boleh kosong")
 		}
 
 		count, err := c.UserRepository.CountByEmailExcludeID(tx, email, user.ID)
 		if err != nil {
-			c.Log.WithError(err).Error("Failed to count user by email")
+			c.Log.WithError(err).Error("Gagal menghitung user by email")
 			return nil, fiber.ErrInternalServerError
 		}
 		if count > 0 {
-			return nil, fiber.NewError(fiber.StatusConflict, "Email already registered")
+			return nil, fiber.NewError(fiber.StatusConflict, "Email sudah terdaftar")
 		}
 
 		user.Email = email

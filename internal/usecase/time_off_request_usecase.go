@@ -65,7 +65,7 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 	}
 
 	if status != "PENDING" {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "New request status must be PENDING")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Pengajuan cuti harus berstatus PENDING")
 	}
 
 	startDate, err := lib.ParseDateToUnixMilli(request.StartDate)
@@ -92,29 +92,48 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 		Where("employee_id = ?", employeeID).
 		Where("request_status IN ?", []string{"PENDING", "APPROVED"}).
 		Where("NOT (end_date < ? OR start_date > ?)", startDate, endDate).
+		Where("request_status NOT IN ?", []string{"REJECTED", "CANCELLED"}).
 		Count(&overlapCount).Error; err != nil {
 		c.Log.WithError(err).Error("Failed to check overlap dates")
 		return nil, fiber.ErrInternalServerError
 	}
 	if overlapCount > 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off request overlaps with existing request")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Tanggal pengajuan cuti bertabrakan dengan pengajuan lain yang sudah ada")
+	}
+
+	// TODO: Create only 5 requests per day to prevent spam (configurable limit).
+	var dailyCount int64
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := time.Now().In(loc)
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).UnixMilli()
+	todayEnd := todayStart + 24*60*60*1000
+
+	if err := tx.Table("time_off_requests").
+		Where("employee_id = ?", employeeID).
+		Where("created_at >= ? AND created_at < ?", todayStart, todayEnd).
+		Count(&dailyCount).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to check daily request count")
+		return nil, fiber.ErrInternalServerError
+	}
+	if dailyCount >= 5 {
+		return nil, fiber.NewError(fiber.StatusTooManyRequests, "Kuota Pengajuan Cuti Harian Sudah Penuh")
 	}
 
 	timeOffType, err := c.TimeOffTypeRepo.FindByID(tx, request.TimeOffTypeID)
 	if err != nil {
-		c.Log.WithError(err).Error("Time off type not found")
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off type not found")
+		c.Log.WithError(err).Error("Tipe cuti tidak ditemukan")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Tipe cuti tidak ditemukan")
 	}
 	if timeOffType.IsQuotaBased {
 		// TODO: Use company timezone when deriving period year.
 		periodYear := time.UnixMilli(startDate).UTC().Year()
 		balance, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, employeeID, request.TimeOffTypeID, periodYear)
 		if err != nil {
-			c.Log.WithError(err).Error("Time off balance not found")
-			return nil, fiber.NewError(fiber.StatusBadRequest, "Time off balance not found")
+			c.Log.WithError(err).Error("Kuota cuti tidak ditemukan")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Kuota cuti tidak ditemukan")
 		}
 		if request.RequestedDays > balance.RemainingDays {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "Requested days exceed remaining balance")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Jumlah hari yang diminta melebihi kuota yang tersedia")
 		}
 	}
 
@@ -129,7 +148,7 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 	}
 
 	if err := c.TimeOffRequestRepo.Create(tx, item); err != nil {
-		c.Log.WithError(err).Error("Failed to create time off request")
+		c.Log.WithError(err).Error("Gagal membuat pengajuan cuti")
 		return nil, fiber.ErrInternalServerError
 	}
 	// Ensure requested dates are persisted (entity hook sets start_date to now).
@@ -139,7 +158,7 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 			"start_date": startDate,
 			"end_date":   endDate,
 		}).Error; err != nil {
-		c.Log.WithError(err).Error("Failed to update time off request dates")
+		c.Log.WithError(err).Error("Gagal memperbarui tanggal pengajuan cuti")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -157,7 +176,7 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 	}
 	// Persist approval records.
 	if err := c.TimeOffApprovalRepo.CreateMany(tx, approvals); err != nil {
-		c.Log.WithError(err).Error("Failed to create time off approvals")
+		c.Log.WithError(err).Error("Gagal membuat data approval untuk pengajuan cuti")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -205,7 +224,7 @@ func (c *TimeOffRequestUseCase) GetRequestByID(ctx context.Context, id string) (
 
 	item, err := c.TimeOffRequestRepo.FindByID(tx, id, true)
 	if err != nil {
-		c.Log.WithError(err).Error("Time off request not found")
+		c.Log.WithError(err).Error("Cuti tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
 
@@ -230,12 +249,12 @@ func (c *TimeOffRequestUseCase) UpdateRequest(ctx context.Context, id string, re
 
 	item, err := c.TimeOffRequestRepo.FindByID(tx, id, true)
 	if err != nil {
-		c.Log.WithError(err).Error("Time off request not found")
+		c.Log.WithError(err).Error("Cuti tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
 
 	if item.RequestStatus == nil || strings.ToUpper(strings.TrimSpace(*item.RequestStatus)) != "PENDING" {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Only pending requests can be updated")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Hanya pengajuan yang berstatus PENDING yang dapat diperbarui")
 	}
 	if request.RequestStatus != nil {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "request_status cannot be updated from this endpoint")
@@ -268,7 +287,7 @@ func (c *TimeOffRequestUseCase) UpdateRequest(ctx context.Context, id string, re
 	}
 
 	if startDate > endDate {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid start_date or end_date")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Tanggal mulai tidak boleh setelah tanggal selesai")
 	}
 
 	const dayMillis = 24 * 60 * 60 * 1000
@@ -277,7 +296,7 @@ func (c *TimeOffRequestUseCase) UpdateRequest(ctx context.Context, id string, re
 		requestedDays = *request.RequestedDays
 	}
 	if requestedDays <= 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid date range")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Tanggal tidak valid atau jumlah hari yang diminta tidak valid")
 	}
 
 	var overlapCount int64
@@ -291,23 +310,23 @@ func (c *TimeOffRequestUseCase) UpdateRequest(ctx context.Context, id string, re
 		return nil, fiber.ErrInternalServerError
 	}
 	if overlapCount > 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off request overlaps with existing request")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Pengajuan cuti tumpang tindih dengan pengajuan yang sudah ada")
 	}
 
 	timeOffType, err := c.TimeOffTypeRepo.FindByID(tx, timeOffTypeID)
 	if err != nil {
-		c.Log.WithError(err).Error("Time off type not found")
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Time off type not found")
+		c.Log.WithError(err).Error("Jenis cuti tidak ditemukan")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Jenis cuti tidak ditemukan")
 	}
 	if timeOffType.IsQuotaBased {
 		periodYear := time.UnixMilli(startDate).UTC().Year()
 		balance, err := c.TimeOffBalanceRepo.FindByEmployeeTypeYear(tx, item.EmployeeID, timeOffTypeID, periodYear)
 		if err != nil {
-			c.Log.WithError(err).Error("Time off balance not found")
-			return nil, fiber.NewError(fiber.StatusBadRequest, "Time off balance not found")
+			c.Log.WithError(err).Error("Saldo cuti tidak ditemukan")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Saldo cuti tidak ditemukan")
 		}
 		if requestedDays > balance.RemainingDays {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "Requested days exceed remaining balance")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Jumlah hari yang diminta melebihi saldo yang tersedia")
 		}
 	}
 
@@ -350,7 +369,7 @@ func (c *TimeOffRequestUseCase) DeleteRequest(ctx context.Context, id string) er
 	}
 
 	if item.RequestStatus == nil || strings.ToUpper(strings.TrimSpace(*item.RequestStatus)) != "PENDING" {
-		return fiber.NewError(fiber.StatusBadRequest, "Only pending requests can be deleted")
+		return fiber.NewError(fiber.StatusBadRequest, "Hanya pengajuan yang berstatus PENDING yang dapat dihapus")
 	}
 
 	if err := c.TimeOffRequestRepo.Delete(tx, item); err != nil {
@@ -415,7 +434,7 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Position not found")
 	}
 
-	currentName := strings.TrimSpace(current.Name)
+	// currentName := strings.TrimSpace(current.Name)
 	parentID := current.ParentID
 
 	const maxDepth = 20
@@ -430,7 +449,7 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 			return nil, fiber.NewError(fiber.StatusBadRequest, "Parent position not found")
 		}
 
-		parentName := strings.TrimSpace(parent.Name)
+		// parentName := strings.TrimSpace(parent.Name)
 
 		var approver struct {
 			EmployeeID string `gorm:"column:employee_id"`
@@ -460,22 +479,23 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		// 1) Below Direktur Operasional -> stop at Direktur Operasional.
 		// 2) Direktur Operasional -> only need Direktur Utama.
 		// 3) Direktur Utama -> only need Komisaris Utama.
-		if strings.EqualFold(parentName, "Direktur Operasional") && !strings.EqualFold(currentName, "Direktur Operasional") {
-			break
-		}
-		if strings.EqualFold(currentName, "Direktur Operasional") && strings.EqualFold(parentName, "Direktur Utama") {
-			break
-		}
-		if strings.EqualFold(currentName, "Direktur Utama") && strings.EqualFold(parentName, "Komisaris Utama") {
-			break
-		}
-		// Fallback stop: if we hit a required approver, stop here unless current is Direktur Operasional.
-		if parent.IsApprover && !strings.EqualFold(currentName, "Direktur Operasional") {
-			break
-		}
+		// if strings.EqualFold(parentName, "Direktur Operasional") && !strings.EqualFold(currentName, "Direktur Operasional") {
+		// 	break
+		// }
+		// if strings.EqualFold(currentName, "Direktur Operasional") && strings.EqualFold(parentName, "Direktur Utama") {
+		// 	break
+		// }
+		// if strings.EqualFold(currentName, "Direktur Utama") && strings.EqualFold(parentName, "Komisaris Utama") {
+		// 	break
+		// }
+		// // Fallback stop: if we hit a required approver, stop here unless current is Direktur Operasional.
+		// if parent.IsApprover && !strings.EqualFold(currentName, "Direktur Operasional") {
+		// 	break
+		// }
 
 		// Move to the next parent.
-		currentName = parentName
+		// currentName = parentName
+
 		parentID = parent.ParentID
 	}
 

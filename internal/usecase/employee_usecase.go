@@ -371,7 +371,7 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	if request.Fullname != nil {
 		fullname := strings.TrimSpace(*request.Fullname)
 		if fullname == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "fullname cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Nama Lengkap tidak boleh kosong")
 		}
 		employee.Fullname = fullname
 		employee.User.Name = fullname
@@ -380,7 +380,7 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	if request.BirthPlace != nil {
 		birthPlace := strings.TrimSpace(*request.BirthPlace)
 		if birthPlace == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "birth_place cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Tempat lahir tidak boleh kosong")
 		}
 		employee.BirthPlace = birthPlace
 	}
@@ -388,13 +388,13 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	if request.BirthDate != nil {
 		birthDate := strings.TrimSpace(*request.BirthDate)
 		if birthDate == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "birth_date cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Tanggal lahir tidak boleh kosong")
 		}
 
 		parsedBirthDate, err := lib.ParseDateToUnixMilli(birthDate)
 		if err != nil {
 			c.Log.WithError(err).Error("Failed to parse birth date")
-			return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid birth_date format")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Format tanggal lahir tidak valid")
 		}
 		employee.BirthDate = parsedBirthDate
 	}
@@ -406,7 +406,7 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	if request.MaritalStatus != nil {
 		maritalStatus := strings.TrimSpace(*request.MaritalStatus)
 		if maritalStatus == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "marital_status cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Status pernikahan tidak boleh kosong")
 		}
 		employee.MaritalStatus = maritalStatus
 	}
@@ -414,7 +414,7 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	if request.Religion != nil {
 		religion := strings.TrimSpace(*request.Religion)
 		if religion == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "religion cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Agama tidak boleh kosong")
 		}
 		employee.Religion = religion
 	}
@@ -422,7 +422,7 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	if request.Phone != nil {
 		phone := strings.TrimSpace(*request.Phone)
 		if phone == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "phone cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Nomor telepon tidak boleh kosong")
 		}
 		employee.Phone = phone
 	}
@@ -430,7 +430,7 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	if request.Timezone != nil {
 		timezone := strings.TrimSpace(*request.Timezone)
 		if timezone == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "timezone cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Timezone tidak boleh kosong")
 		}
 		employee.Timezone = timezone
 	}
@@ -438,7 +438,7 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	if request.Email != nil {
 		email := strings.TrimSpace(*request.Email)
 		if email == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "email cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Email tidak boleh kosong")
 		}
 
 		count, err := c.UserRepository.CountByEmailExcludeID(tx, email, employee.UserID)
@@ -447,7 +447,7 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 			return nil, fiber.ErrInternalServerError
 		}
 		if count > 0 {
-			return nil, fiber.NewError(fiber.StatusConflict, "Email already registered")
+			return nil, fiber.NewError(fiber.StatusConflict, "Email sudah terdaftar")
 		}
 
 		employee.User.Email = email
@@ -458,17 +458,17 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 	employee.User.UpdatedAt = nowMilli
 
 	if err := c.UserRepository.Update(tx, &employee.User); err != nil {
-		c.Log.WithError(err).Error("Failed to update employee user")
+		c.Log.WithError(err).Error("Gagal memperbarui user employee")
 		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := c.EmployeeRepository.Update(tx, employee); err != nil {
-		c.Log.WithError(err).Error("Failed to update employee")
+		c.Log.WithError(err).Error("Gagal memperbarui employee")
 		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
