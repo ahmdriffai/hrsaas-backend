@@ -200,11 +200,11 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 
 	balanceRoute := c.App.Group("/api/time-off-balances", c.AuthMiddleware)
 	balanceRoute.Post("/_set", c.AdminMiddleware, c.TimeOffBalanceController.SetBalance)
+	balanceRoute.Get("/_current", c.EmployeeMiddleware, c.TimeOffBalanceController.ListCurrentBalances)
 	balanceRoute.Get("/", c.AdminMiddleware, c.TimeOffBalanceController.ListBalancesByEmployee)
 	balanceRoute.Get("/:id", c.AdminMiddleware, c.TimeOffBalanceController.Detail)
 	balanceRoute.Put("/:id", c.AdminMiddleware, c.TimeOffBalanceController.Update)
 	balanceRoute.Delete("/:id", c.AdminMiddleware, c.TimeOffBalanceController.Delete)
-	balanceRoute.Get("/_current", c.EmployeeMiddleware, c.TimeOffBalanceController.ListCurrentBalances)
 }
 
 func (c *RouteConfig) SetupCommonRouter() {

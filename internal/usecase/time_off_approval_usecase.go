@@ -119,16 +119,19 @@ func (c *TimeOffApprovalUseCase) Decide(ctx context.Context, requestID, approval
 	}
 
 	if action == "APPROVE" {
-		var pendingCount int64
-		if err := tx.
-			Table("time_off_approvals").
-			Where("time_off_request_id = ? AND approval_status = ? AND is_required = ?", requestID, "PENDING", true).
-			Count(&pendingCount).Error; err != nil {
-			c.Log.WithError(err).Error("Failed to count pending approvals")
+		var isApprover bool
+		if err := tx.Raw(`
+			SELECT p.is_approver
+			FROM employee_contracts ec
+			JOIN positions p ON p.id = ec.position_id
+			WHERE ec.employee_id = ? AND ec.is_active = true
+			LIMIT 1
+		`, approverID).Scan(&isApprover).Error; err != nil {
+			c.Log.WithError(err).Error("Failed to check approver position")
 			return fiber.ErrInternalServerError
 		}
 
-		if pendingCount == 0 {
+		if isApprover {
 			if err := tx.Table("time_off_requests").
 				Where("id = ?", requestID).
 				Update("request_status", "APPROVED").Error; err != nil {
@@ -205,16 +208,19 @@ func (c *TimeOffApprovalUseCase) DecideByApprovalID(ctx context.Context, approva
 	}
 
 	if action == "APPROVE" {
-		var pendingCount int64
-		if err := tx.
-			Table("time_off_approvals").
-			Where("time_off_request_id = ? AND approval_status = ? AND is_required = ?", approval.TimeOffRequestId, "PENDING", true).
-			Count(&pendingCount).Error; err != nil {
-			c.Log.WithError(err).Error("Failed to count pending approvals")
+		var isApprover bool
+		if err := tx.Raw(`
+			SELECT p.is_approver
+			FROM employee_contracts ec
+			JOIN positions p ON p.id = ec.position_id
+			WHERE ec.employee_id = ? AND ec.is_active = true
+			LIMIT 1
+		`, approverID).Scan(&isApprover).Error; err != nil {
+			c.Log.WithError(err).Error("Failed to check approver position")
 			return fiber.ErrInternalServerError
 		}
 
-		if pendingCount == 0 {
+		if isApprover {
 			if err := tx.Table("time_off_requests").
 				Where("id = ?", approval.TimeOffRequestId).
 				Update("request_status", "APPROVED").Error; err != nil {
