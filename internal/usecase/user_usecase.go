@@ -326,7 +326,7 @@ func (c *UserUseCase) Update(ctx context.Context, request *model.UpdateUserReque
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -339,17 +339,17 @@ func (c *UserUseCase) Delete(ctx context.Context, id string) error {
 
 	user := new(entity.User)
 	if err := c.UserRepository.FindById(tx, user, id); err != nil {
-		c.Log.WithError(err).Error("User not found")
+		c.Log.WithError(err).Error("User tidak ditemukan")
 		return fiber.ErrNotFound
 	}
 
 	if err := c.UserRepository.Delete(tx, user); err != nil {
-		c.Log.WithError(err).Error("Failed to delete user")
+		c.Log.WithError(err).Error("Gagal menghapus user")
 		return fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return fiber.ErrInternalServerError
 	}
 
@@ -367,17 +367,17 @@ func (c *UserUseCase) ChangePassword(ctx context.Context, userID string, request
 
 	user := new(entity.User)
 	if err := c.UserRepository.FindById(tx, user, userID); err != nil {
-		c.Log.WithError(err).Error("User not found")
+		c.Log.WithError(err).Error("User tidak ditemukan")
 		return fiber.ErrNotFound
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.CurrentPassword)); err != nil {
-		c.Log.WithError(err).Warn("Current password does not match")
-		return fiber.NewError(fiber.StatusBadRequest, "Current password is incorrect")
+		c.Log.WithError(err).Warn("Password saat ini tidak cocok")
+		return fiber.NewError(fiber.StatusBadRequest, "Password saat ini salah")
 	}
 
 	if request.CurrentPassword == request.NewPassword {
-		return fiber.NewError(fiber.StatusBadRequest, "New password must be different from current password")
+		return fiber.NewError(fiber.StatusBadRequest, "Password baru harus berbeda dari password saat ini")
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), bcrypt.DefaultCost)
@@ -390,12 +390,12 @@ func (c *UserUseCase) ChangePassword(ctx context.Context, userID string, request
 	user.UpdatedAt = time.Now().UnixMilli()
 
 	if err := c.UserRepository.Update(tx, user); err != nil {
-		c.Log.WithError(err).Error("Failed to update user password")
+		c.Log.WithError(err).Error("Gagal memperbarui password user")
 		return fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return fiber.ErrInternalServerError
 	}
 
