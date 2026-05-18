@@ -101,6 +101,23 @@ func (c *UserController) GetCurrentUser(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *UserController) ResetPassword(ctx *fiber.Ctx) error {
+	request := new(model.ResetPasswordRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	if err := c.UserUseCase.ResetPassword(ctx.UserContext(), ctx.Params("id"), request); err != nil {
+		c.Log.WithError(err).Error("failed to reset password")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{
+		Data: nil,
+	})
+}
+
 func (c *UserController) ChangePassword(ctx *fiber.Ctx) error {
 	user := ctx.Locals("user").(*model.UserResponse)
 
