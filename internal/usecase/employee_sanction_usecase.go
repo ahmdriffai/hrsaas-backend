@@ -136,12 +136,12 @@ func (c *EmSancUseCase) Detail(ctx context.Context, id string, companyID string)
 
 	item := new(entity.EmployeeSanction)
 	if err := c.EmSancRepository.FindByIdAndCompany(tx, item, id, companyID, "Employee", "Sanction"); err != nil {
-		c.Log.WithError(err).Error("Employee sanction not found")
+		c.Log.WithError(err).Error("Employee sanction tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -159,7 +159,7 @@ func (c *EmSancUseCase) Update(ctx context.Context, id string, companyID string,
 
 	item := new(entity.EmployeeSanction)
 	if err := c.EmSancRepository.FindByIdAndCompany(tx, item, id, companyID, "Employee", "Sanction"); err != nil {
-		c.Log.WithError(err).Error("Employee sanction not found")
+		c.Log.WithError(err).Error("Employee sanction tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
 
@@ -169,7 +169,7 @@ func (c *EmSancUseCase) Update(ctx context.Context, id string, companyID string,
 	if request.Reason != nil {
 		reason := strings.TrimSpace(*request.Reason)
 		if reason == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "reason cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Alasan tidak boleh kosong")
 		}
 		item.Reason = &reason
 	}
@@ -177,7 +177,7 @@ func (c *EmSancUseCase) Update(ctx context.Context, id string, companyID string,
 	if request.StartDate != nil {
 		startDate := strings.TrimSpace(*request.StartDate)
 		if startDate == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "start_date cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Tanggal mulai tidak boleh kosong")
 		}
 
 		parsedStartDate, err := lib.ParseDateToUnixMilli(startDate)
@@ -207,13 +207,13 @@ func (c *EmSancUseCase) Update(ctx context.Context, id string, companyID string,
 	}
 
 	if nextEndDate != nil && *nextEndDate < nextStartDate {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "end_date cannot be earlier than start_date")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Tanggal selesai tidak boleh lebih awal dari tanggal mulai")
 	}
 
 	if request.Status != nil {
 		status := strings.ToLower(strings.TrimSpace(*request.Status))
 		if status == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "status cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Status tidak boleh kosong")
 		}
 		item.Status = &status
 	}
@@ -243,17 +243,17 @@ func (c *EmSancUseCase) Delete(ctx context.Context, id string, companyID string)
 
 	item := new(entity.EmployeeSanction)
 	if err := c.EmSancRepository.FindByIdAndCompany(tx, item, id, companyID); err != nil {
-		c.Log.WithError(err).Error("Employee sanction not found")
+		c.Log.WithError(err).Error("Employee sanction tidak ditemukan")
 		return fiber.ErrNotFound
 	}
 
 	if err := c.EmSancRepository.Delete(tx, item); err != nil {
-		c.Log.WithError(err).Error("Failed to delete employee sanction")
+		c.Log.WithError(err).Error("Gagal menghapus employee sanction")
 		return fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return fiber.ErrInternalServerError
 	}
 

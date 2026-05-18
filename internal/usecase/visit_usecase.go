@@ -56,7 +56,7 @@ func (c *VisitUseCase) Create(ctx context.Context, employeeID, companyID string,
 
 	if visitType == "IN" {
 		if request.ClientName == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "client_name is required for IN visit")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Client name perlu diisi untuk memulai kunjungan")
 		}
 
 		_, err := c.Repo.FindLastOpenByEmployee(tx, employeeID)
@@ -64,7 +64,7 @@ func (c *VisitUseCase) Create(ctx context.Context, employeeID, companyID string,
 			return nil, fiber.NewError(fiber.StatusBadRequest, "Tidak dapat memulai kunjungan. Lakukan selesai kunjungan terlebih dahulu")
 		}
 		if err != gorm.ErrRecordNotFound {
-			c.Log.WithError(err).Error("Failed to check open visit")
+			c.Log.WithError(err).Error("Gagal memeriksa kunjungan terbuka")
 			return nil, fiber.ErrInternalServerError
 		}
 
@@ -75,7 +75,7 @@ func (c *VisitUseCase) Create(ctx context.Context, employeeID, companyID string,
 			ClientName: request.ClientName,
 		}
 		if err := c.Repo.Create(tx, visit); err != nil {
-			c.Log.WithError(err).Error("Failed to create visit")
+			c.Log.WithError(err).Error("Gagal membuat data kunjungan")
 			return nil, fiber.ErrInternalServerError
 		}
 		visitID = visit.ID
@@ -86,13 +86,13 @@ func (c *VisitUseCase) Create(ctx context.Context, employeeID, companyID string,
 			if err == gorm.ErrRecordNotFound {
 				return nil, fiber.NewError(fiber.StatusBadRequest, "Tidak dapat menyelesaikan kunjungan. Anda harus memulai kunjungan terlebih dahulu.")
 			}
-			c.Log.WithError(err).Error("Failed to find open visit")
+			c.Log.WithError(err).Error("Gagal menemukan kunjungan terbuka")
 			return nil, fiber.ErrInternalServerError
 		}
 		visitID = openVisit.ID
 
 		if err := tx.Model(&entity.Visit{}).Where("id = ?", visitID).Update("updated_at", nowMilli).Error; err != nil {
-			c.Log.WithError(err).Error("Failed to update visit updated_at")
+			c.Log.WithError(err).Error("Gagal memperbarui updated_at kunjungan")
 			return nil, fiber.ErrInternalServerError
 		}
 	}
@@ -108,18 +108,18 @@ func (c *VisitUseCase) Create(ctx context.Context, employeeID, companyID string,
 		Note:      request.Note,
 	}
 	if err := tx.Create(detail).Error; err != nil {
-		c.Log.WithError(err).Error("Failed to create visit detail")
+		c.Log.WithError(err).Error("Gagal membuat detail kunjungan")
 		return nil, fiber.ErrInternalServerError
 	}
 
 	var result entity.Visit
 	if err := tx.Preload("Employee").Preload("Details").Where("id = ?", visitID).Take(&result).Error; err != nil {
-		c.Log.WithError(err).Error("Failed to load visit with relations")
+		c.Log.WithError(err).Error("Gagal memuat kunjungan dengan relasi")
 		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -131,7 +131,7 @@ func (c *VisitUseCase) List(ctx context.Context, request *model.SearchVisitReque
 	defer tx.Rollback()
 
 	if err := c.Validate.Struct(request); err != nil {
-		c.Log.WithError(err).Error("error validating request body")
+		c.Log.WithError(err).Error("Gagal memvalidasi body permintaan")
 		return nil, 0, fiber.ErrBadRequest
 	}
 	if request.SortBy != "" && request.SortBy != "newest" && request.SortBy != "oldest" {
@@ -139,23 +139,23 @@ func (c *VisitUseCase) List(ctx context.Context, request *model.SearchVisitReque
 	}
 	if request.StartDate != "" {
 		if _, err := time.Parse("2006-01-02", request.StartDate); err != nil {
-			return nil, 0, fiber.NewError(fiber.StatusBadRequest, "Invalid start_date")
+			return nil, 0, fiber.NewError(fiber.StatusBadRequest, "Tanggal mulai tidak valid")
 		}
 	}
 	if request.EndDate != "" {
 		if _, err := time.Parse("2006-01-02", request.EndDate); err != nil {
-			return nil, 0, fiber.NewError(fiber.StatusBadRequest, "Invalid end_date")
+			return nil, 0, fiber.NewError(fiber.StatusBadRequest, "Tanggal selesai tidak valid")
 		}
 	}
 
 	items, total, err := c.Repo.List(tx, request, true)
 	if err != nil {
-		c.Log.WithError(err).Error("failed to list visits")
+		c.Log.WithError(err).Error("Gagal memuat daftar kunjungan")
 		return nil, 0, fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, 0, fiber.ErrInternalServerError
 	}
 
@@ -173,12 +173,12 @@ func (c *VisitUseCase) GetByID(ctx context.Context, id string) (*model.VisitResp
 
 	item, err := c.Repo.FindByID(tx, id, true)
 	if err != nil {
-		c.Log.WithError(err).Error("visit not found")
+		c.Log.WithError(err).Error("Kunjungan tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -190,18 +190,18 @@ func (c *VisitUseCase) Update(ctx context.Context, id string, request *model.Upd
 	defer tx.Rollback()
 
 	if err := c.Validate.Struct(request); err != nil {
-		c.Log.WithError(err).Error("Failed to validate request body")
+		c.Log.WithError(err).Error("Gagal memvalidasi body permintaan")
 		return nil, fiber.ErrBadRequest
 	}
 
 	if _, err := c.Repo.FindByID(tx, id, true); err != nil {
-		c.Log.WithError(err).Error("visit not found")
+		c.Log.WithError(err).Error("Kunjungan tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
 
 	if request.Latitude != nil || request.Longitude != nil {
 		if request.Latitude == nil || request.Longitude == nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "latitude and longitude must be provided together")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "lokasi tidak valid. Latitude dan longitude harus diisi bersamaan")
 		}
 	}
 
@@ -213,21 +213,21 @@ func (c *VisitUseCase) Update(ctx context.Context, id string, request *model.Upd
 	if request.ClientName != nil {
 		clientName := strings.TrimSpace(*request.ClientName)
 		if clientName == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "client_name cannot be empty")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Nama klien tidak boleh kosong")
 		}
 		visitUpdates["client_name"] = clientName
 	}
 
 	if len(visitUpdates) > 1 {
 		if err := tx.Model(&entity.Visit{}).Where("id = ?", id).Updates(visitUpdates).Error; err != nil {
-			c.Log.WithError(err).Error("Failed to update visit")
+			c.Log.WithError(err).Error("Gagal memperbarui kunjungan")
 			return nil, fiber.ErrInternalServerError
 		}
 	}
 
 	detail, err := c.Repo.FindLatestDetailByVisitID(tx, id)
 	if err != nil {
-		c.Log.WithError(err).Error("visit detail not found")
+		c.Log.WithError(err).Error("Detail kunjungan tidak ditemukan")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -250,19 +250,19 @@ func (c *VisitUseCase) Update(ctx context.Context, id string, request *model.Upd
 
 	if len(detailUpdates) > 1 {
 		if err := tx.Model(&entity.VisitDetail{}).Where("id = ?", detail.ID).Updates(detailUpdates).Error; err != nil {
-			c.Log.WithError(err).Error("Failed to update visit detail")
+			c.Log.WithError(err).Error("Gagal memperbarui detail kunjungan")
 			return nil, fiber.ErrInternalServerError
 		}
 	}
 
 	result, err := c.Repo.FindByID(tx, id, true)
 	if err != nil {
-		c.Log.WithError(err).Error("Failed to load updated visit")
+		c.Log.WithError(err).Error("Gagal memuat kunjungan yang diperbarui")
 		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -275,12 +275,12 @@ func (c *VisitUseCase) GetVisitOwner(ctx context.Context, id string) (string, er
 
 	item, err := c.Repo.FindByID(tx, id, false)
 	if err != nil {
-		c.Log.WithError(err).Error("visit not found")
+		c.Log.WithError(err).Error("Kunjungan tidak ditemukan")
 		return "", fiber.ErrNotFound
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return "", fiber.ErrInternalServerError
 	}
 
@@ -293,18 +293,18 @@ func (c *VisitUseCase) CanDoVisit(ctx context.Context, employeeID, visitType str
 
 	visitType = strings.ToUpper(strings.TrimSpace(visitType))
 	if visitType != "IN" && visitType != "OUT" {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "visit_type must be IN or OUT")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Tipe kunjungan tidak valid. Harus IN atau OUT")
 	}
 
 	_, err := c.Repo.FindLastOpenByEmployee(tx, employeeID)
 	hasOpenVisit := err == nil
 
 	if err != nil && err != gorm.ErrRecordNotFound {
-		c.Log.WithError(err).Error("Failed to check open visit")
+		c.Log.WithError(err).Error("Gagal memeriksa kunjungan terbuka")
 		return nil, fiber.ErrInternalServerError
 	}
 
-	response := &model.CanDoVisitResponse{CanDoVisit: true, Message: "You can do visit " + visitType}
+	response := &model.CanDoVisitResponse{CanDoVisit: true, Message: "Anda dapat melakukan kunjungan " + visitType}
 
 	if visitType == "IN" && hasOpenVisit {
 		response.CanDoVisit = false
@@ -315,7 +315,7 @@ func (c *VisitUseCase) CanDoVisit(ctx context.Context, employeeID, visitType str
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -328,12 +328,12 @@ func (c *VisitUseCase) GetUnclosedVisit(ctx context.Context, employeeID string) 
 
 	openVisit, err := c.Repo.FindLastOpenByEmployee(tx, employeeID)
 	if err != nil && err != gorm.ErrRecordNotFound {
-		c.Log.WithError(err).Error("Failed to check open visit")
+		c.Log.WithError(err).Error("Gagal memeriksa kunjungan terbuka")
 		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -351,17 +351,17 @@ func (c *VisitUseCase) Delete(ctx context.Context, id string) error {
 
 	item, err := c.Repo.FindByID(tx, id, false)
 	if err != nil {
-		c.Log.WithError(err).Error("visit not found")
+		c.Log.WithError(err).Error("Kunjungan tidak ditemukan")
 		return fiber.ErrNotFound
 	}
 
 	if err := c.Repo.Delete(tx, item); err != nil {
-		c.Log.WithError(err).Error("failed to delete visit")
+		c.Log.WithError(err).Error("Gagal menghapus kunjungan")
 		return fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return fiber.ErrInternalServerError
 	}
 
