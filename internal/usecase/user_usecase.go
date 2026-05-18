@@ -275,7 +275,7 @@ func (c *UserUseCase) Update(ctx context.Context, request *model.UpdateUserReque
 	}
 
 	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, request.ID, "Roles", "Employee"); err != nil {
+	if err := c.UserRepository.FindById(tx, user, request.ID, "Roles"); err != nil {
 		c.Log.WithError(err).Error("User tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
