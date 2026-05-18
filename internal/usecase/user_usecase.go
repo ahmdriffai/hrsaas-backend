@@ -275,7 +275,7 @@ func (c *UserUseCase) Update(ctx context.Context, request *model.UpdateUserReque
 	}
 
 	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, request.ID, "Roles", "Employee"); err != nil {
+	if err := c.UserRepository.FindById(tx, user, request.ID, "Roles"); err != nil {
 		c.Log.WithError(err).Error("User tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
@@ -345,6 +345,43 @@ func (c *UserUseCase) Delete(ctx context.Context, id string) error {
 
 	if err := c.UserRepository.Delete(tx, user); err != nil {
 		c.Log.WithError(err).Error("Gagal menghapus user")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
+func (c *UserUseCase) ResetPassword(ctx context.Context, userID string, request *model.ResetPasswordRequest) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	user := new(entity.User)
+	if err := c.UserRepository.FindById(tx, user, userID); err != nil {
+		c.Log.WithError(err).Error("User tidak ditemukan")
+		return fiber.ErrNotFound
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to hash new password")
+		return fiber.ErrInternalServerError
+	}
+
+	user.Password = string(passwordHash)
+	user.UpdatedAt = time.Now().UnixMilli()
+
+	if err := c.UserRepository.Update(tx, user); err != nil {
+		c.Log.WithError(err).Error("Gagal mereset password user")
 		return fiber.ErrInternalServerError
 	}
 

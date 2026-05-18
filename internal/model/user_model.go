@@ -60,6 +60,10 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" validate:"required,min=8"`
 }
 
+type ResetPasswordRequest struct {
+	NewPassword string `json:"new_password" validate:"required,min=8"`
+}
+
 type AssignRoleRequest struct {
 	UserID string   `json:"-"`
 	Roles  []string `json:"roles" validate:"required"`
