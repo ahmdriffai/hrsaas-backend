@@ -423,12 +423,13 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		ParentID   *string `gorm:"column:parent_id"`
 		Name       string  `gorm:"column:name"`
 		IsApprover bool    `gorm:"column:is_approver"`
+		CompanyID  string  `gorm:"column:company_id"`
 	}
 
 	approvals := make([]entity.TimeOffApproval, 0, 4)
 	var current positionRow
 	if err := tx.Table("positions").
-		Select("id, parent_id, name, is_approver").
+		Select("id, parent_id, name, is_approver, company_id").
 		Where("id = ?", contract.PositionID).
 		Take(&current).Error; err != nil {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Position not found")
@@ -500,10 +501,34 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		parentID = parent.ParentID
 	}
 
-	// Require at least one approver.
-	if len(approvals) == 0 {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Approval chain is empty")
+	// Always include all company-wide required approvers (is_approver = true),
+	var globalApprovers []struct {
+		EmployeeID string `gorm:"column:employee_id"`
+	}
+	if err := tx.Table("employee_contracts ec").
+		Select("ec.employee_id").
+		Joins("JOIN positions p ON p.id = ec.position_id").
+		Where("ec.is_active = ?", true).
+		Where("p.is_approver = ?", true).
+		Where("p.company_id = ?", current.CompanyID).
+		Where("ec.employee_id != ?", employeeID).
+		Find(&globalApprovers).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to fetch global required approvers")
+		return nil, fiber.ErrInternalServerError
 	}
 
+	inChain := make(map[string]bool, len(approvals))
+	for _, a := range approvals {
+		inChain[a.ApproverId] = true
+	}
+	for _, ga := range globalApprovers {
+		if !inChain[ga.EmployeeID] {
+			approvals = append(approvals, entity.TimeOffApproval{
+				ApproverId: ga.EmployeeID,
+				IsRequired: true,
+				Status:     "PENDING",
+			})
+		}
+	}
 	return approvals, nil
 }

@@ -55,7 +55,7 @@ type UpdateTimeOffRequest struct {
 	EndDate       *string `json:"end_date,omitempty"`
 	RequestedDays *int    `json:"requested_days,omitempty"`
 	RequestReason *string `json:"request_reason,omitempty" validate:"max=255"`
-	RequestStatus *string `json:"request_status,omitempty" validate:"oneof=PENDING APPROVED REJECTED"`
+	RequestStatus *string `json:"request_status,omitempty" validate:"omitempty,oneof=PENDING APPROVED REJECTED"`
 }
 
 func TimeOffRequestToResponse(request *entity.TimeOffRequest) *TimeOffRequestResponse {
