@@ -460,7 +460,7 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 			Where("is_active = ?", true).
 			Where("position_id = ?", parent.ID).
 			Where("division_id = ?", contract.DivisionID).
-			Where("end_date IS NULL OR end_date >= ?", nowEpoch()).
+			// Where("end_date IS NULL OR end_date >= ?", nowEpoch()).
 			Order("start_date DESC").
 			Limit(1).
 			Take(&approver).Error; err != nil {
