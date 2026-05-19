@@ -100,22 +100,17 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 	if overlapCount > 0 {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Tanggal pengajuan cuti bertabrakan dengan pengajuan lain yang sudah ada")
 	}
-
-	// TODO: Create only 5 requests per day to prevent spam (configurable limit).
-	var dailyCount int64
-	loc, _ := time.LoadLocation("Asia/Jakarta")
-	now := time.Now().In(loc)
-	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).UnixMilli()
-	todayEnd := todayStart + 24*60*60*1000
-
+	// Limit to 5 concurrent leave requests per day across all employees for any day in the requested range.
+	var concurrentCount int64
 	if err := tx.Table("time_off_requests").
-		Where("employee_id = ?", employeeID).
-		Where("created_at >= ? AND created_at < ?", todayStart, todayEnd).
-		Count(&dailyCount).Error; err != nil {
-		c.Log.WithError(err).Error("Failed to check daily request count")
+		Where("employee_id != ?", employeeID).
+		Where("request_status IN ?", []string{"PENDING", "APPROVED"}).
+		Where("NOT (end_date < ? OR start_date > ?)", startDate, endDate).
+		Count(&concurrentCount).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to check concurrent leave count")
 		return nil, fiber.ErrInternalServerError
 	}
-	if dailyCount >= 5 {
+	if concurrentCount >= 5 {
 		return nil, fiber.NewError(fiber.StatusTooManyRequests, "Kuota Pengajuan Cuti Harian Sudah Penuh")
 	}
 
