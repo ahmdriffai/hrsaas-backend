@@ -132,15 +132,26 @@ func (c *TimeOffApprovalUseCase) Decide(ctx context.Context, requestID, approval
 		}
 
 		if isApprover {
-			if err := tx.Table("time_off_requests").
-				Where("id = ?", requestID).
-				Update("request_status", "APPROVED").Error; err != nil {
-				c.Log.WithError(err).Error("Failed to update time off request status")
+			var pendingRequired int64
+			if err := tx.Table("time_off_approvals").
+				Where("time_off_request_id = ?", requestID).
+				Where("is_required = ?", true).
+				Where("approval_status != ?", "APPROVED").
+				Count(&pendingRequired).Error; err != nil {
+				c.Log.WithError(err).Error("Failed to count pending approvals")
 				return fiber.ErrInternalServerError
 			}
-			if err := c.applyBalanceOnApproval(tx, requestID); err != nil {
-				c.Log.WithError(err).Error("Failed to update time off balance")
-				return err
+			if pendingRequired == 0 {
+				if err := tx.Table("time_off_requests").
+					Where("id = ?", requestID).
+					Update("request_status", "APPROVED").Error; err != nil {
+					c.Log.WithError(err).Error("Failed to update time off request status")
+					return fiber.ErrInternalServerError
+				}
+				if err := c.applyBalanceOnApproval(tx, requestID); err != nil {
+					c.Log.WithError(err).Error("Failed to update time off balance")
+					return err
+				}
 			}
 		}
 	} else {
@@ -221,15 +232,26 @@ func (c *TimeOffApprovalUseCase) DecideByApprovalID(ctx context.Context, approva
 		}
 
 		if isApprover {
-			if err := tx.Table("time_off_requests").
-				Where("id = ?", approval.TimeOffRequestId).
-				Update("request_status", "APPROVED").Error; err != nil {
-				c.Log.WithError(err).Error("Failed to update time off request status")
+			var pendingRequired int64
+			if err := tx.Table("time_off_approvals").
+				Where("time_off_request_id = ?", approval.TimeOffRequestId).
+				Where("is_required = ?", true).
+				Where("approval_status != ?", "APPROVED").
+				Count(&pendingRequired).Error; err != nil {
+				c.Log.WithError(err).Error("Failed to count pending approvals")
 				return fiber.ErrInternalServerError
 			}
-			if err := c.applyBalanceOnApproval(tx, approval.TimeOffRequestId); err != nil {
-				c.Log.WithError(err).Error("Failed to update time off balance")
-				return err
+			if pendingRequired == 0 {
+				if err := tx.Table("time_off_requests").
+					Where("id = ?", approval.TimeOffRequestId).
+					Update("request_status", "APPROVED").Error; err != nil {
+					c.Log.WithError(err).Error("Failed to update time off request status")
+					return fiber.ErrInternalServerError
+				}
+				if err := c.applyBalanceOnApproval(tx, approval.TimeOffRequestId); err != nil {
+					c.Log.WithError(err).Error("Failed to update time off balance")
+					return err
+				}
 			}
 		}
 	} else {
