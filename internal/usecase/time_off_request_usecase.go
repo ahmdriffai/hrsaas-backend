@@ -457,6 +457,7 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		// Find the approver (employee) who holds the parent position in same division.
 		if err := tx.Table("employee_contracts").
 			Select("employee_id").
+			Where("is_active = ?", true).
 			Where("position_id = ?", parent.ID).
 			Where("division_id = ?", contract.DivisionID).
 			Where("end_date IS NULL OR end_date >= ?", nowEpoch()).
