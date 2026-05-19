@@ -464,7 +464,7 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 			Order("start_date DESC").
 			Limit(1).
 			Take(&approver).Error; err != nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "Approver not found for position")
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Approver tidak ditemukan untuk posisi "+parent.Name)
 		}
 
 		// Avoid self-approval.
