@@ -183,6 +183,7 @@ func (c *PositionUseCase) Update(ctx context.Context, id string, request *model.
 	}
 
 	position.UpdatedAt = time.Now().UnixMilli()
+	position.Parent = nil
 
 	if err := c.PositionRepository.Update(tx, position); err != nil {
 		c.Log.WithError(err).Error("Failed to update position")
