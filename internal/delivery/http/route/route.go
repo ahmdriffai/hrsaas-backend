@@ -63,6 +63,7 @@ Guest Router
 func (c *RouteConfig) SetupGuestRouter() {
 	c.App.Post("/api/_login", c.UserController.Login)
 	c.App.Post("/api/_register", c.UserController.Register)
+	c.App.Delete("/api/users/_logout", c.UserController.Logout)
 }
 
 func (c *RouteConfig) SetupCompanyRouter() {
@@ -75,7 +76,6 @@ func (c *RouteConfig) SetupUserRouter() {
 	route := c.App.Group("/api/users", c.AuthMiddleware)
 	route.Get("/_current", c.UserController.GetCurrentUser)
 	route.Patch("/_change-password", c.UserController.ChangePassword)
-	c.App.Delete("/api/users/_logout", c.UserController.Logout)
 
 	adminRoute := route.Group("/", c.AdminMiddleware)
 	adminRoute.Get("/", c.UserController.List)
