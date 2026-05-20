@@ -4,7 +4,6 @@ import (
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
 	"math"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -23,6 +22,49 @@ func NewUserController(userUseCase *usecase.UserUseCase, log *logrus.Logger, vip
 		Log:         log,
 		Viper:       viper,
 	}
+}
+
+/*
+Cookies
+*/
+func (c *UserController) setTokenCookie(ctx *fiber.Ctx, token string) {
+	secure := c.Viper.GetBool("app.cookie_secure")
+	domain := c.Viper.GetString("app.cookie_domain")
+	sameSite := "Lax"
+	if secure {
+		sameSite = "None"
+	}
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    token,
+		HTTPOnly: true,
+		Secure:   secure,
+		SameSite: sameSite,
+		Domain:   domain,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 7,
+	})
+}
+
+func (c *UserController) clearTokenCookie(ctx *fiber.Ctx) {
+	secure := c.Viper.GetBool("app.cookie_secure")
+	domain := c.Viper.GetString("app.cookie_domain")
+	sameSite := "Lax"
+	if secure {
+		sameSite = "None"
+	}
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    "",
+		HTTPOnly: true,
+		Secure:   secure,
+		SameSite: sameSite,
+		Domain:   domain,
+		Path:     "/",
+		MaxAge:   -1,
+	})
 }
 
 /*
@@ -70,22 +112,7 @@ func (c *UserController) Login(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	isProduction := viper.GetString("app.env") == "production"
-
-	sameSite := "Lax"
-	if isProduction {
-		sameSite = "None"
-	}
-
-	ctx.Cookie(&fiber.Cookie{
-		Name:     "token",
-		Value:    response.Token,
-		HTTPOnly: true,
-		Secure:   c.Viper.GetBool("app.cookie_secure"), // true kalau production (HTTPS)
-		SameSite: sameSite,
-		Domain:   c.Viper.GetString("app.cookie_domain"), // ".bankwonosobo.co.id"
-		Path:     "/",
-	})
+	c.setTokenCookie(ctx, response.Token)
 
 	return ctx.JSON(model.WebResponse[*model.LoginUserResponse]{
 		Data: response,
@@ -248,22 +275,17 @@ func (c *UserController) RemoveRoles(ctx *fiber.Ctx) error {
 Logout User Controller
 */
 func (c *UserController) Logout(ctx *fiber.Ctx) error {
-	user := ctx.Locals("user").(*model.UserResponse)
+	token := ctx.Cookies("token")
+	if token == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "No token found in cookies")
+	}
 
-	err := c.UserUseCase.Logout(ctx.UserContext(), user.ID)
-	if err != nil {
-		c.Log.WithError(err).Error("failed to logout user")
+	if err := c.UserUseCase.Logout(ctx.UserContext(), token); err != nil {
+		c.Log.WithError(err).Error("Gagal Logout")
 		return err
 	}
 
-	ctx.Cookie(&fiber.Cookie{
-		Name:     "token",
-		Value:    "",
-		Expires:  time.Now().Add(-time.Hour),
-		HTTPOnly: true,
-		Path:     "/",
-	})
-
+	c.clearTokenCookie(ctx)
 	return ctx.JSON(model.WebResponse[any]{
 		Data: nil,
 	})
