@@ -9,7 +9,6 @@ type UserResponse struct {
 	Name          string               `json:"name,omitempty"`
 	Email         string               `json:"email,omitempty"`
 	EmailVerified bool                 `json:"email_verified,omitempty"`
-	Image         *string              `json:"image,omitempty"`
 	CompanyID     string               `json:"company_id,omitempty"`
 	Employee      *EmployeeResponse    `json:"employee,omitempty"`
 	Roles         []RoleResponse       `json:"roles,omitempty"`
@@ -85,7 +84,7 @@ func UserToResponse(user *entity.User) *UserResponse {
 	var permissions []PermissionResponse
 
 	if user.Employee != nil {
-		employeeResponse = EmployeeToResponse(user.Employee)
+		employeeResponse = EmployeeSummaryToResponse(user.Employee)
 	}
 	for _, r := range user.Roles {
 		roles = append(roles, RoleResponse{
@@ -102,7 +101,6 @@ func UserToResponse(user *entity.User) *UserResponse {
 		ID:            user.ID,
 		Name:          user.Name,
 		Email:         user.Email,
-		Image:         user.Image,
 		Roles:         roles,
 		Permissions:   permissions,
 		CompanyID:     user.CompanyID,

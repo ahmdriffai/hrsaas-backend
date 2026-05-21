@@ -115,6 +115,7 @@ func EmployeeSummaryToResponse(employee *entity.Employee) *EmployeeResponse {
 		EmployeeNumber: employee.EmployeeNumber,
 		Fullname:       employee.Fullname,
 		BirthPlace:     employee.BirthPlace,
+		Timezone:       employee.Timezone,
 	}
 	return response
 }
