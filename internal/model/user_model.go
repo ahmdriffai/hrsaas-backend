@@ -29,12 +29,12 @@ type SearchUserRequest struct {
 }
 
 type UpdateUserRequest struct {
-	ID            string  `json:"-"`
-	Name          *string `json:"name,omitempty"`
-	Email         *string `json:"email,omitempty" validate:"omitempty,email"`
-	Image         *string `json:"image,omitempty"`
-	CompanyID     *string `json:"company_id,omitempty"`
-	EmailVerified *bool   `json:"email_verified,omitempty"`
+	ID            string    `json:"-"`
+	Name          *string   `json:"name,omitempty"`
+	Email         *string   `json:"email,omitempty" validate:"omitempty,email"`
+	Image         *string   `json:"image,omitempty"`
+	EmailVerified *bool     `json:"email_verified,omitempty"`
+	RoleIDs       *[]string `json:"role_ids,omitempty"`
 }
 
 type VerifyUserRequest struct {
