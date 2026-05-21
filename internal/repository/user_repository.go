@@ -66,7 +66,7 @@ func (r *UserRepository) Search(db *gorm.DB, request *model.SearchUserRequest) (
 }
 
 func (r *UserRepository) AssignRoles(db *gorm.DB, user *entity.User, roles []entity.Role) error {
-	return db.Model(user).Association("Roles").Append(roles)
+	return db.Omit("Roles.*").Model(user).Association("Roles").Replace(roles)
 }
 
 func (r *UserRepository) RemoveRoles(db *gorm.DB, user *entity.User, roles []entity.Role) error {

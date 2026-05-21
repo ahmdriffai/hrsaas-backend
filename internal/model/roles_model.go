@@ -48,5 +48,7 @@ func RoleToResponse(role *entity.Role) *RoleResponse {
 		ID:          role.ID,
 		Name:        role.Name,
 		Permissions: permissions,
+		CreatedAt:   role.CreatedAt,
+		UpdatedAt:   role.UpdatedAt,
 	}
 }

@@ -48,18 +48,23 @@ func (u *RoleUseCase) Create(ctx context.Context, request *model.CreateRoleReque
 
 	role := &entity.Role{Name: request.Name}
 
+	if err := u.RoleRepository.Create(tx, role); err != nil {
+		u.Log.WithError(err).Error("Failed to create role")
+		return nil, fiber.ErrInternalServerError
+	}
+
 	if len(request.Permissions) > 0 {
 		permissions, err := u.PermissionRepository.FindByIDs(tx, request.Permissions)
 		if err != nil {
 			u.Log.WithError(err).Error("Failed to find permissions")
 			return nil, fiber.ErrInternalServerError
 		}
-		role.Permissions = permissions
-	}
 
-	if err := u.RoleRepository.Create(tx, role); err != nil {
-		u.Log.WithError(err).Error("Failed to create role")
-		return nil, fiber.ErrInternalServerError
+		if _, err := u.RoleRepository.AssignPermissions(ctx, tx, role, permissions); err != nil {
+			u.Log.WithError(err).Error("Failed to assign permissions to role")
+			return nil, fiber.ErrInternalServerError
+		}
+		role.Permissions = permissions
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -179,24 +184,26 @@ func (u *RoleUseCase) AssignPermissions(ctx context.Context, request *model.Assi
 		return nil, fiber.ErrBadRequest
 	}
 
+	permissions, err := u.PermissionRepository.FindByIDs(tx, request.Permissions)
+	if err != nil {
+		u.Log.WithError(err).Error("Failed to fetch permissions")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(permissions) != len(request.Permissions) {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "some permissions not found")
+	}
+
 	var role entity.Role
 	if err := u.RoleRepository.FindById(tx, &role, request.RoleID, "Permissions"); err != nil {
 		u.Log.WithError(err).Error("Role not found")
 		return nil, fiber.ErrNotFound
 	}
 
-	permissions, err := u.PermissionRepository.FindByIDs(tx, request.Permissions)
-	if err != nil {
-		u.Log.WithError(err).Error("Failed to find permissions")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if err := u.RoleRepository.AssignPermissions(tx, &role, permissions); err != nil {
+	if _, err := u.RoleRepository.AssignPermissions(ctx, tx, &role, permissions); err != nil {
 		u.Log.WithError(err).Error("Failed to assign permissions to role")
 		return nil, fiber.ErrInternalServerError
 	}
-
-	role.Permissions = append(role.Permissions, permissions...)
 
 	if err := tx.Commit().Error; err != nil {
 		u.Log.WithError(err).Error("Failed to commit transaction")
