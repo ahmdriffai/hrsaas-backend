@@ -11,9 +11,9 @@ type UserResponse struct {
 	EmailVerified bool                 `json:"email_verified,omitempty"`
 	Image         *string              `json:"image,omitempty"`
 	CompanyID     string               `json:"company_id,omitempty"`
+	Employee      *EmployeeResponse    `json:"employee,omitempty"`
 	Roles         []RoleResponse       `json:"roles,omitempty"`
 	Permissions   []PermissionResponse `json:"permissions,omitempty"`
-	Employee      *EmployeeResponse    `json:"employee,omitempty"`
 	CreatedAt     int64                `json:"created_at,omitempty"`
 	UpdatedAt     int64                `json:"updated_at,omitempty"`
 }
