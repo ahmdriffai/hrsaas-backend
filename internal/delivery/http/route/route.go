@@ -83,8 +83,6 @@ func (c *RouteConfig) SetupUserRouter() {
 	adminRoute.Put("/:id", c.UserController.Update)
 	adminRoute.Delete("/:id", c.UserController.Delete)
 	adminRoute.Patch("/:id/_reset-password", c.UserController.ResetPassword)
-	adminRoute.Post("/:id/roles", c.UserController.AssignRoles)
-	adminRoute.Delete("/:id/roles", c.UserController.RemoveRoles)
 }
 
 func (c *RouteConfig) SetupEmployeeRouter() {

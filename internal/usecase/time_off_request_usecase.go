@@ -140,6 +140,7 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 		EndDate:       &endDate,
 		RequestReason: &request.RequestReason,
 		RequestStatus: &status,
+		FileUrl:       request.FileUrl,
 	}
 
 	if err := c.TimeOffRequestRepo.Create(tx, item); err != nil {

@@ -30,13 +30,14 @@ type TimeOffRequestResponse struct {
 }
 
 type CreateTimeOffRequest struct {
-	TimeOffTypeID string `json:"time_off_type_id" validate:"required"`
-	StartDate     string `json:"start_date" validate:"required"`
-	EndDate       string `json:"end_date" validate:"required"`
-	RequestedDays int    `json:"requested_days"`
-	RequestReason string `json:"request_reason" validate:"required,max=255"`
-	RequestStatus string `json:"request_status" validate:"required,oneof=PENDING APPROVED REJECTED"`
-	CreatedAt     int64  `json:"created_at"`
+	TimeOffTypeID string  `json:"time_off_type_id" validate:"required"`
+	StartDate     string  `json:"start_date" validate:"required"`
+	EndDate       string  `json:"end_date" validate:"required"`
+	RequestedDays int     `json:"requested_days"`
+	RequestReason string  `json:"request_reason" validate:"required,max=255"`
+	RequestStatus string  `json:"request_status" validate:"required,oneof=PENDING APPROVED REJECTED"`
+	FileUrl       *string `json:"file_url,omitempty"`
+	CreatedAt     int64   `json:"created_at"`
 }
 
 type SearchTimeOffRequest struct {
