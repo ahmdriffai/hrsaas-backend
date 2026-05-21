@@ -318,8 +318,22 @@ func (c *UserUseCase) Update(ctx context.Context, request *model.UpdateUserReque
 		user.Image = request.Image
 	}
 
-	if request.CompanyID != nil {
-		user.CompanyID = *request.CompanyID
+	if request.RoleIDs != nil {
+		var roles []entity.Role
+		for _, roleID := range *request.RoleIDs {
+			role := new(entity.Role)
+			if err := c.RoleRepository.FindById(tx, role, roleID); err != nil {
+				c.Log.WithError(err).Errorf("Role dengan ID %s tidak ditemukan", roleID)
+				return nil, fiber.NewError(fiber.StatusBadRequest, "Role tidak ditemukan")
+			}
+			roles = append(roles, *role)
+		}
+
+		if err := c.UserRepository.AssignRoles(tx, user, roles); err != nil {
+			c.Log.WithError(err).Error("Gagal mengassign role ke user")
+			return nil, fiber.ErrInternalServerError
+		}
+		user.Roles = roles
 	}
 
 	if request.EmailVerified != nil {
