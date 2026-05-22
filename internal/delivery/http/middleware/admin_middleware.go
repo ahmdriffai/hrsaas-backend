@@ -8,19 +8,19 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func NewAdmin() fiber.Handler {
+func NewAdmin(permission string) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		user, ok := ctx.Locals("user").(*model.UserResponse)
 		if !ok || user == nil {
 			return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 		}
 
-		for _, role := range user.Roles {
-			if strings.EqualFold(role.Name, "ADMIN") {
+		for _, p := range user.Permissions {
+			if strings.EqualFold(p.Name, permission) {
 				return ctx.Next()
 			}
 		}
 
-		return fiber.NewError(fiber.StatusForbidden, "Forbidden: Admin access required")
+		return fiber.NewError(fiber.StatusForbidden, "Forbidden: insufficient permissions")
 	}
 }

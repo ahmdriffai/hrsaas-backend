@@ -138,7 +138,7 @@ func Bootstrap(config *BootstrapConfig) {
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
-	adminMiddleware := middleware.NewAdmin()
+	adminMiddleware := middleware.NewAdmin
 	employeeMiddleware := middleware.NewEmployee()
 
 	// route config

@@ -88,10 +88,12 @@ func UserToResponse(user *entity.User) *UserResponse {
 	}
 	for _, r := range user.Roles {
 		roles = append(roles, RoleResponse{
+			ID:   r.ID,
 			Name: r.Name,
 		})
 		for _, p := range r.Permissions {
 			permissions = append(permissions, PermissionResponse{
+				ID:   p.ID,
 				Name: p.Name,
 			})
 		}
