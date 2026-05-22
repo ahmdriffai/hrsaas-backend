@@ -19,6 +19,7 @@ type RouteConfig struct {
 	OfficeLocationController   *http.OfficeLocationController
 	SanctionController         *http.SanctionController
 	EmSancController           *http.EmSancController
+	HolidayController          *http.HolidayController
 	PositionController         *http.PositionController
 	AttendanceController       *http.AttendanceController
 	ShiftController            *http.ShiftController
@@ -55,6 +56,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupPermissionRouter()
 	c.SetupRoleRouter()
 	c.SetupEmployeeDocumentRouter()
+	c.SetupHolidayRouter()
 }
 
 /*
@@ -259,4 +261,12 @@ func (c *RouteConfig) SetupVisitRouter() {
 	route.Put("/:id", c.VisitController.Update)
 	route.Get("/:id", c.VisitController.GetByID)
 	route.Delete("/:id", c.VisitController.Delete)
+}
+
+func (c *RouteConfig) SetupHolidayRouter() {
+	route := c.App.Group("/api/holidays", c.AuthMiddleware, c.AdminMiddleware)
+	route.Post("/", c.HolidayController.Create)
+	route.Get("/", c.HolidayController.List)
+	route.Put("/:id", c.HolidayController.Update)
+	route.Delete("/:id", c.HolidayController.Delete)
 }
