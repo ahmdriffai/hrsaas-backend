@@ -60,6 +60,7 @@ CREATE TABLE time_off_approvals
     time_off_request_id VARCHAR(36) NOT NULL,
     approver_id VARCHAR(36) NOT NULL,
     approval_status VARCHAR(50) NOT NULL,
+    approval_order INT NOT NULL DEFAULT 0,
     action_reason TEXT,
     action_at BIGINT NULL,
     PRIMARY KEY(id),
