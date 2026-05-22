@@ -66,7 +66,7 @@ func (c *UserUseCase) Verify(ctx context.Context, request *model.VerifyUserReque
 
 	// find user
 	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, session.UserID, "Roles", "Employee"); err != nil {
+	if err := c.UserRepository.FindById(tx, user, session.UserID, "Roles", "Roles.Permissions", "Employee"); err != nil {
 		c.Log.Warnf("Gagal menemukan user by token : %+v", err)
 		return nil, fiber.ErrUnauthorized
 	}
@@ -175,7 +175,7 @@ func (c *UserUseCase) Login(ctx context.Context, request *model.LoginUserRequest
 
 	// find user by email
 	user := new(entity.User)
-	if err := c.UserRepository.FindByEmail(tx, user, request.Email, "Roles"); err != nil {
+	if err := c.UserRepository.FindByEmail(tx, user, request.Email, "Roles", "Roles.Permissions"); err != nil {
 		c.Log.Warnf("Gagal menemukan user by email : %+v", err)
 		return nil, fiber.NewError(fiber.StatusConflict, "email dan password tidak valid")
 	}
@@ -260,7 +260,7 @@ func (c *UserUseCase) Detail(ctx context.Context, id string) (*model.UserRespons
 	defer tx.Rollback()
 
 	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, id, "Roles", "Employee"); err != nil {
+	if err := c.UserRepository.FindById(tx, user, id, "Roles", "Roles.Permissions", "Employee"); err != nil {
 		c.Log.WithError(err).Error("User tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}

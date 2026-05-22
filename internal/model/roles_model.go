@@ -3,11 +3,9 @@ package model
 import "hr-sas/internal/entity"
 
 type RoleResponse struct {
-	ID          string               `json:"id"`
+	ID          string               `json:"id,omitempty"`
 	Name        string               `json:"name"`
 	Permissions []PermissionResponse `json:"permissions,omitempty"`
-	CreatedAt   int64                `json:"created_at,omitempty"`
-	UpdatedAt   int64                `json:"updated_at,omitempty"`
 }
 
 type CreateRoleRequest struct {
@@ -48,7 +46,5 @@ func RoleToResponse(role *entity.Role) *RoleResponse {
 		ID:          role.ID,
 		Name:        role.Name,
 		Permissions: permissions,
-		CreatedAt:   role.CreatedAt,
-		UpdatedAt:   role.UpdatedAt,
 	}
 }

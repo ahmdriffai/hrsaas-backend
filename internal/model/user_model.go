@@ -5,16 +5,16 @@ import (
 )
 
 type UserResponse struct {
-	ID            string            `json:"id,omitempty"`
-	Name          string            `json:"name,omitempty"`
-	Email         string            `json:"email,omitempty"`
-	EmailVerified bool              `json:"email_verified,omitempty"`
-	Image         *string           `json:"image,omitempty"`
-	CompanyID     string            `json:"company_id,omitempty"`
-	Roles         []RoleResponse    `json:"roles,omitempty"`
-	Employee      *EmployeeResponse `json:"employee,omitempty"`
-	CreatedAt     int64             `json:"created_at,omitempty"`
-	UpdatedAt     int64             `json:"updated_at,omitempty"`
+	ID            string               `json:"id,omitempty"`
+	Name          string               `json:"name,omitempty"`
+	Email         string               `json:"email,omitempty"`
+	EmailVerified bool                 `json:"email_verified,omitempty"`
+	CompanyID     string               `json:"company_id,omitempty"`
+	Employee      *EmployeeResponse    `json:"employee,omitempty"`
+	Roles         []RoleResponse       `json:"roles,omitempty"`
+	Permissions   []PermissionResponse `json:"permissions,omitempty"`
+	CreatedAt     int64                `json:"created_at,omitempty"`
+	UpdatedAt     int64                `json:"updated_at,omitempty"`
 }
 
 type LoginUserResponse struct {
@@ -81,24 +81,30 @@ func UserToResponse(user *entity.User) *UserResponse {
 
 	var employeeResponse *EmployeeResponse
 	var roles []RoleResponse
+	var permissions []PermissionResponse
 
 	if user.Employee != nil {
-		employeeResponse = EmployeeToResponse(user.Employee)
+		employeeResponse = EmployeeSummaryToResponse(user.Employee)
 	}
 	for _, r := range user.Roles {
-		roles = append(roles, *RoleToResponse(&r))
+		roles = append(roles, RoleResponse{
+			Name: r.Name,
+		})
+		for _, p := range r.Permissions {
+			permissions = append(permissions, PermissionResponse{
+				Name: p.Name,
+			})
+		}
 	}
 
 	return &UserResponse{
 		ID:            user.ID,
 		Name:          user.Name,
 		Email:         user.Email,
-		Image:         user.Image,
 		Roles:         roles,
+		Permissions:   permissions,
 		CompanyID:     user.CompanyID,
 		EmailVerified: user.EmailVerified,
 		Employee:      employeeResponse,
-		CreatedAt:     user.CreatedAt,
-		UpdatedAt:     user.UpdatedAt,
 	}
 }
