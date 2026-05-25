@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
 
@@ -41,8 +42,12 @@ func (r *RoleRepository) FindByIDs(db *gorm.DB, ids []string) ([]entity.Role, er
 	return roles, nil
 }
 
-func (r *RoleRepository) AssignPermissions(db *gorm.DB, role *entity.Role, permissions []entity.Permission) error {
-	return db.Model(role).Association("Permissions").Append(permissions)
+func (r *RoleRepository) AssignPermissions(ctx context.Context, db *gorm.DB, role *entity.Role, permissions []entity.Permission) (*entity.Role, error) {
+	err := db.WithContext(ctx).Omit("Permissions.*").Model(role).Association("Permissions").Replace(permissions)
+	if err != nil {
+		return nil, err
+	}
+	return role, nil
 }
 
 func (r *RoleRepository) FindAll(db *gorm.DB) ([]entity.Role, error) {

@@ -66,7 +66,7 @@ func (c *UserUseCase) Verify(ctx context.Context, request *model.VerifyUserReque
 
 	// find user
 	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, session.UserID, "Roles", "Employee"); err != nil {
+	if err := c.UserRepository.FindById(tx, user, session.UserID, "Roles", "Roles.Permissions", "Employee"); err != nil {
 		c.Log.Warnf("Gagal menemukan user by token : %+v", err)
 		return nil, fiber.ErrUnauthorized
 	}
@@ -124,18 +124,11 @@ func (c *UserUseCase) Register(ctx context.Context, request *model.RegisterUserR
 		return nil, fiber.ErrInternalServerError
 	}
 
-	adminRole := &entity.Role{Name: "ADMIN"}
-	if err := c.RoleRepository.Create(tx, adminRole); err != nil {
-		c.Log.WithError(err).Error("Failed to create admin role")
-		return nil, fiber.ErrInternalServerError
-	}
-
 	// create user
 	user := &entity.User{
 		Name:      request.Name,
 		Email:     request.Email,
 		Password:  string(passwordHash),
-		Roles:     []entity.Role{*adminRole},
 		CompanyID: company.ID,
 	}
 
@@ -143,6 +136,21 @@ func (c *UserUseCase) Register(ctx context.Context, request *model.RegisterUserR
 		c.Log.WithError(err).Error("Failed to create user")
 		return nil, fiber.ErrInternalServerError
 	}
+
+	adminRole, roleErr := c.RoleRepository.FindByName(tx, "ADMIN")
+	if roleErr != nil {
+		adminRole = &entity.Role{Name: "ADMIN"}
+		if err := c.RoleRepository.Create(tx, adminRole); err != nil {
+			c.Log.WithError(err).Error("Failed to create admin role")
+			return nil, fiber.ErrInternalServerError
+		}
+	}
+
+	if err := c.UserRepository.AssignRoles(tx, user, []entity.Role{*adminRole}); err != nil {
+		c.Log.WithError(err).Error("Failed to assign admin role to user")
+		return nil, fiber.ErrInternalServerError
+	}
+	user.Roles = []entity.Role{*adminRole}
 
 	if err := tx.Commit().Error; err != nil {
 		c.Log.Warnf("Failed commit transaction : %+v", err)
@@ -167,7 +175,7 @@ func (c *UserUseCase) Login(ctx context.Context, request *model.LoginUserRequest
 
 	// find user by email
 	user := new(entity.User)
-	if err := c.UserRepository.FindByEmail(tx, user, request.Email, "Roles"); err != nil {
+	if err := c.UserRepository.FindByEmail(tx, user, request.Email, "Roles", "Roles.Permissions"); err != nil {
 		c.Log.Warnf("Gagal menemukan user by email : %+v", err)
 		return nil, fiber.NewError(fiber.StatusConflict, "email dan password tidak valid")
 	}
@@ -252,7 +260,7 @@ func (c *UserUseCase) Detail(ctx context.Context, id string) (*model.UserRespons
 	defer tx.Rollback()
 
 	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, id, "Roles", "Employee"); err != nil {
+	if err := c.UserRepository.FindById(tx, user, id, "Roles", "Roles.Permissions", "Employee"); err != nil {
 		c.Log.WithError(err).Error("User tidak ditemukan")
 		return nil, fiber.ErrNotFound
 	}
@@ -310,8 +318,22 @@ func (c *UserUseCase) Update(ctx context.Context, request *model.UpdateUserReque
 		user.Image = request.Image
 	}
 
-	if request.CompanyID != nil {
-		user.CompanyID = *request.CompanyID
+	if request.RoleIDs != nil {
+		var roles []entity.Role
+		for _, roleID := range *request.RoleIDs {
+			role := new(entity.Role)
+			if err := c.RoleRepository.FindById(tx, role, roleID); err != nil {
+				c.Log.WithError(err).Errorf("Role dengan ID %s tidak ditemukan", roleID)
+				return nil, fiber.NewError(fiber.StatusBadRequest, "Role tidak ditemukan")
+			}
+			roles = append(roles, *role)
+		}
+
+		if err := c.UserRepository.AssignRoles(tx, user, roles); err != nil {
+			c.Log.WithError(err).Error("Gagal mengassign role ke user")
+			return nil, fiber.ErrInternalServerError
+		}
+		user.Roles = roles
 	}
 
 	if request.EmailVerified != nil {
@@ -437,94 +459,6 @@ func (c *UserUseCase) ChangePassword(ctx context.Context, userID string, request
 	}
 
 	return nil
-}
-
-/*
-Assign Roles to User
-*/
-func (c *UserUseCase) AssignRoles(ctx context.Context, request *model.AssignRoleRequest) (*model.UserResponse, error) {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer tx.Rollback()
-
-	if err := c.Validate.Struct(request); err != nil {
-		c.Log.WithError(err).Error("Failed to validate request body")
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
-	}
-
-	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, request.UserID, "Roles"); err != nil {
-		c.Log.WithError(err).Error("User not found")
-		return nil, fiber.ErrNotFound
-	}
-
-	roles, err := c.RoleRepository.FindByIDs(tx, request.Roles)
-	if err != nil {
-		c.Log.WithError(err).Error("Failed to find roles")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if err := c.UserRepository.AssignRoles(tx, user, roles); err != nil {
-		c.Log.WithError(err).Error("Failed to assign roles to user")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	user.Roles = append(user.Roles, roles...)
-
-	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	return model.UserToResponse(user), nil
-}
-
-/*
-Remove Roles from User
-*/
-func (c *UserUseCase) RemoveRoles(ctx context.Context, request *model.RemoveRoleRequest) (*model.UserResponse, error) {
-	tx := c.DB.WithContext(ctx).Begin()
-	defer tx.Rollback()
-
-	if err := c.Validate.Struct(request); err != nil {
-		c.Log.WithError(err).Error("Failed to validate request body")
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
-	}
-
-	user := new(entity.User)
-	if err := c.UserRepository.FindById(tx, user, request.UserID, "Roles"); err != nil {
-		c.Log.WithError(err).Error("User not found")
-		return nil, fiber.ErrNotFound
-	}
-
-	roles, err := c.RoleRepository.FindByIDs(tx, request.Roles)
-	if err != nil {
-		c.Log.WithError(err).Error("Failed to find roles")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	if err := c.UserRepository.RemoveRoles(tx, user, roles); err != nil {
-		c.Log.WithError(err).Error("Failed to remove roles from user")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	removeSet := make(map[string]bool, len(roles))
-	for _, r := range roles {
-		removeSet[r.ID] = true
-	}
-	remaining := user.Roles[:0]
-	for _, r := range user.Roles {
-		if !removeSet[r.ID] {
-			remaining = append(remaining, r)
-		}
-	}
-	user.Roles = remaining
-
-	if err := tx.Commit().Error; err != nil {
-		c.Log.WithError(err).Error("Failed to commit transaction")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	return model.UserToResponse(user), nil
 }
 
 /*

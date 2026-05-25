@@ -10,7 +10,7 @@ type RouteConfig struct {
 	App *fiber.App
 
 	AuthMiddleware     fiber.Handler
-	AdminMiddleware    fiber.Handler
+	AdminMiddleware    func(permission string) fiber.Handler
 	EmployeeMiddleware fiber.Handler
 
 	CompanyController          *http.CompanyController
@@ -19,6 +19,7 @@ type RouteConfig struct {
 	OfficeLocationController   *http.OfficeLocationController
 	SanctionController         *http.SanctionController
 	EmSancController           *http.EmSancController
+	HolidayController          *http.HolidayController
 	PositionController         *http.PositionController
 	AttendanceController       *http.AttendanceController
 	ShiftController            *http.ShiftController
@@ -55,6 +56,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupPermissionRouter()
 	c.SetupRoleRouter()
 	c.SetupEmployeeDocumentRouter()
+	c.SetupHolidayRouter()
 }
 
 /*
@@ -77,21 +79,19 @@ func (c *RouteConfig) SetupUserRouter() {
 	route.Get("/_current", c.UserController.GetCurrentUser)
 	route.Patch("/_change-password", c.UserController.ChangePassword)
 
-	adminRoute := route.Group("/", c.AdminMiddleware)
+	adminRoute := route.Group("/", c.AdminMiddleware("USERS"))
 	adminRoute.Get("/", c.UserController.List)
 	adminRoute.Get("/:id", c.UserController.Detail)
 	adminRoute.Put("/:id", c.UserController.Update)
 	adminRoute.Delete("/:id", c.UserController.Delete)
 	adminRoute.Patch("/:id/_reset-password", c.UserController.ResetPassword)
-	adminRoute.Post("/:id/roles", c.UserController.AssignRoles)
-	adminRoute.Delete("/:id/roles", c.UserController.RemoveRoles)
 }
 
 func (c *RouteConfig) SetupEmployeeRouter() {
 	route := c.App.Group("/api/employees", c.AuthMiddleware)
 	route.Get("/", c.EmployeeController.ListEmployee)
 
-	adminRoute := route.Group("/", c.AdminMiddleware)
+	adminRoute := route.Group("/", c.AdminMiddleware("EMPLOYEES"))
 	adminRoute.Post("/", c.EmployeeController.CreateEmployee)
 	adminRoute.Post("/import-excel", c.EmployeeController.ImportExcel)
 	adminRoute.Get("/:id", c.EmployeeController.DetailEmployee)
@@ -102,7 +102,7 @@ func (c *RouteConfig) SetupEmployeeRouter() {
 func (c *RouteConfig) SetupEmployeeContractRouter() {
 	route := c.App.Group("/api/employee-contracts", c.AuthMiddleware)
 	route.Get("/", c.EmployeeContractController.List)
-	adminRoute := route.Group("/", c.AdminMiddleware)
+	adminRoute := route.Group("/", c.AdminMiddleware("EMPLOYEE_CONTRACTS"))
 	adminRoute.Post("/", c.EmployeeContractController.Create)
 	adminRoute.Get("/:id", c.EmployeeContractController.Detail)
 	adminRoute.Put("/:id", c.EmployeeContractController.Update)
@@ -114,14 +114,14 @@ func (c *RouteConfig) SetupDivisionRouter() {
 	route.Get("/", c.DivisionController.List)
 	route.Get("/:id", c.DivisionController.Detail)
 
-	adminRoute := route.Group("/", c.AdminMiddleware)
+	adminRoute := route.Group("/", c.AdminMiddleware("DIVISIONS"))
 	adminRoute.Post("/", c.DivisionController.Create)
 	adminRoute.Put("/:id", c.DivisionController.Update)
 	adminRoute.Delete("/:id", c.DivisionController.Delete)
 }
 
 func (c *RouteConfig) SetupSanctionRouter() {
-	route := c.App.Group("/api/sanctions", c.AuthMiddleware, c.AdminMiddleware)
+	route := c.App.Group("/api/sanctions", c.AuthMiddleware, c.AdminMiddleware("SANCTIONS"))
 	route.Post("/", c.SanctionController.Create)
 	route.Get("/", c.SanctionController.ListSanction)
 	route.Get("/:id", c.SanctionController.Detail)
@@ -133,7 +133,7 @@ func (c *RouteConfig) SetupEmployeeSanctionRouter() {
 	route := c.App.Group("/api/employee-sanctions", c.AuthMiddleware)
 	route.Get("/_current", c.EmployeeMiddleware, c.EmSancController.CurrentSearch)
 
-	adminRouter := route.Group("/", c.AdminMiddleware)
+	adminRouter := route.Group("/", c.AdminMiddleware("EMPLOYEE_SANCTIONS"))
 	adminRouter.Post("/", c.EmSancController.Create)
 	adminRouter.Get("/", c.EmSancController.Search)
 	adminRouter.Get("/:id", c.EmSancController.Detail)
@@ -142,7 +142,7 @@ func (c *RouteConfig) SetupEmployeeSanctionRouter() {
 }
 
 func (c *RouteConfig) SetupPositionRouter() {
-	route := c.App.Group("/api/positions", c.AuthMiddleware, c.AdminMiddleware)
+	route := c.App.Group("/api/positions", c.AuthMiddleware, c.AdminMiddleware("POSITIONS"))
 	route.Get("/", c.PositionController.ListPosition)
 	route.Post("/", c.PositionController.Create)
 	route.Get("/:id", c.PositionController.Detail)
@@ -151,7 +151,7 @@ func (c *RouteConfig) SetupPositionRouter() {
 }
 
 func (c *RouteConfig) SetupOfficeLocationRouter() {
-	route := c.App.Group("/api/office-locations", c.AuthMiddleware, c.AdminMiddleware)
+	route := c.App.Group("/api/office-locations", c.AuthMiddleware, c.AdminMiddleware("OFFICE_LOCATIONS"))
 	route.Get("/", c.OfficeLocationController.List)
 	route.Post("/", c.OfficeLocationController.Create)
 	route.Get("/:officeLocationID", c.OfficeLocationController.Detail)
@@ -167,7 +167,7 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 }
 
 func (c *RouteConfig) SetupShiftRouter() {
-	route := c.App.Group("/api/shifts", c.AuthMiddleware, c.AdminMiddleware)
+	route := c.App.Group("/api/shifts", c.AuthMiddleware, c.AdminMiddleware("SHIFTS"))
 	route.Get("/", c.ShiftController.List)
 	route.Post("/", c.ShiftController.Create)
 	route.Get("/:shiftID", c.ShiftController.Detail)
@@ -177,35 +177,47 @@ func (c *RouteConfig) SetupShiftRouter() {
 }
 
 func (c *RouteConfig) SetupTimeOffRouter() {
-	route := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
-	route.Get("/", c.TimeOffRequestController.ListRequests)
+	// TIME OFF REQUEST ROUTES
+	// admin and employee
+	timeOffRequest := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
+	timeOffRequest.Get("/:id", c.TimeOffRequestController.GetRequestByID)
+	timeOffRequest.Put("/:id", c.TimeOffRequestController.UpdateRequest)
+	timeOffRequest.Get("/:id/approvals", c.TimeOffApprovalController.ListApprovals)
 
-	employeeRoute := route.Group("/", c.EmployeeMiddleware)
+	// admin only
+	adminRoute := timeOffRequest.Group("/", c.AdminMiddleware("TIME_OFF_REQUESTS"))
+	adminRoute.Get("/", c.TimeOffRequestController.ListRequests)
+	adminRoute.Delete("/:id", c.TimeOffRequestController.DeleteRequest)
+
+	// employee only
+	employeeRoute := timeOffRequest.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Post("/", c.TimeOffRequestController.CreateRequest)
 	employeeRoute.Get("/_current", c.TimeOffRequestController.ListCurrentRequests)
 
-	route.Get("/:id", c.TimeOffRequestController.GetRequestByID)
-	route.Put("/:id", c.TimeOffRequestController.UpdateRequest)
-	route.Delete("/:id", c.TimeOffRequestController.DeleteRequest)
-	route.Get("/:id/approvals", c.TimeOffApprovalController.ListApprovals)
+	employeeRoute.Patch("/:id/approvals/:approval_id", c.TimeOffApprovalController.Decide) // Mbingungi
 
-	employeeRoute.Patch("/:id/approvals/:approval_id", c.TimeOffApprovalController.Decide)
-
+	// TIME OFF REQUEST ROUTES
+	// admin and employee
 	typeRoute := c.App.Group("/api/time-off-types", c.AuthMiddleware)
 	typeRoute.Get("/", c.TimeOffTypeController.ListTypes)
 	typeRoute.Get("/:id", c.TimeOffTypeController.Detail)
-	typeAdminRoute := typeRoute.Group("/", c.AdminMiddleware)
+
+	// admin only
+	typeAdminRoute := typeRoute.Group("/", c.AdminMiddleware("TIME_OFF_TYPES"))
 	typeAdminRoute.Post("/", c.TimeOffTypeController.CreateType)
 	typeAdminRoute.Put("/:id", c.TimeOffTypeController.UpdateType)
 	typeAdminRoute.Delete("/:id", c.TimeOffTypeController.DeleteType)
 
+	// TIME OFF BALANCE ROUTES
 	balanceRoute := c.App.Group("/api/time-off-balances", c.AuthMiddleware)
-	balanceRoute.Post("/_set", c.AdminMiddleware, c.TimeOffBalanceController.SetBalance)
 	balanceRoute.Get("/_current", c.EmployeeMiddleware, c.TimeOffBalanceController.ListCurrentBalances)
-	balanceRoute.Get("/", c.AdminMiddleware, c.TimeOffBalanceController.ListBalancesByEmployee)
-	balanceRoute.Get("/:id", c.AdminMiddleware, c.TimeOffBalanceController.Detail)
-	balanceRoute.Put("/:id", c.AdminMiddleware, c.TimeOffBalanceController.Update)
-	balanceRoute.Delete("/:id", c.AdminMiddleware, c.TimeOffBalanceController.Delete)
+	balanceRoute.Get("/:id", c.TimeOffBalanceController.Detail)
+
+	balanceAdminRoute := balanceRoute.Group("/", c.AdminMiddleware("TIME_OFF_BALANCES"))
+	balanceAdminRoute.Post("/_set", c.TimeOffBalanceController.SetBalance)
+	balanceAdminRoute.Get("/", c.TimeOffBalanceController.ListBalancesByEmployee)
+	balanceAdminRoute.Put("/:id", c.TimeOffBalanceController.Update)
+	balanceAdminRoute.Delete("/:id", c.TimeOffBalanceController.Delete)
 }
 
 func (c *RouteConfig) SetupCommonRouter() {
@@ -222,7 +234,7 @@ func (c *RouteConfig) SetupTimeOffApprovalRouter() {
 }
 
 func (c *RouteConfig) SetupPermissionRouter() {
-	route := c.App.Group("/api/permissions", c.AuthMiddleware, c.AdminMiddleware)
+	route := c.App.Group("/api/permissions", c.AuthMiddleware, c.AdminMiddleware("PERMISSIONS"))
 	route.Get("/", c.PermissionController.List)
 	route.Post("/", c.PermissionController.Create)
 	route.Get("/:id", c.PermissionController.Detail)
@@ -231,7 +243,7 @@ func (c *RouteConfig) SetupPermissionRouter() {
 }
 
 func (c *RouteConfig) SetupRoleRouter() {
-	route := c.App.Group("/api/roles", c.AuthMiddleware, c.AdminMiddleware)
+	route := c.App.Group("/api/roles", c.AuthMiddleware, c.AdminMiddleware("ROLES"))
 	route.Get("/", c.RoleController.List)
 	route.Post("/", c.RoleController.Create)
 	route.Get("/:id", c.RoleController.Detail)
@@ -241,7 +253,7 @@ func (c *RouteConfig) SetupRoleRouter() {
 }
 
 func (c *RouteConfig) SetupEmployeeDocumentRouter() {
-	route := c.App.Group("/api/employee-docs", c.AuthMiddleware, c.AdminMiddleware)
+	route := c.App.Group("/api/employee-docs", c.AuthMiddleware, c.AdminMiddleware("EMPLOYEE_DOCUMENTS"))
 	route.Post("/", c.EmployeeDocumentController.Create)
 	route.Get("/", c.EmployeeDocumentController.List)
 	route.Put("/:id", c.EmployeeDocumentController.Update)
@@ -250,7 +262,7 @@ func (c *RouteConfig) SetupEmployeeDocumentRouter() {
 
 func (c *RouteConfig) SetupVisitRouter() {
 	route := c.App.Group("/api/visits", c.AuthMiddleware)
-	route.Get("/", c.VisitController.List)
+	route.Get("/:id", c.VisitController.GetByID)
 
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Post("/", c.VisitController.Create)
@@ -258,7 +270,16 @@ func (c *RouteConfig) SetupVisitRouter() {
 	employeeRoute.Get("/_current/can-do", c.VisitController.CanDoVisit)
 	employeeRoute.Get("/_current/unclosed", c.VisitController.GetUnclosedVisit)
 
-	route.Put("/:id", c.VisitController.Update)
-	route.Get("/:id", c.VisitController.GetByID)
-	route.Delete("/:id", c.VisitController.Delete)
+	adminRoute := route.Group("/", c.AdminMiddleware("VISITS"))
+	adminRoute.Get("/", c.VisitController.List)
+	adminRoute.Put("/:id", c.VisitController.Update)
+	adminRoute.Delete("/:id", c.VisitController.Delete)
+}
+
+func (c *RouteConfig) SetupHolidayRouter() {
+	route := c.App.Group("/api/holidays", c.AuthMiddleware, c.AdminMiddleware("HOLIDAYS"))
+	route.Post("/", c.HolidayController.Create)
+	route.Get("/", c.HolidayController.List)
+	route.Put("/:id", c.HolidayController.Update)
+	route.Delete("/:id", c.HolidayController.Delete)
 }

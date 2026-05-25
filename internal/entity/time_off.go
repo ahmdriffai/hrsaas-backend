@@ -97,6 +97,7 @@ type TimeOffApproval struct {
 	ID               string         `gorm:"column:id;primaryKey"`
 	TimeOffRequestId string         `gorm:"column:time_off_request_id;not null"`
 	ApproverId       string         `gorm:"column:approver_id;not null"`
+	ApprovalOrder    int            `gorm:"column:approval_order;not null"`
 	Status           string         `gorm:"column:approval_status;not null"`
 	IsRequired       bool           `gorm:"column:is_required;not null"`
 	ActionReason     string         `gorm:"column:action_reason"`

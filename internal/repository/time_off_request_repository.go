@@ -91,5 +91,9 @@ func (r *TimeOffRequestRepository) applyFilters(query *gorm.DB, request *model.S
 		endDate, _ := lib.ParseDateToUnixMilli(request.EndDate)
 		query = query.Where("end_date <= ?", endDate)
 	}
+	if request.TimeOffTypeID != "" {
+		query = query.Where("time_off_type_id = ?", request.TimeOffTypeID)
+	}
+
 	return query
 }

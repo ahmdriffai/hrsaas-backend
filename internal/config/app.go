@@ -46,6 +46,7 @@ func Bootstrap(config *BootstrapConfig) {
 	permissionRepository := repository.NewPermissionRepository(config.Log)
 	roleRepository := repository.NewRoleRepository(config.Log)
 	employeeDocumentRepository := repository.NewEmployeeDocumentRepository(config.Log)
+	holidayRepository := repository.NewHolidayRepository(config.Log)
 
 	// setup producer
 
@@ -112,7 +113,7 @@ func Bootstrap(config *BootstrapConfig) {
 	permissionUseCase := usecase.NewPermissionUseCase(config.DB, config.Log, config.Validate, permissionRepository)
 	roleUseCase := usecase.NewRoleUseCase(config.DB, config.Log, config.Validate, roleRepository, permissionRepository)
 	employeeDocumentUseCase := usecase.NewEmployeeDocumentUseCase(config.DB, config.Log, config.Validate, employeeDocumentRepository)
-
+	holidayUseCase := usecase.NewHolidayUseCase(config.DB, config.Log, config.Validate, holidayRepository)
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
 	userController := http.NewUserController(userUseCase, config.Log, config.Config)
@@ -135,10 +136,10 @@ func Bootstrap(config *BootstrapConfig) {
 	permissionController := http.NewPermissionController(permissionUseCase, config.Log)
 	roleController := http.NewRoleController(roleUseCase, config.Log)
 	employeeDocumentController := http.NewEmployeeDocumentController(employeeDocumentUseCase, config.Log)
-
+	holidayController := http.NewHolidayController(holidayUseCase, config.Log)
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
-	adminMiddleware := middleware.NewAdmin()
+	adminMiddleware := middleware.NewAdmin
 	employeeMiddleware := middleware.NewEmployee()
 
 	// route config
@@ -169,6 +170,7 @@ func Bootstrap(config *BootstrapConfig) {
 		PermissionController:       permissionController,
 		RoleController:             roleController,
 		EmployeeDocumentController: employeeDocumentController,
+		HolidayController:          holidayController,
 	}
 
 	routeConfig.Setup()

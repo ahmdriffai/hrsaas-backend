@@ -1,7 +1,7 @@
 package model
 
 type PermissionResponse struct {
-	ID        string `json:"id"`
+	ID        string `json:"id,omitempty"`
 	Name      string `json:"name"`
 	CreatedAt int64  `json:"created_at,omitempty"`
 	UpdatedAt int64  `json:"updated_at,omitempty"`

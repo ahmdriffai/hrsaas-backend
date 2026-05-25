@@ -283,6 +283,11 @@ func (c *TimeOffApprovalUseCase) ListApprovalsByApprover(ctx context.Context, ap
 
 	query := tx.Model(&entity.TimeOffApproval{}).
 		Where("approver_id = ?", approverID).
+		Where(`NOT EXISTS (
+			SELECT 1 FROM time_off_approvals prev
+			WHERE prev.time_off_request_id = time_off_approvals.time_off_request_id
+			AND prev.approval_order < time_off_approvals.approval_order
+			AND prev.approval_status != 'APPROVED')`).
 		Preload("Employee").
 		Preload("TimeOffRequest").
 		Preload("TimeOffRequest.Employee").

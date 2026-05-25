@@ -140,6 +140,7 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 		EndDate:       &endDate,
 		RequestReason: &request.RequestReason,
 		RequestStatus: &status,
+		FileUrl:       request.FileUrl,
 	}
 
 	if err := c.TimeOffRequestRepo.Create(tx, item); err != nil {
@@ -168,6 +169,7 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 	for i := range approvals {
 		approvals[i].TimeOffRequestId = item.ID
 		approvals[i].Status = "PENDING"
+		approvals[i].ApprovalOrder = i + 1
 	}
 	// Persist approval records.
 	if err := c.TimeOffApprovalRepo.CreateMany(tx, approvals); err != nil {
@@ -430,7 +432,6 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Position not found")
 	}
 
-	// currentName := strings.TrimSpace(current.Name)
 	parentID := current.ParentID
 
 	const maxDepth = 20
@@ -466,33 +467,12 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		// Avoid self-approval.
 		if approver.EmployeeID != employeeID {
 			approvals = append(approvals, entity.TimeOffApproval{
-				ApproverId: approver.EmployeeID,
-				IsRequired: parent.IsApprover,
-				Status:     "PENDING",
+				ApproverId:    approver.EmployeeID,
+				IsRequired:    parent.IsApprover,
+				Status:        "PENDING",
+				ApprovalOrder: depth + 1,
 			})
 		}
-
-		// Stop rules:
-		// 1) Below Direktur Operasional -> stop at Direktur Operasional.
-		// 2) Direktur Operasional -> only need Direktur Utama.
-		// 3) Direktur Utama -> only need Komisaris Utama.
-		// if strings.EqualFold(parentName, "Direktur Operasional") && !strings.EqualFold(currentName, "Direktur Operasional") {
-		// 	break
-		// }
-		// if strings.EqualFold(currentName, "Direktur Operasional") && strings.EqualFold(parentName, "Direktur Utama") {
-		// 	break
-		// }
-		// if strings.EqualFold(currentName, "Direktur Utama") && strings.EqualFold(parentName, "Komisaris Utama") {
-		// 	break
-		// }
-		// // Fallback stop: if we hit a required approver, stop here unless current is Direktur Operasional.
-		// if parent.IsApprover && !strings.EqualFold(currentName, "Direktur Operasional") {
-		// 	break
-		// }
-
-		// Move to the next parent.
-		// currentName = parentName
-
 		parentID = parent.ParentID
 	}
 
