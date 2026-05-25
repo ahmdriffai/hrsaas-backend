@@ -277,7 +277,7 @@ func (c *RouteConfig) SetupVisitRouter() {
 }
 
 func (c *RouteConfig) SetupHolidayRouter() {
-	route := c.App.Group("/api/holidays", c.AuthMiddleware, c.AdminMiddleware)
+	route := c.App.Group("/api/holidays", c.AuthMiddleware, c.AdminMiddleware("HOLIDAYS"))
 	route.Post("/", c.HolidayController.Create)
 	route.Get("/", c.HolidayController.List)
 	route.Put("/:id", c.HolidayController.Update)
