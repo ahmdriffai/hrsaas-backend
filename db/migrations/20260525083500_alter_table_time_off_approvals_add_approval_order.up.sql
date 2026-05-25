@@ -1,0 +1,1 @@
+ALTER TABLE time_off_approvals ADD COLUMN IF NOT EXISTS approval_order INT NOT NULL DEFAULT 0;
