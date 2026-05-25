@@ -116,10 +116,6 @@ func (c *TimeOffRequestController) DeleteRequest(ctx *fiber.Ctx) error {
 
 // TODO: Add admin-only filters and company scoping.
 func (c *TimeOffRequestController) ListRequests(ctx *fiber.Ctx) error {
-	if !middleware.HasRole(ctx, "ADMIN") {
-		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
-	}
-
 	request := new(model.SearchTimeOffRequest)
 	request.EmployeeID = ctx.Query("employee_id", "")
 	request.TimeOffTypeID = ctx.Query("time_off_type_id", "")
