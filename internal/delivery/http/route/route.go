@@ -180,7 +180,7 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 	// TIME OFF REQUEST ROUTES
 	// admin and employee
 	timeOffRequest := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
-	timeOffRequest.Get("/:id", c.TimeOffRequestController.GetRequestByID)
+	timeOffRequest.Get("/:id/detail", c.TimeOffRequestController.GetRequestByID)
 	timeOffRequest.Put("/:id", c.TimeOffRequestController.UpdateRequest)
 	timeOffRequest.Get("/:id/approvals", c.TimeOffApprovalController.ListApprovals)
 
