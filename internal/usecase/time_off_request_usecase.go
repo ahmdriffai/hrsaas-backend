@@ -496,12 +496,15 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 	for _, a := range approvals {
 		inChain[a.ApproverId] = true
 	}
+
+	globalOrder := len(approvals) + 1
 	for _, ga := range globalApprovers {
 		if !inChain[ga.EmployeeID] {
 			approvals = append(approvals, entity.TimeOffApproval{
-				ApproverId: ga.EmployeeID,
-				IsRequired: true,
-				Status:     "PENDING",
+				ApproverId:    ga.EmployeeID,
+				IsRequired:    true,
+				Status:        "PENDING",
+				ApprovalOrder: globalOrder,
 			})
 		}
 	}
