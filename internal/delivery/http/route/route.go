@@ -262,7 +262,7 @@ func (c *RouteConfig) SetupEmployeeDocumentRouter() {
 
 func (c *RouteConfig) SetupVisitRouter() {
 	route := c.App.Group("/api/visits", c.AuthMiddleware)
-	route.Get("/:id", c.VisitController.GetByID)
+	route.Get("/:id/detail", c.VisitController.GetByID)
 
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Post("/", c.VisitController.Create)
