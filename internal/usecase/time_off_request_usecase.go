@@ -101,9 +101,11 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Tanggal pengajuan cuti bertabrakan dengan pengajuan lain yang sudah ada")
 	}
 	// Limit to 5 concurrent leave requests per day across all employees for any day in the requested range.
+	// The limit is bases on time off type, so different types of leave (e.g. annual vs sick) can have separate limits.
 	var concurrentCount int64
 	if err := tx.Table("time_off_requests").
 		Where("employee_id != ?", employeeID).
+		Where("time_off_type_id = ?", request.TimeOffTypeID).
 		Where("request_status IN ?", []string{"PENDING", "APPROVED"}).
 		Where("NOT (end_date < ? OR start_date > ?)", startDate, endDate).
 		Count(&concurrentCount).Error; err != nil {

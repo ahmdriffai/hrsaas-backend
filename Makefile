@@ -12,7 +12,7 @@ DB_URL = "postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?ss
 
 MIGRATE = migrate -path db/migrations -database $(DB_URL)
 
-.PHONY: run build dev tidy migrate-up migrate-down migrate-up-n migrate-down-n migrate-force migrate-version migrate-create
+.PHONY: run build dev tidy seed migrate-up migrate-down migrate-up-n migrate-down-n migrate-force migrate-version migrate-create
 
 ## ─── APP ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +31,10 @@ dev:
 ## Tidy dependencies
 tidy:
 	go mod tidy
+
+## Jalankan seeder
+seed:
+	go run db/seeder/main.go
 
 ## ─── MIGRATION ──────────────────────────────────────────────────────────────
 

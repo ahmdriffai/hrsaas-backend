@@ -194,10 +194,18 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 	employeeRoute.Post("/", c.TimeOffRequestController.CreateRequest)
 	employeeRoute.Get("/_current", c.TimeOffRequestController.ListCurrentRequests)
 
+<<<<<<< HEAD
 	employeeRoute.Patch("/:id/approvals/:approval_id", c.TimeOffApprovalController.Decide) // Mbingungi
 
 	// TIME OFF REQUEST ROUTES
 	// admin and employee
+=======
+	route.Get("/:id", c.TimeOffRequestController.GetRequestByID)
+	route.Put("/:id", c.TimeOffRequestController.UpdateRequest)
+	route.Delete("/:id", c.TimeOffRequestController.DeleteRequest)
+	route.Get("/:id/approvals", c.TimeOffApprovalController.ListApprovals)
+
+>>>>>>> 1413ba0 (feat: add time-off-types on limit)
 	typeRoute := c.App.Group("/api/time-off-types", c.AuthMiddleware)
 	typeRoute.Get("/", c.TimeOffTypeController.ListTypes)
 	typeRoute.Get("/:id", c.TimeOffTypeController.Detail)
