@@ -43,13 +43,13 @@ type Division struct {
 func (Division) TableName() string { return "divisions" }
 
 type Position struct {
-	ID        string  `gorm:"column:id;primaryKey"`
-	CompanyID string  `gorm:"column:company_id"`
-	Name      string  `gorm:"column:name"`
-	ParentID  *string `gorm:"column:parent_id"`
-	IsApprover bool   `gorm:"column:is_approver"`
-	CreatedAt int64   `gorm:"column:created_at"`
-	UpdatedAt int64   `gorm:"column:updated_at"`
+	ID         string  `gorm:"column:id;primaryKey"`
+	CompanyID  string  `gorm:"column:company_id"`
+	Name       string  `gorm:"column:name"`
+	ParentID   *string `gorm:"column:parent_id"`
+	IsApprover bool    `gorm:"column:is_approver"`
+	CreatedAt  int64   `gorm:"column:created_at"`
+	UpdatedAt  int64   `gorm:"column:updated_at"`
 }
 
 func (Position) TableName() string { return "positions" }
@@ -230,9 +230,9 @@ func main() {
 	// ── 3. Positions (hierarchical) ────────────────────────────────────────────
 	// Order matters: parent must exist before child
 	type posSpec struct {
-		name     string
+		name      string
 		parentKey string // empty = root
-		approver bool
+		approver  bool
 	}
 	posSpecs := []posSpec{
 		{"Direktur Utama", "", true},
@@ -276,12 +276,12 @@ func main() {
 		}
 		return r
 	}
-	adminRole := ensureRole("Admin")
-	staffRole := ensureRole("Staff")
+	adminRole := ensureRole("ADMIN")
+	staffRole := ensureRole("STAFF")
 
 	// ── 5. Permissions → Admin role ────────────────────────────────────────────
 	permissionNames := []string{
-		"USER", "EMPLOYEES", "EMPLOYEE_CONTRACT", "DIVISIONS",
+		"USERS", "EMPLOYEES", "EMPLOYEE_CONTRACTS", "DIVISIONS",
 		"SANCTIONS", "EMPLOYEE_SANCTIONS", "POSITIONS", "OFFICE_LOCATIONS",
 		"SHIFTS", "TIME_OFF_REQUESTS", "TIME_OFF_TYPES", "TIME_OFF_BALANCES",
 		"PERMISSIONS", "ROLES", "EMPLOYEE_DOCUMENTS", "VISITS", "HOLIDAYS",
@@ -337,8 +337,8 @@ func main() {
 				Gender: emp.gender, BirthPlace: "Jakarta",
 				BirthDate: birthDate, BlodType: "O",
 				MaritalStatus: "single", Religion: "Islam",
-				Phone: fmt.Sprintf("08100000000%d", i+1),
-				Timezone: "Asia/Jakarta",
+				Phone:     fmt.Sprintf("08100000000%d", i+1),
+				Timezone:  "Asia/Jakarta",
 				CreatedAt: now(), UpdatedAt: now(),
 			}
 			db.Create(&employee)

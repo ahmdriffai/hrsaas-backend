@@ -188,6 +188,7 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 	adminRoute := timeOffRequest.Group("/", c.AdminMiddleware("TIME_OFF_REQUESTS"))
 	adminRoute.Get("/", c.TimeOffRequestController.ListRequests)
 	adminRoute.Delete("/:id", c.TimeOffRequestController.DeleteRequest)
+	adminRoute.Post("/:employee_id", c.TimeOffRequestController.AdminCreateRequest)
 
 	// employee only
 	employeeRoute := timeOffRequest.Group("/", c.EmployeeMiddleware)
