@@ -25,9 +25,9 @@ type Employee struct {
 	UpdatedAt      int64  `gorm:"column:updated_at"`
 
 	User              User
-	EmployeeContract  []EmployeeContract  `gorm:"foreignKey:EmployeeID;references:ID"`
-	OfficeLocations   []OfficeLocation    `gorm:"many2many:employee_office_locations"`
-	EmployeeDocuments []EmployeeDocument  `gorm:"foreignKey:EmployeeID;references:ID"`
+	EmployeeContract  []EmployeeContract `gorm:"foreignKey:EmployeeID;references:ID"`
+	OfficeLocations   []OfficeLocation   `gorm:"many2many:employee_office_locations"`
+	EmployeeDocuments []EmployeeDocument `gorm:"foreignKey:EmployeeID;references:ID"`
 }
 
 // BeforeCreate hook to set UUID
@@ -86,4 +86,53 @@ type EmployeeContract struct {
 func (c *EmployeeContract) BeforeCreate(tx *gorm.DB) (err error) {
 	c.ID = uuid.NewString()
 	return nil
+}
+
+type EmployeeEducation struct {
+	ID             string   `gorm:"column:id;primaryKey"`
+	CompanyID      string   `gorm:"column:company_id;not null"`
+	EmployeeID     string   `gorm:"column:employee_id;not null"`
+	EducationLevel string   `gorm:"column:education_level;not null"`
+	InstitutionName string  `gorm:"column:institution_name;not null"`
+	Major          string   `gorm:"column:major;not null"`
+	GraduationYear string   `gorm:"column:graduation_year"`
+	GPA            *float64 `gorm:"column:gpa"`
+	StartYear      *int     `gorm:"column:start_year"`
+	EndYear        *int     `gorm:"column:end_year"`
+	CreatedAt      int64    `gorm:"column:created_at;autoCreateTime:milli"`
+	UpdatedAt      int64    `gorm:"column:updated_at;autoUpdateTime:milli"`
+	Employee       Employee `gorm:"foreignKey:EmployeeID;references:ID"`
+}
+
+// BeforeCreate hook to set UUID
+func (c *EmployeeEducation) BeforeCreate(tx *gorm.DB) (err error) {
+	c.ID = uuid.NewString()
+	return nil
+}
+
+func (c *EmployeeEducation) TableName() string {
+	return "employee_educations"
+}
+
+type EmployeeTraining struct {
+	ID             string   `gorm:"column:id;primaryKey"`
+	CompanyID      string   `gorm:"column:company_id;not null"`
+	EmployeeID     string   `gorm:"column:employee_id;not null"`
+	TrainingName   string   `gorm:"column:training_name;not null"`
+	Organizer      string   `gorm:"column:organizer;not null"`
+	StartDate      int64    `gorm:"column:start_date;not null"`
+	EndDate        *int64   `gorm:"column:end_date"`
+	CertificateURL *string  `gorm:"column:certificate_url"`
+	CreatedAt      int64    `gorm:"column:created_at;autoCreateTime:milli"`
+	UpdatedAt      int64    `gorm:"column:updated_at;autoUpdateTime:milli"`
+	Employee       Employee `gorm:"foreignKey:EmployeeID;references:ID"`
+}
+
+func (c *EmployeeTraining) BeforeCreate(tx *gorm.DB) (err error) {
+	c.ID = uuid.NewString()
+	return nil
+}
+
+func (c *EmployeeTraining) TableName() string {
+	return "employee_trainings"
 }
