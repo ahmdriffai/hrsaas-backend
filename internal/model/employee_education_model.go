@@ -10,7 +10,7 @@ type EmployeeEducationResponse struct {
 	EducationLevel  string   `json:"education_level"`
 	InstitutionName string   `json:"institution_name"`
 	Major           string   `json:"major"`
-	GraduationYear  string   `json:"graduation_year"`
+	GraduationYear  int64    `json:"graduation_year"`
 	GPA             *float64 `json:"gpa,omitempty"`
 	StartYear       *int     `json:"start_year,omitempty"`
 	EndYear         *int     `json:"end_year,omitempty"`

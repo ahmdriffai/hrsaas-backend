@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"hr-sas/internal/entity"
+	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
 
@@ -37,13 +38,19 @@ func (c *EmployeeEducationUseCase) Create(ctx context.Context, request *model.Cr
 		return nil, fiber.ErrBadRequest
 	}
 
+	graduationYear, err := lib.ParseDateToUnixMilli(request.GraduationYear)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to parse graduation year")
+		return nil, fiber.ErrBadRequest
+	}
+
 	item := &entity.EmployeeEducation{
 		CompanyID:       request.CompanyID,
 		EmployeeID:      request.EmployeeID,
 		EducationLevel:  request.EducationLevel,
 		InstitutionName: request.InstitutionName,
 		Major:           request.Major,
-		GraduationYear:  request.GraduationYear,
+		GraduationYear:  graduationYear,
 		GPA:             request.GPA,
 		StartYear:       request.StartYear,
 		EndYear:         request.EndYear,
@@ -139,7 +146,12 @@ func (c *EmployeeEducationUseCase) Update(ctx context.Context, request *model.Up
 		item.Major = *request.Major
 	}
 	if request.GraduationYear != nil {
-		item.GraduationYear = *request.GraduationYear
+		t, err := lib.ParseDateToUnixMilli(*request.GraduationYear)
+		if err != nil {
+			c.Log.WithError(err).Error("Failed to parse graduation year")
+			return nil, fiber.ErrBadRequest
+		}
+		item.GraduationYear = t
 	}
 	if request.GPA != nil {
 		item.GPA = request.GPA
