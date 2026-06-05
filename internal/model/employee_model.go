@@ -83,16 +83,10 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 	}
 
 	var identityNumber string
-	for _, id := range employee.EmployeeIdentifications {
-		if id.IsDefault {
-			identityNumber = id.IdentityNumber
-			break
-		}
+	if employee.EmployeeIdentifications != nil {
+		identityNumber = employee.EmployeeIdentifications.IdentityNumber
 	}
 
-	if identityNumber == "" && len(employee.EmployeeIdentifications) > 0 {
-		identityNumber = employee.EmployeeIdentifications[0].IdentityNumber
-	}
 	contracts := EmployeeContractsToResponse(employee.EmployeeContract)
 	employeeDocs := EmployeeDocumentsToResponse(employee.EmployeeDocuments)
 	user := UserToResponse(&employee.User)

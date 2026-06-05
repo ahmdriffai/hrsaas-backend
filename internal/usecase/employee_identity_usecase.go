@@ -39,6 +39,15 @@ func (c *EmployeeIdentityUseCase) Create(ctx context.Context, request *model.Cre
 		return nil, fiber.ErrBadRequest
 	}
 
+	var count int64
+	if err := tx.Model(&entity.EmployeeIdentity{}).Where("employee_id = ?", request.EmployeeID).Count(&count).Error; err != nil {
+		c.Log.WithError(err).Error("Failed to check existing employee identity")
+		return nil, fiber.ErrInternalServerError
+	}
+	if count > 0 {
+		return nil, fiber.NewError(fiber.StatusConflict, "Employee already has an identity")
+	}
+
 	item := &entity.EmployeeIdentity{
 		EmployeeID:                 request.EmployeeID,
 		IdentityType:               request.IdentityType,

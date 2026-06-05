@@ -27,7 +27,7 @@ func (r *EmployeeRepository) CountByEmployeeNumberAndCompanyID(db *gorm.DB, empl
 
 func (r *EmployeeRepository) Search(db *gorm.DB, request *model.SearchEmployeeRequest) ([]entity.Employee, int64, error) {
 	var employee []entity.Employee
-	if err := db.Preload("User").Scopes(r.FilterSearch(request)).Offset((request.Page - 1) * request.Size).Limit(request.Size).Find(&employee).Error; err != nil {
+	if err := db.Preload("User").Preload("EmployeeIdentifications").Scopes(r.FilterSearch(request)).Offset((request.Page - 1) * request.Size).Limit(request.Size).Find(&employee).Error; err != nil {
 		return nil, 0, err
 	}
 
