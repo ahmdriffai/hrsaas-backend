@@ -11,6 +11,8 @@ type EmployeeDocument struct {
 	ID         string   `gorm:"column:id;primaryKey"`
 	CompanyID  string   `gorm:"column:company_id;not null"`
 	EmployeeID string   `gorm:"column:employee_id;not null"`
+	DocType    string   `gorm:"column:doc_type;not null"`
+	DocNumber  string   `gorm:"column:doc_number;not null"`
 	DocName    string   `gorm:"column:doc_name;not null"`
 	FileURL    string   `gorm:"column:file_url;not null"`
 	IssuedAt   int64    `gorm:"column:issued_at;not null"`

@@ -36,6 +36,7 @@ type RouteConfig struct {
 	EmployeeDocumentController  *http.EmployeeDocumentController
 	EmployeeEducationController *http.EmployeeEducationController
 	EmployeeTrainingController  *http.EmployeeTrainingController
+	EmployeeIdentityController  *http.EmployeeIdentityController
 }
 
 func (c *RouteConfig) Setup() {
@@ -61,6 +62,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupHolidayRouter()
 	c.SetupEmployeeEducationRouter()
 	c.SetupEmployeeTrainingRouter()
+	c.SetupEmployeeIdentityRouter()
 }
 
 /*
@@ -298,6 +300,14 @@ func (c *RouteConfig) SetupEmployeeTrainingRouter() {
 	route.Get("/:training_id", c.EmployeeTrainingController.Detail)
 	route.Put("/:training_id", c.EmployeeTrainingController.Update)
 	route.Delete("/:training_id", c.EmployeeTrainingController.Delete)
+}
+
+func (c *RouteConfig) SetupEmployeeIdentityRouter() {
+	route := c.App.Group("/api/employee-identities", c.AuthMiddleware, c.AdminMiddleware("EMPLOYEE_IDENTITIES"))
+	route.Post("/", c.EmployeeIdentityController.Create)
+	route.Get("/", c.EmployeeIdentityController.List)
+	route.Put("/:identity_id", c.EmployeeIdentityController.Update)
+	route.Delete("/:identity_id", c.EmployeeIdentityController.Delete)
 }
 
 func (c *RouteConfig) SetupHolidayRouter() {

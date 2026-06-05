@@ -11,8 +11,10 @@ type EmployeeResponse struct {
 	UserID             string                      `json:"user_id,omitempty"`
 	EmployeeNumber     string                      `json:"employee_number,omitempty"`
 	Fullname           string                      `json:"fullname,omitempty"`
+	Gender             string                      `json:"gender,omitempty"`
 	BirthPlace         string                      `json:"birth_place,omitempty"`
 	BirthDate          int64                       `json:"birth_date,omitempty"`
+	IdentityNumber     string                      `json:"identity_number,omitempty"`
 	BlodType           string                      `json:"blood_type,omitempty"`
 	MaritalStatus      string                      `json:"marital_status,omitempty"`
 	Religion           string                      `json:"religion,omitempty"`
@@ -30,6 +32,7 @@ type EmployeeResponse struct {
 type CreateEmployeeRequest struct {
 	CompanyID      string `json:"-" validate:"required"`
 	Fullname       string `json:"fullname" validate:"required"`
+	Gender         string `json:"gender" validate:"required"`
 	EmployeeNumber string `json:"employee_number" validate:"required"`
 	BirthPlace     string `json:"birth_place" validate:"required"`
 	BirthDate      string `json:"birth_date" validate:"required"`
@@ -45,6 +48,7 @@ type CreateEmployeeRequest struct {
 type UpdateEmployeeRequest struct {
 	ID             string  `json:"-"`
 	Fullname       *string `json:"fullname,omitempty"`
+	Gender         *string `json:"gender,omitempty"`
 	EmployeeNumber *string `json:"employee_number,omitempty"`
 	BirthPlace     *string `json:"birth_place,omitempty"`
 	BirthDate      *string `json:"birth_date,omitempty"`
@@ -78,6 +82,17 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		return nil
 	}
 
+	var identityNumber string
+	for _, id := range employee.EmployeeIdentifications {
+		if id.IsDefault {
+			identityNumber = id.IdentityNumber
+			break
+		}
+	}
+
+	if identityNumber == "" && len(employee.EmployeeIdentifications) > 0 {
+		identityNumber = employee.EmployeeIdentifications[0].IdentityNumber
+	}
 	contracts := EmployeeContractsToResponse(employee.EmployeeContract)
 	employeeDocs := EmployeeDocumentsToResponse(employee.EmployeeDocuments)
 	user := UserToResponse(&employee.User)
@@ -87,8 +102,10 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		CompanyID:      employee.CompanyID,
 		UserID:         employee.UserID,
 		Fullname:       employee.Fullname,
+		Gender:         employee.Gender,
 		BirthPlace:     employee.BirthPlace,
 		BirthDate:      employee.BirthDate,
+		IdentityNumber: identityNumber,
 		BlodType:       employee.BlodType,
 		MaritalStatus:  employee.MaritalStatus,
 		Religion:       employee.Religion,
