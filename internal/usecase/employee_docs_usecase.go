@@ -46,6 +46,8 @@ func (c *EmployeeDocumentUseCase) Create(ctx context.Context, request *model.Cre
 
 	item := &entity.EmployeeDocument{
 		EmployeeID: request.EmployeeID,
+		DocType:    request.DocType,
+		DocNumber:  request.DocNumber,
 		DocName:    request.DocName,
 		FileURL:    request.FileURL,
 		IssuedAt:   issuedAt,
@@ -110,6 +112,12 @@ func (c *EmployeeDocumentUseCase) Update(ctx context.Context, request *model.Upd
 		return nil, fiber.ErrInternalServerError
 	}
 
+	if request.DocType != nil {
+		item.DocType = *request.DocType
+	}
+	if request.DocNumber != nil {
+		item.DocNumber = *request.DocNumber
+	}
 	if request.DocName != nil {
 		item.DocName = *request.DocName
 	}

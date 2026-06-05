@@ -30,7 +30,8 @@ s3:
   secret_key: ""
   public_url: "" # base URL publik, contoh: https://cdn.example.com atau https://<bucket>.s3.amazonaws.com
 
-
+face:
+  base_url: "http://localhost:8080"
 # mail:
 #   smtp:
 #     host: smtp.gmail.com

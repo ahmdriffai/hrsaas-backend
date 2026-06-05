@@ -91,6 +91,7 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 	// create employee entity
 	employee := &entity.Employee{
 		Fullname:       request.Fullname,
+		Gender:         request.Gender,
 		BirthPlace:     request.BirthPlace,
 		BirthDate:      birthDate,
 		BlodType:       request.BlodType,
@@ -317,7 +318,12 @@ func (c *EmployeeUseCase) Detail(ctx context.Context, request *model.DetailEmplo
 	defer tx.Rollback()
 
 	employee := new(entity.Employee)
-	err := c.EmployeeRepository.FindByIdAndCompany(tx, employee, request.ID, request.CompanyID, "EmployeeContract", "EmployeeContract.Position", "EmployeeContract.Division", "EmployeeDocuments", "User", "User.Roles")
+	err := c.EmployeeRepository.FindByIdAndCompany(
+		tx, employee, request.ID, request.CompanyID,
+		"EmployeeContract", "EmployeeContract.Position",
+		"EmployeeContract.Division", "EmployeeDocuments",
+		"User", "User.Roles", "EmployeeIdentifications",
+	)
 	if err != nil {
 		c.Log.WithError(err).Error("Failed to find employee by ID")
 		return nil, fiber.ErrNotFound
@@ -375,6 +381,14 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 		}
 		employee.Fullname = fullname
 		employee.User.Name = fullname
+	}
+
+	if request.Gender != nil {
+		gender := strings.TrimSpace(*request.Gender)
+		if gender == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Gender Harus di isi")
+		}
+		employee.Gender = gender
 	}
 
 	if request.BirthPlace != nil {

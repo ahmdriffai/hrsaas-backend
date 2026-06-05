@@ -26,6 +26,7 @@ type AttendanceUseCase struct {
 	ShiftRepository      *repository.ShiftRepository
 	ShiftDayRepo         *repository.ShiftDayRepository
 	AttendanceLogRepo    *repository.AttendanceLogRepository
+	FaceServiceURL       string
 }
 
 func NewAttendanceUseCase(
@@ -37,6 +38,7 @@ func NewAttendanceUseCase(
 	shiftRepository *repository.ShiftRepository,
 	shiftDayRepo *repository.ShiftDayRepository,
 	attendanceLogRepo *repository.AttendanceLogRepository,
+	faceServiceURL string,
 ) *AttendanceUseCase {
 	return &AttendanceUseCase{
 		DB:                   db,
@@ -47,6 +49,7 @@ func NewAttendanceUseCase(
 		ShiftRepository:      shiftRepository,
 		ShiftDayRepo:         shiftDayRepo,
 		AttendanceLogRepo:    attendanceLogRepo,
+		FaceServiceURL:       faceServiceURL,
 	}
 }
 
@@ -146,6 +149,11 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		Status:      "HADIR",
 	}
 
+	faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah")
+	}
+
 	attendanceLog := &entity.AttendanceLog{
 		Type:               "CHECK_IN",
 		Time:               nowMilli,
@@ -153,8 +161,8 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		Lng:                request.Lng,
 		LocationDistance:   locationDistance,
 		IsLocationVerified: true,
-		IsFaceVerified:     false,
-		FaceConfidence:     0,
+		IsFaceVerified:     faceResult.IsVerified,
+		FaceConfidence:     faceResult.Confidence,
 		FaceImageURL:       request.FaceImageUrl,
 		DeviceInfo:         request.DeviceInfo,
 	}
@@ -237,6 +245,11 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		return nil, err
 	}
 
+	faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah")
+	}
+
 	attendance.CheckOutTime = nowMilli
 
 	checkInTime := time.UnixMilli(attendance.CheckInTime)
@@ -259,8 +272,8 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		Lng:                request.Lng,
 		LocationDistance:   distance,
 		IsLocationVerified: true,
-		IsFaceVerified:     false,
-		FaceConfidence:     0,
+		IsFaceVerified:     faceResult.IsVerified,
+		FaceConfidence:     faceResult.Confidence,
 		FaceImageURL:       request.FaceImageUrl,
 		DeviceInfo:         request.DeviceInfo,
 	}
