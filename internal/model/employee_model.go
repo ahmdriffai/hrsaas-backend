@@ -6,23 +6,25 @@ import (
 )
 
 type EmployeeResponse struct {
-	ID             string                     `json:"id,omitempty"`
-	CompanyID      string                     `json:"company_id,omitempty"`
-	UserID         string                     `json:"user_id,omitempty"`
-	EmployeeNumber string                     `json:"employee_number,omitempty"`
-	Fullname       string                     `json:"fullname,omitempty"`
-	BirthPlace     string                     `json:"birth_place,omitempty"`
-	BirthDate      int64                      `json:"birth_date,omitempty"`
-	BlodType       string                     `json:"blood_type,omitempty"`
-	MaritalStatus  string                     `json:"marital_status,omitempty"`
-	Religion       string                     `json:"religion,omitempty"`
-	Phone          string                     `json:"phone,omitempty"`
-	Timezone       string                     `json:"timezone,omitempty"`
-	Contracts      []EmployeeContractResponse `json:"contracts,omitempty"`
-	EmployeeDocs   []EmployeeDocumentResponse `json:"employee_docs,omitempty"`
-	User           *UserResponse              `json:"user,omitempty"`
-	CreatedAt      int64                      `json:"created_at,omitempty"`
-	UpdatedAt      int64                      `json:"updated_at,omitempty"`
+	ID                 string                      `json:"id,omitempty"`
+	CompanyID          string                      `json:"company_id,omitempty"`
+	UserID             string                      `json:"user_id,omitempty"`
+	EmployeeNumber     string                      `json:"employee_number,omitempty"`
+	Fullname           string                      `json:"fullname,omitempty"`
+	BirthPlace         string                      `json:"birth_place,omitempty"`
+	BirthDate          int64                       `json:"birth_date,omitempty"`
+	BlodType           string                      `json:"blood_type,omitempty"`
+	MaritalStatus      string                      `json:"marital_status,omitempty"`
+	Religion           string                      `json:"religion,omitempty"`
+	Phone              string                      `json:"phone,omitempty"`
+	Timezone           string                      `json:"timezone,omitempty"`
+	Contracts          []EmployeeContractResponse  `json:"contracts,omitempty"`
+	EmployeeDocs       []EmployeeDocumentResponse  `json:"employee_docs,omitempty"`
+	EmployeeEducations []EmployeeEducationResponse `json:"employee_educations,omitempty"`
+	EmployeeTrainings  []EmployeeTrainingResponse  `json:"employee_trainings,omitempty"`
+	User               *UserResponse               `json:"user,omitempty"`
+	CreatedAt          int64                       `json:"created_at,omitempty"`
+	UpdatedAt          int64                       `json:"updated_at,omitempty"`
 }
 
 type CreateEmployeeRequest struct {

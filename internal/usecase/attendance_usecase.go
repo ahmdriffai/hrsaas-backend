@@ -50,30 +50,47 @@ func NewAttendanceUseCase(
 	}
 }
 
-// Implement Attendance Use Case Check-In,
-func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInAttendanceRequest) (*model.AttendanceResponse, error) {
+func (c *AttendanceUseCase) validateLocation(tx *gorm.DB, employeeID string, lat, lng float64) (distance float64, err error) {
+	locations, err := c.LocationRepository.GetByEmployeeID(tx, employeeID)
+	if err != nil {
+		return 0, fiber.ErrInternalServerError
+	}
 
+	for _, location := range locations {
+		locLat, err := strconv.ParseFloat(location.Lat, 64)
+		if err != nil {
+			continue
+		}
+		locLng, err := strconv.ParseFloat(location.Lng, 64)
+		if err != nil {
+			continue
+		}
+		d := lib.DistanceMeter(lat, lng, locLat, locLng)
+		if d <= float64(location.Radius) {
+			return d, nil
+		}
+	}
+
+	return 0, fiber.NewError(400, "Anda diluar jangkauan")
+}
+
+func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInAttendanceRequest) (*model.AttendanceResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	// cek user adalah employee
 	if request.EmployeeID == "" {
 		c.Log.Error("Bad Request")
 		return nil, fiber.NewError(400, "User tidak bisa melakukan check-in karena bukan karyawan")
 	}
 
-	// validate request body
 	if err := c.Validate.Struct(request); err != nil {
 		c.Log.WithError(err).Error("Failed to validate request body")
 		return nil, fiber.ErrBadRequest
 	}
 
-	// init time now
 	now := time.Now()
-	nowMilli := time.Now().UnixMilli()
+	nowMilli := now.UnixMilli()
 
-	// Ambil shift karyawan (misalnya dari employee.shift_id → shifts)
-	// → Dapatkan start_time, late_tolerance
 	shifts, err := c.ShiftRepository.FindByEmployeeID(tx, request.EmployeeID)
 	if err != nil {
 		return nil, fiber.NewError(fiber.StatusNotFound, "Shift tidak ditemukan")
@@ -83,20 +100,15 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	}
 	shift := shifts[0]
 
-	// Cek apakah sudah ada attendance hari ini?
-	// → Query attendance WHERE employee_id & date = today
 	var existingAttendance entity.Attendance
 	err = c.AttendanceRepository.FindByEmployeeIDAndDate(tx, &existingAttendance, request.EmployeeID, nowMilli)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, fiber.ErrInternalServerError
 	}
-	// → Jika ada → return error "Sudah check-in hari ini
 	if existingAttendance.ID != "" {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Sudah check-in hari ini")
 	}
 
-	// Validasi lokasi
-	// - Ambil office_locations yang terdaftar oleh employee
 	locations, err := c.LocationRepository.GetByEmployeeID(tx, request.EmployeeID)
 	if err != nil {
 		return nil, fiber.ErrInternalServerError
@@ -104,7 +116,6 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 
 	fmt.Println(locations)
 
-	// - Hitung jarak (lat,lng user ke kantor)
 	isInRange := false
 	locationDistance := 0.0
 	for _, location := range locations {
@@ -116,7 +127,6 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		if err != nil {
 			continue
 		}
-
 		distance := lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
 		if distance <= float64(location.Radius) {
 			isInRange = true
@@ -124,21 +134,18 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 			break
 		}
 	}
-	// Jika lokasi valid, lanjutkan proses
 	if !isInRange {
 		return nil, fiber.NewError(400, "Anda diluar jangkauan")
 	}
 
-	// attendance object
 	attendance := &entity.Attendance{
 		CompanyID:   request.CompanyID,
 		EmployeeID:  request.EmployeeID,
 		Date:        nowMilli,
 		CheckInTime: nowMilli,
-		Status:      "HADIR", // Default status
+		Status:      "HADIR",
 	}
 
-	// attendance log object
 	attendanceLog := &entity.AttendanceLog{
 		Type:               "CHECK_IN",
 		Time:               nowMilli,
@@ -151,15 +158,6 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		FaceImageURL:       request.FaceImageUrl,
 		DeviceInfo:         request.DeviceInfo,
 	}
-
-	// Validasi wajah
-	// - Kirim face_image ke Face Recognition Service
-	//  - Dapat confidence score
-	//  - is_face_verified = confidence >= threshold (misal 0.75)
-
-	// Tentukan status
-	//  - Jika now() > shift.start_time + late_tolerance → status = TERLAMBAT
-	//  - Else → status = HADIR
 
 	weekday := int(now.Weekday())
 	if weekday == int(time.Sunday) {
@@ -182,11 +180,9 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	)
 
 	if now.After(startTimeToday.Add(time.Duration(shift.LateTolerance) * time.Minute)) {
-		// Set status to LATE
 		attendance.Status = "TERLAMBAT"
 	}
 
-	// Simpan ke attendance:
 	if err := c.AttendanceRepository.Create(tx, attendance); err != nil {
 		c.Log.WithError(err).Error("Failed to create attendance")
 		return nil, fiber.ErrInternalServerError
@@ -194,29 +190,22 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 
 	attendanceLog.AttendanceID = attendance.ID
 
-	// Simpan ke attendance_logs:
 	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {
 		c.Log.WithError(err).Error("Failed to create attendance log")
 		return nil, fiber.ErrInternalServerError
 	}
 
-	// commit transaction
 	if err := tx.Commit().Error; err != nil {
 		c.Log.WithError(err).Error("Failed to commit transaction")
 		return nil, fiber.ErrInternalServerError
 	}
 
-	// return success
-	return nil, nil
+	return model.AttendandeToResponse(attendance), nil
 }
 
 func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckInAttendanceRequest) (*model.AttendanceResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback()
 
 	if request.EmployeeID == "" {
 		return nil, fiber.NewError(400, "User tidak bisa melakukan check-out karena bukan karyawan")
@@ -243,46 +232,18 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Sudah check-out hari ini")
 	}
 
-	locations, err := c.LocationRepository.GetByEmployeeID(tx, request.EmployeeID)
+	distance, err := c.validateLocation(tx, request.EmployeeID, request.Lat, request.Lng)
 	if err != nil {
-		return nil, fiber.ErrInternalServerError
-	}
-
-	isInRange := false
-	var distance float64
-
-	for _, location := range locations {
-		lat, err := strconv.ParseFloat(location.Lat, 64)
-		if err != nil {
-			continue
-		}
-
-		lng, err := strconv.ParseFloat(location.Lng, 64)
-		if err != nil {
-			continue
-		}
-
-		distance = lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
-
-		if distance <= float64(location.Radius) {
-			isInRange = true
-			break
-		}
-	}
-
-	if !isInRange {
-		return nil, fiber.NewError(400, "Anda diluar jangkauan")
+		return nil, err
 	}
 
 	attendance.CheckOutTime = nowMilli
 
 	checkInTime := time.UnixMilli(attendance.CheckInTime)
-
 	totalWorkMinutes := int(now.Sub(checkInTime).Minutes()) - attendance.TotalBreakMinutes
 	if totalWorkMinutes < 0 {
 		totalWorkMinutes = 0
 	}
-
 	attendance.TotalWorkMinutes = totalWorkMinutes
 
 	if err := c.AttendanceRepository.Update(tx, &attendance); err != nil {
@@ -317,5 +278,158 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 	return model.AttendandeToResponse(&attendance), nil
 }
 
-// Implement Attendance Use Case Break-In
-// Implement Attendance Use Case Break-Out
+func (c *AttendanceUseCase) BreakIn(ctx context.Context, request *model.CheckInAttendanceRequest) (*model.AttendanceResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if request.EmployeeID == "" {
+		return nil, fiber.NewError(400, "User tidak bisa melakukan break-in karena bukan karyawan")
+	}
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	nowMilli := time.Now().UnixMilli()
+
+	var attendance entity.Attendance
+	if err := c.AttendanceRepository.FindByEmployeeIDAndDate(tx, &attendance, request.EmployeeID, nowMilli); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Belum check-in hari ini")
+		}
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if attendance.CheckOutTime != 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Sudah check-out, tidak bisa break-in")
+	}
+
+	breakInCount, err := c.AttendanceLogRepo.CountByAttendanceIDAndType(tx, attendance.ID, "BREAK_IN")
+	if err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+	breakOutCount, err := c.AttendanceLogRepo.CountByAttendanceIDAndType(tx, attendance.ID, "BREAK_OUT")
+	if err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+	if breakInCount > breakOutCount {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Sedang dalam break")
+	}
+
+	distance, err := c.validateLocation(tx, request.EmployeeID, request.Lat, request.Lng)
+	if err != nil {
+		return nil, err
+	}
+
+	attendanceLog := &entity.AttendanceLog{
+		AttendanceID:       attendance.ID,
+		Type:               "BREAK_IN",
+		Time:               nowMilli,
+		Lat:                request.Lat,
+		Lng:                request.Lng,
+		LocationDistance:   distance,
+		IsLocationVerified: true,
+		IsFaceVerified:     false,
+		FaceConfidence:     0,
+		FaceImageURL:       request.FaceImageUrl,
+		DeviceInfo:         request.DeviceInfo,
+	}
+
+	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {
+		c.Log.WithError(err).Error("Failed to create attendance log")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.AttendandeToResponse(&attendance), nil
+}
+
+func (c *AttendanceUseCase) BreakOut(ctx context.Context, request *model.CheckInAttendanceRequest) (*model.AttendanceResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if request.EmployeeID == "" {
+		return nil, fiber.NewError(400, "User tidak bisa melakukan break-out karena bukan karyawan")
+	}
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	now := time.Now()
+	nowMilli := now.UnixMilli()
+
+	var attendance entity.Attendance
+	if err := c.AttendanceRepository.FindByEmployeeIDAndDate(tx, &attendance, request.EmployeeID, nowMilli); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Belum check-in hari ini")
+		}
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if attendance.CheckOutTime != 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Sudah check-out, tidak bisa break-out")
+	}
+
+	breakInCount, err := c.AttendanceLogRepo.CountByAttendanceIDAndType(tx, attendance.ID, "BREAK_IN")
+	if err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+	breakOutCount, err := c.AttendanceLogRepo.CountByAttendanceIDAndType(tx, attendance.ID, "BREAK_OUT")
+	if err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+	if breakInCount == breakOutCount {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Belum break-in")
+	}
+
+	var lastBreakIn entity.AttendanceLog
+	if err := c.AttendanceLogRepo.FindLastByAttendanceIDAndType(tx, &lastBreakIn, attendance.ID, "BREAK_IN"); err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+
+	distance, err := c.validateLocation(tx, request.EmployeeID, request.Lat, request.Lng)
+	if err != nil {
+		return nil, err
+	}
+
+	breakDuration := int(now.Sub(time.UnixMilli(lastBreakIn.Time)).Minutes())
+	attendance.TotalBreakMinutes += breakDuration
+
+	if err := c.AttendanceRepository.Update(tx, &attendance); err != nil {
+		c.Log.WithError(err).Error("Failed to update attendance")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	attendanceLog := &entity.AttendanceLog{
+		AttendanceID:       attendance.ID,
+		Type:               "BREAK_OUT",
+		Time:               nowMilli,
+		Lat:                request.Lat,
+		Lng:                request.Lng,
+		LocationDistance:   distance,
+		IsLocationVerified: true,
+		IsFaceVerified:     false,
+		FaceConfidence:     0,
+		FaceImageURL:       request.FaceImageUrl,
+		DeviceInfo:         request.DeviceInfo,
+	}
+
+	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {
+		c.Log.WithError(err).Error("Failed to create attendance log")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.AttendandeToResponse(&attendance), nil
+}
