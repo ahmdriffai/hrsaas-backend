@@ -33,7 +33,10 @@ type RouteConfig struct {
 	VisitController            *http.VisitController
 	PermissionController       *http.PermissionController
 	RoleController             *http.RoleController
-	EmployeeDocumentController *http.EmployeeDocumentController
+	EmployeeDocumentController  *http.EmployeeDocumentController
+	EmployeeEducationController *http.EmployeeEducationController
+	EmployeeTrainingController  *http.EmployeeTrainingController
+	EmployeeIdentityController  *http.EmployeeIdentityController
 }
 
 func (c *RouteConfig) Setup() {
@@ -57,6 +60,9 @@ func (c *RouteConfig) Setup() {
 	c.SetupRoleRouter()
 	c.SetupEmployeeDocumentRouter()
 	c.SetupHolidayRouter()
+	c.SetupEmployeeEducationRouter()
+	c.SetupEmployeeTrainingRouter()
+	c.SetupEmployeeIdentityRouter()
 }
 
 /*
@@ -164,6 +170,9 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 	route := c.App.Group("/api/attendances", c.AuthMiddleware)
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Post("/check-in", c.AttendanceController.CheckIn)
+	employeeRoute.Post("/check-out", c.AttendanceController.CheckOut)
+	employeeRoute.Post("/break-in", c.AttendanceController.BreakIn)
+	employeeRoute.Post("/break-out", c.AttendanceController.BreakOut)
 }
 
 func (c *RouteConfig) SetupShiftRouter() {
@@ -180,7 +189,7 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 	// TIME OFF REQUEST ROUTES
 	// admin and employee
 	timeOffRequest := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
-	timeOffRequest.Get("/:id", c.TimeOffRequestController.GetRequestByID)
+	timeOffRequest.Get("/:id/detail", c.TimeOffRequestController.GetRequestByID)
 	timeOffRequest.Put("/:id", c.TimeOffRequestController.UpdateRequest)
 	timeOffRequest.Get("/:id/approvals", c.TimeOffApprovalController.ListApprovals)
 
@@ -188,13 +197,12 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 	adminRoute := timeOffRequest.Group("/", c.AdminMiddleware("TIME_OFF_REQUESTS"))
 	adminRoute.Get("/", c.TimeOffRequestController.ListRequests)
 	adminRoute.Delete("/:id", c.TimeOffRequestController.DeleteRequest)
+	adminRoute.Post("/:employee_id", c.TimeOffRequestController.AdminCreateRequest)
 
 	// employee only
 	employeeRoute := timeOffRequest.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Post("/", c.TimeOffRequestController.CreateRequest)
 	employeeRoute.Get("/_current", c.TimeOffRequestController.ListCurrentRequests)
-
-	employeeRoute.Patch("/:id/approvals/:approval_id", c.TimeOffApprovalController.Decide) // Mbingungi
 
 	// TIME OFF REQUEST ROUTES
 	// admin and employee
@@ -262,7 +270,7 @@ func (c *RouteConfig) SetupEmployeeDocumentRouter() {
 
 func (c *RouteConfig) SetupVisitRouter() {
 	route := c.App.Group("/api/visits", c.AuthMiddleware)
-	route.Get("/:id", c.VisitController.GetByID)
+	route.Get("/:id/detail", c.VisitController.GetByID)
 
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Post("/", c.VisitController.Create)
@@ -274,6 +282,32 @@ func (c *RouteConfig) SetupVisitRouter() {
 	adminRoute.Get("/", c.VisitController.List)
 	adminRoute.Put("/:id", c.VisitController.Update)
 	adminRoute.Delete("/:id", c.VisitController.Delete)
+}
+
+func (c *RouteConfig) SetupEmployeeEducationRouter() {
+	route := c.App.Group("/api/employee-educations", c.AuthMiddleware, c.AdminMiddleware("EMPLOYEE_EDUCATIONS"))
+	route.Post("/", c.EmployeeEducationController.Create)
+	route.Get("/", c.EmployeeEducationController.List)
+	route.Get("/:education_id", c.EmployeeEducationController.Detail)
+	route.Put("/:education_id", c.EmployeeEducationController.Update)
+	route.Delete("/:education_id", c.EmployeeEducationController.Delete)
+}
+
+func (c *RouteConfig) SetupEmployeeTrainingRouter() {
+	route := c.App.Group("/api/employee-trainings", c.AuthMiddleware, c.AdminMiddleware("EMPLOYEE_TRAININGS"))
+	route.Post("/", c.EmployeeTrainingController.Create)
+	route.Get("/", c.EmployeeTrainingController.List)
+	route.Get("/:training_id", c.EmployeeTrainingController.Detail)
+	route.Put("/:training_id", c.EmployeeTrainingController.Update)
+	route.Delete("/:training_id", c.EmployeeTrainingController.Delete)
+}
+
+func (c *RouteConfig) SetupEmployeeIdentityRouter() {
+	route := c.App.Group("/api/employee-identities", c.AuthMiddleware, c.AdminMiddleware("EMPLOYEE_IDENTITIES"))
+	route.Post("/", c.EmployeeIdentityController.Create)
+	route.Get("/", c.EmployeeIdentityController.List)
+	route.Put("/:identity_id", c.EmployeeIdentityController.Update)
+	route.Delete("/:identity_id", c.EmployeeIdentityController.Delete)
 }
 
 func (c *RouteConfig) SetupHolidayRouter() {

@@ -46,6 +46,29 @@ func (c *TimeOffRequestController) CreateRequest(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *TimeOffRequestController) AdminCreateRequest(ctx *fiber.Ctx) error {
+	employeeID := ctx.Params("employee_id")
+	if employeeID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "employee_id param is required")
+	}
+
+	request := new(model.CreateTimeOffRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	response, err := c.RequestUseCase.CreateRequest(ctx.UserContext(), employeeID, request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to create time off request")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.TimeOffRequestResponse]{
+		Data: response,
+	})
+}
+
 func (c *TimeOffRequestController) GetRequestByID(ctx *fiber.Ctx) error {
 	requestID := ctx.Params("id")
 	if requestID == "" {

@@ -294,7 +294,9 @@ func (c *TimeOffApprovalUseCase) ListApprovalsByApprover(ctx context.Context, ap
 		Preload("TimeOffRequest.Employee.EmployeeContract").
 		Preload("TimeOffRequest.Employee.EmployeeContract.Position").
 		Preload("TimeOffRequest.Employee.EmployeeContract.Division").
-		Preload("TimeOffRequest.TimeOffType")
+		Preload("TimeOffRequest.TimeOffType").
+		Preload("TimeOffRequest.Approvals").
+		Preload("TimeOffRequest.Approvals.Employee")
 
 	if request.Status != "" {
 		query = query.Where("approval_status = ?", request.Status)

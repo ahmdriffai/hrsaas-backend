@@ -3,8 +3,10 @@ package usecase
 import (
 	"context"
 	"hr-sas/internal/entity"
+	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -37,15 +39,27 @@ func (c *EmployeeDocumentUseCase) Create(ctx context.Context, request *model.Cre
 		return nil, fiber.ErrBadRequest
 	}
 
+	issuedAt, err := lib.ParseDateToUnixMilli(request.Issued)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Format issued tidak valid, gunakan YYYY-MM-DD")
+	}
+
 	item := &entity.EmployeeDocument{
 		EmployeeID: request.EmployeeID,
 		DocType:    request.DocType,
 		DocNumber:  request.DocNumber,
+		DocName:    request.DocName,
 		FileURL:    request.FileURL,
+		IssuedAt:   issuedAt,
 	}
 
 	if err := c.Repo.Create(tx, item); err != nil {
 		c.Log.WithError(err).Error("Failed to create employee document")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := c.Repo.FindById(tx, item, item.ID, "Employee"); err != nil {
+		c.Log.WithError(err).Error("Failed to load employee document")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -90,7 +104,7 @@ func (c *EmployeeDocumentUseCase) Update(ctx context.Context, request *model.Upd
 	}
 
 	var item entity.EmployeeDocument
-	if err := c.Repo.FindById(tx, &item, request.ID); err != nil {
+	if err := c.Repo.FindById(tx, &item, request.ID, "Employee"); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, fiber.ErrNotFound
 		}
@@ -104,9 +118,20 @@ func (c *EmployeeDocumentUseCase) Update(ctx context.Context, request *model.Upd
 	if request.DocNumber != nil {
 		item.DocNumber = *request.DocNumber
 	}
+	if request.DocName != nil {
+		item.DocName = *request.DocName
+	}
 	if request.FileURL != nil {
 		item.FileURL = *request.FileURL
 	}
+	if request.Issued != nil {
+		issuedAt, err := lib.ParseDateToUnixMilli(*request.Issued)
+		if err != nil {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Format issued tidak valid, gunakan YYYY-MM-DD")
+		}
+		item.IssuedAt = issuedAt
+	}
+	item.UpdatedAt = time.Now().UnixMilli()
 
 	if err := c.Repo.Update(tx, &item); err != nil {
 		c.Log.WithError(err).Error("Failed to update employee document")

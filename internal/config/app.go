@@ -47,6 +47,9 @@ func Bootstrap(config *BootstrapConfig) {
 	roleRepository := repository.NewRoleRepository(config.Log)
 	employeeDocumentRepository := repository.NewEmployeeDocumentRepository(config.Log)
 	holidayRepository := repository.NewHolidayRepository(config.Log)
+	employeeEducationRepository := repository.NewEmployeeEducationRepository(config.Log)
+	employeeTrainingRepository := repository.NewEmployeeTrainingRepository(config.Log)
+	employeeIdentityRepository := repository.NewEmployeeIdentityRepository(config.Log)
 
 	// setup producer
 
@@ -67,7 +70,7 @@ func Bootstrap(config *BootstrapConfig) {
 	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
-	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository)
+	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository, config.Config.GetString("face.base_url"))
 	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository, shiftDayRepository)
 	timeOffRequestUseCase := usecase.NewTimeOffRequestUseCase(
 		config.DB,
@@ -114,6 +117,9 @@ func Bootstrap(config *BootstrapConfig) {
 	roleUseCase := usecase.NewRoleUseCase(config.DB, config.Log, config.Validate, roleRepository, permissionRepository)
 	employeeDocumentUseCase := usecase.NewEmployeeDocumentUseCase(config.DB, config.Log, config.Validate, employeeDocumentRepository)
 	holidayUseCase := usecase.NewHolidayUseCase(config.DB, config.Log, config.Validate, holidayRepository)
+	employeeEducationUseCase := usecase.NewEmployeeEducationUseCase(config.DB, config.Log, config.Validate, employeeEducationRepository)
+	employeeTrainingUseCase := usecase.NewEmployeeTrainingUseCase(config.DB, config.Log, config.Validate, employeeTrainingRepository)
+	employeeIdentityUseCase := usecase.NewEmployeeIdentityUseCase(config.DB, config.Log, config.Validate, employeeIdentityRepository, employeeRepository)
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
 	userController := http.NewUserController(userUseCase, config.Log, config.Config)
@@ -137,6 +143,9 @@ func Bootstrap(config *BootstrapConfig) {
 	roleController := http.NewRoleController(roleUseCase, config.Log)
 	employeeDocumentController := http.NewEmployeeDocumentController(employeeDocumentUseCase, config.Log)
 	holidayController := http.NewHolidayController(holidayUseCase, config.Log)
+	employeeEducationController := http.NewEmployeeEducationController(employeeEducationUseCase, config.Log)
+	employeeTrainingController := http.NewEmployeeTrainingController(employeeTrainingUseCase, config.Log)
+	employeeIdentityController := http.NewEmployeeIdentityController(employeeIdentityUseCase, config.Log)
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
 	adminMiddleware := middleware.NewAdmin
@@ -150,27 +159,30 @@ func Bootstrap(config *BootstrapConfig) {
 		AdminMiddleware:    adminMiddleware,
 		EmployeeMiddleware: employeeMiddleware,
 
-		CompanyController:          companyController,
-		UserController:             userController,
-		EmployeeController:         employeeController,
-		SanctionController:         santionController,
-		EmSancController:           emSangController,
-		PositionController:         positionController,
-		OfficeLocationController:   officeLocationController,
-		AttendanceController:       attendaceController,
-		ShiftController:            shiftController,
-		TimeOffRequestController:   timeOffRequestController,
-		TimeOffTypeController:      timeOffTypeController,
-		TimeOffBalanceController:   timeOffBalanceController,
-		TimeOffApprovalController:  timeOffApprovalController,
-		UploadController:           uploadController,
-		EmployeeContractController: employeeContractController,
-		DivisionController:         divisionController,
-		VisitController:            visitController,
-		PermissionController:       permissionController,
-		RoleController:             roleController,
-		EmployeeDocumentController: employeeDocumentController,
-		HolidayController:          holidayController,
+		CompanyController:           companyController,
+		UserController:              userController,
+		EmployeeController:          employeeController,
+		SanctionController:          santionController,
+		EmSancController:            emSangController,
+		PositionController:          positionController,
+		OfficeLocationController:    officeLocationController,
+		AttendanceController:        attendaceController,
+		ShiftController:             shiftController,
+		TimeOffRequestController:    timeOffRequestController,
+		TimeOffTypeController:       timeOffTypeController,
+		TimeOffBalanceController:    timeOffBalanceController,
+		TimeOffApprovalController:   timeOffApprovalController,
+		UploadController:            uploadController,
+		EmployeeContractController:  employeeContractController,
+		DivisionController:          divisionController,
+		VisitController:             visitController,
+		PermissionController:        permissionController,
+		RoleController:              roleController,
+		EmployeeDocumentController:  employeeDocumentController,
+		HolidayController:           holidayController,
+		EmployeeEducationController: employeeEducationController,
+		EmployeeTrainingController:  employeeTrainingController,
+		EmployeeIdentityController:  employeeIdentityController,
 	}
 
 	routeConfig.Setup()

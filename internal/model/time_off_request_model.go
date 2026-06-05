@@ -84,7 +84,7 @@ func TimeOffRequestToResponse(request *entity.TimeOffRequest) *TimeOffRequestRes
 		RequestStatus: request.RequestStatus,
 		FileUrl:       request.FileUrl,
 		CreatedAt:     request.CreatedAt,
-		Employee:      *EmployeeToResponse(&request.Employee),
+		Employee:      *EmployeeSummaryToResponse(&request.Employee),
 		TimeOffType:   *TimeOffTypeToResponse(&request.TimeOffType),
 		Approvals:     approvals,
 	}
