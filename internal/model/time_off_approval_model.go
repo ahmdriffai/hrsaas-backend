@@ -3,15 +3,15 @@ package model
 import "hr-sas/internal/entity"
 
 type TimeOffApprovalResponse struct {
-	ID                 string                  `json:"id"`
-	TimeOffRequestID   string                  `json:"time_off_request_id"`
-	ApproverEmployeeID string                  `json:"approver_employee_id"`
-	IsRequired         bool                    `json:"is_required"`
-	Status             string                  `json:"status"`
-	ActionAt           int64                   `json:"action_at,omitempty"`
-	ActionReason       *string                 `json:"action_reason,omitempty"`
-	Employee           EmployeeResponse        `json:"employee"`
-	TimeOffRequest     *TimeOffRequestResponse `json:"time_off_request,omitempty"`
+	ID                 string  `json:"id"`
+	TimeOffRequestID   string  `json:"time_off_request_id"`
+	ApproverEmployeeID string  `json:"approver_employee_id"`
+	IsRequired         bool    `json:"is_required"`
+	Status             string  `json:"status"`
+	ActionAt           int64   `json:"action_at,omitempty"`
+	ActionReason       *string `json:"action_reason,omitempty"`
+	// Employee           EmployeeResponse        `json:"employee"`
+	TimeOffRequest *TimeOffRequestResponse `json:"time_off_request,omitempty"`
 }
 
 type DecideTimeOffApprovalRequest struct {
@@ -73,7 +73,7 @@ func TimeOffApprovalToResponse(approval *entity.TimeOffApproval) *TimeOffApprova
 		Status:             approval.Status,
 		ActionAt:           approval.ActionAt,
 		ActionReason:       &approval.ActionReason,
-		Employee:           *EmployeeToResponse(&approval.Employee),
-		TimeOffRequest:     timeoffRequest,
+		// Employee:           *EmployeeSummaryToResponse(&approval.Employee),
+		TimeOffRequest: timeoffRequest,
 	}
 }
