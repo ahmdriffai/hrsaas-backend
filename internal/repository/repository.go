@@ -16,6 +16,7 @@ func (r *Repository[T]) Create(db *gorm.DB, entity *T) error {
 func (r *Repository[T]) Update(db *gorm.DB, entity *T) error {
 	return db.
 		Omit(clause.Associations).
+		Select("*").
 		Updates(entity).
 		Error
 }

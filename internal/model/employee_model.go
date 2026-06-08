@@ -22,6 +22,7 @@ type EmployeeResponse struct {
 	Address            string                      `json:"address,omitempty"`
 	City               string                      `json:"city,omitempty"`
 	Timezone           string                      `json:"timezone,omitempty"`
+	IsActive           bool                        `json:"is_active"`
 	Contracts          []EmployeeContractResponse  `json:"contracts,omitempty"`
 	EmployeeDocs       []EmployeeDocumentResponse  `json:"employee_docs,omitempty"`
 	EmployeeEducations []EmployeeEducationResponse `json:"employee_educations,omitempty"`
@@ -66,6 +67,7 @@ type UpdateEmployeeRequest struct {
 	Email          *string `json:"email,omitempty" validate:"omitempty,email"`
 	Address        *string `json:"address,omitempty"`
 	City           *string `json:"city,omitempty"`
+	IsActive       *bool   `json:"is_active,omitempty"`
 }
 
 type SearchEmployeeRequest struct {
@@ -111,6 +113,7 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		City:           employee.City,
 		Timezone:       employee.Timezone,
 		EmployeeNumber: employee.EmployeeNumber,
+		IsActive:       employee.IsActive,
 		Contracts:      contracts,
 		EmployeeDocs:   employeeDocs,
 		CreatedAt:      employee.CreatedAt,
