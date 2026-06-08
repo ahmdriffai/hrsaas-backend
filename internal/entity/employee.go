@@ -30,7 +30,7 @@ type Employee struct {
 	EmployeeDocuments       []EmployeeDocument  `gorm:"foreignKey:EmployeeID;references:ID"`
 	EmployeeEducations      []EmployeeEducation `gorm:"foreignKey:EmployeeID;references:ID"`
 	EmployeeTrainings       []EmployeeTraining  `gorm:"foreignKey:EmployeeID;references:ID"`
-	EmployeeIdentifications []EmployeeIdentity  `gorm:"foreignKey:EmployeeID;references:ID"`
+	EmployeeIdentifications *EmployeeIdentity   `gorm:"foreignKey:EmployeeID;references:ID"`
 }
 
 // BeforeCreate hook to set UUID
