@@ -94,10 +94,13 @@ func (c *EmployeeUseCase) Create(ctx context.Context, request *model.CreateEmplo
 		Gender:         request.Gender,
 		BirthPlace:     request.BirthPlace,
 		BirthDate:      birthDate,
+		IdentityNumber: request.IdentityNumber,
 		BlodType:       request.BlodType,
 		MaritalStatus:  request.MaritalStatus,
 		Religion:       request.Religion,
 		Phone:          request.Phone,
+		Address:        request.Address,
+		City:           request.City,
 		Timezone:       request.Timezone,
 		CompanyID:      request.CompanyID,
 		EmployeeNumber: request.EmployeeNumber,
@@ -322,7 +325,7 @@ func (c *EmployeeUseCase) Detail(ctx context.Context, request *model.DetailEmplo
 		tx, employee, request.ID, request.CompanyID,
 		"EmployeeContract", "EmployeeContract.Position",
 		"EmployeeContract.Division", "EmployeeDocuments",
-		"User", "User.Roles", "EmployeeIdentifications",
+		"User", "User.Roles",
 	)
 	if err != nil {
 		c.Log.WithError(err).Error("Failed to find employee by ID")
@@ -413,6 +416,14 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 		employee.BirthDate = parsedBirthDate
 	}
 
+	if request.IdentityNumber != nil {
+		identityNumber := strings.TrimSpace(*request.IdentityNumber)
+		if identityNumber == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Nomor identitas tidak boleh kosong")
+		}
+		employee.IdentityNumber = identityNumber
+	}
+
 	if request.BlodType != nil {
 		employee.BlodType = strings.TrimSpace(*request.BlodType)
 	}
@@ -439,6 +450,22 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 			return nil, fiber.NewError(fiber.StatusBadRequest, "Nomor telepon tidak boleh kosong")
 		}
 		employee.Phone = phone
+	}
+
+	if request.Address != nil {
+		address := strings.TrimSpace(*request.Address)
+		if address == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Alamat tidak boleh kosong")
+		}
+		employee.Address = address
+	}
+
+	if request.City != nil {
+		city := strings.TrimSpace(*request.City)
+		if city == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "Kota tidak boleh kosong")
+		}
+		employee.City = city
 	}
 
 	if request.Timezone != nil {

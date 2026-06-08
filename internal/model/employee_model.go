@@ -19,6 +19,8 @@ type EmployeeResponse struct {
 	MaritalStatus      string                      `json:"marital_status,omitempty"`
 	Religion           string                      `json:"religion,omitempty"`
 	Phone              string                      `json:"phone,omitempty"`
+	Address            string                      `json:"address,omitempty"`
+	City               string                      `json:"city,omitempty"`
 	Timezone           string                      `json:"timezone,omitempty"`
 	Contracts          []EmployeeContractResponse  `json:"contracts,omitempty"`
 	EmployeeDocs       []EmployeeDocumentResponse  `json:"employee_docs,omitempty"`
@@ -36,6 +38,7 @@ type CreateEmployeeRequest struct {
 	EmployeeNumber string `json:"employee_number" validate:"required"`
 	BirthPlace     string `json:"birth_place" validate:"required"`
 	BirthDate      string `json:"birth_date" validate:"required"`
+	IdentityNumber string `json:"identity_number" validate:"required"`
 	BlodType       string `json:"blood_type" validate:"required"`
 	MaritalStatus  string `json:"marital_status" validate:"required"`
 	Religion       string `json:"religion" validate:"required"`
@@ -43,6 +46,8 @@ type CreateEmployeeRequest struct {
 	Timezone       string `json:"timezone" validate:"required"`
 	Email          string `json:"email" validate:"required,email"`
 	Password       string `json:"password" validate:"required,min=3"`
+	Address        string `json:"address" validate:"required"`
+	City           string `json:"city" validate:"required"`
 }
 
 type UpdateEmployeeRequest struct {
@@ -52,12 +57,15 @@ type UpdateEmployeeRequest struct {
 	EmployeeNumber *string `json:"employee_number,omitempty"`
 	BirthPlace     *string `json:"birth_place,omitempty"`
 	BirthDate      *string `json:"birth_date,omitempty"`
+	IdentityNumber *string `json:"identity_number,omitempty"`
 	BlodType       *string `json:"blood_type,omitempty"`
 	MaritalStatus  *string `json:"marital_status,omitempty"`
 	Religion       *string `json:"religion,omitempty"`
 	Phone          *string `json:"phone,omitempty"`
 	Timezone       *string `json:"timezone,omitempty"`
 	Email          *string `json:"email,omitempty" validate:"omitempty,email"`
+	Address        *string `json:"address,omitempty"`
+	City           *string `json:"city,omitempty"`
 }
 
 type SearchEmployeeRequest struct {
@@ -82,11 +90,6 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		return nil
 	}
 
-	var identityNumber string
-	if employee.EmployeeIdentifications != nil {
-		identityNumber = employee.EmployeeIdentifications.IdentityNumber
-	}
-
 	contracts := EmployeeContractsToResponse(employee.EmployeeContract)
 	employeeDocs := EmployeeDocumentsToResponse(employee.EmployeeDocuments)
 	user := UserToResponse(&employee.User)
@@ -99,11 +102,13 @@ func EmployeeToResponse(employee *entity.Employee) *EmployeeResponse {
 		Gender:         employee.Gender,
 		BirthPlace:     employee.BirthPlace,
 		BirthDate:      employee.BirthDate,
-		IdentityNumber: identityNumber,
+		IdentityNumber: employee.IdentityNumber,
 		BlodType:       employee.BlodType,
 		MaritalStatus:  employee.MaritalStatus,
 		Religion:       employee.Religion,
 		Phone:          employee.Phone,
+		Address:        employee.Address,
+		City:           employee.City,
 		Timezone:       employee.Timezone,
 		EmployeeNumber: employee.EmployeeNumber,
 		Contracts:      contracts,
