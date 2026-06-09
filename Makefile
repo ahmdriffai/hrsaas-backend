@@ -1,12 +1,8 @@
 APP_NAME	= hrsaas-backend
 BUILD_DIR	= ./bin
 
-DB_USER		= postgres
-DB_PASS		= postgres
-DB_HOST		= localhost
-DB_PORT     = 5432
-DB_NAME     = hr_saas
-DB_SSLMODE  = disable
+ENV ?= dev
+-include .env.$(ENV)
 
 DB_URL = "postgresql://$(DB_USER):$(DB_PASS)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)"
 
