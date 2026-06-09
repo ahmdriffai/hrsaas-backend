@@ -13,30 +13,29 @@ type RouteConfig struct {
 	AdminMiddleware    func(permission string) fiber.Handler
 	EmployeeMiddleware fiber.Handler
 
-	CompanyController          *http.CompanyController
-	UserController             *http.UserController
-	EmployeeController         *http.EmployeeController
-	OfficeLocationController   *http.OfficeLocationController
-	SanctionController         *http.SanctionController
-	EmSancController           *http.EmSancController
-	HolidayController          *http.HolidayController
-	PositionController         *http.PositionController
-	AttendanceController       *http.AttendanceController
-	ShiftController            *http.ShiftController
-	TimeOffRequestController   *http.TimeOffRequestController
-	TimeOffTypeController      *http.TimeOffTypeController
-	TimeOffBalanceController   *http.TimeOffBalanceController
-	TimeOffApprovalController  *http.TimeOffApprovalController
-	UploadController           *http.UploadController
-	EmployeeContractController *http.EmployeeContractController
-	DivisionController         *http.DivisionController
-	VisitController            *http.VisitController
-	PermissionController       *http.PermissionController
-	RoleController             *http.RoleController
+	CompanyController           *http.CompanyController
+	UserController              *http.UserController
+	EmployeeController          *http.EmployeeController
+	OfficeLocationController    *http.OfficeLocationController
+	SanctionController          *http.SanctionController
+	EmSancController            *http.EmSancController
+	HolidayController           *http.HolidayController
+	PositionController          *http.PositionController
+	AttendanceController        *http.AttendanceController
+	ShiftController             *http.ShiftController
+	TimeOffRequestController    *http.TimeOffRequestController
+	TimeOffTypeController       *http.TimeOffTypeController
+	TimeOffBalanceController    *http.TimeOffBalanceController
+	TimeOffApprovalController   *http.TimeOffApprovalController
+	UploadController            *http.UploadController
+	EmployeeContractController  *http.EmployeeContractController
+	DivisionController          *http.DivisionController
+	VisitController             *http.VisitController
+	PermissionController        *http.PermissionController
+	RoleController              *http.RoleController
 	EmployeeDocumentController  *http.EmployeeDocumentController
 	EmployeeEducationController *http.EmployeeEducationController
 	EmployeeTrainingController  *http.EmployeeTrainingController
-	EmployeeIdentityController  *http.EmployeeIdentityController
 }
 
 func (c *RouteConfig) Setup() {
@@ -62,7 +61,6 @@ func (c *RouteConfig) Setup() {
 	c.SetupHolidayRouter()
 	c.SetupEmployeeEducationRouter()
 	c.SetupEmployeeTrainingRouter()
-	c.SetupEmployeeIdentityRouter()
 }
 
 /*
@@ -300,14 +298,6 @@ func (c *RouteConfig) SetupEmployeeTrainingRouter() {
 	route.Get("/:training_id", c.EmployeeTrainingController.Detail)
 	route.Put("/:training_id", c.EmployeeTrainingController.Update)
 	route.Delete("/:training_id", c.EmployeeTrainingController.Delete)
-}
-
-func (c *RouteConfig) SetupEmployeeIdentityRouter() {
-	route := c.App.Group("/api/employee-identities", c.AuthMiddleware, c.AdminMiddleware("EMPLOYEE_IDENTITIES"))
-	route.Post("/", c.EmployeeIdentityController.Create)
-	route.Get("/", c.EmployeeIdentityController.List)
-	route.Put("/:identity_id", c.EmployeeIdentityController.Update)
-	route.Delete("/:identity_id", c.EmployeeIdentityController.Delete)
 }
 
 func (c *RouteConfig) SetupHolidayRouter() {
