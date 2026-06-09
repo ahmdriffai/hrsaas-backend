@@ -66,14 +66,15 @@ func (c *EmployeeContractUseCase) Create(ctx context.Context, request *model.Cre
 	}
 
 	item := &entity.EmployeeContract{
-		EmployeeID:   request.EmployeeID,
-		ContractType: request.ContractType,
-		StartDate:    startDate,
-		EndDate:      endDate,
-		DivisionID:   request.DivisionID,
-		PositionID:   request.PositionID,
-		Salary:       request.Salary,
-		IsActive:     true,
+		EmployeeID:       request.EmployeeID,
+		ContractType:     request.ContractType,
+		StartDate:        startDate,
+		EndDate:          endDate,
+		DivisionID:       request.DivisionID,
+		PositionID:       request.PositionID,
+		EmploymentStatus: request.EmploymentStatus,
+		Salary:           request.Salary,
+		IsActive:         true,
 	}
 
 	if err := c.Repo.DeactivateActiveByEmployee(tx, request.EmployeeID); err != nil {
@@ -120,15 +121,16 @@ func (c *EmployeeContractUseCase) Create(ctx context.Context, request *model.Cre
 		return nil, fiber.ErrInternalServerError
 	}
 	return &model.EmployeeContractResponse{
-		ID:           item.ID,
-		EmployeeID:   item.EmployeeID,
-		ContractType: item.ContractType,
-		StartDate:    item.StartDate,
-		EndDate:      item.EndDate,
-		DivisionID:   item.DivisionID,
-		PositionID:   item.PositionID,
-		Salary:       item.Salary,
-		IsActive:     item.IsActive,
+		ID:               item.ID,
+		EmployeeID:       item.EmployeeID,
+		ContractType:     item.ContractType,
+		StartDate:        item.StartDate,
+		EndDate:          item.EndDate,
+		DivisionID:       item.DivisionID,
+		PositionID:       item.PositionID,
+		Salary:           item.Salary,
+		IsActive:         item.IsActive,
+		EmploymentStatus: item.EmploymentStatus,
 	}, nil
 }
 
@@ -224,6 +226,13 @@ func (c *EmployeeContractUseCase) Update(ctx context.Context, id string, request
 	}
 	if request.PositionID != nil {
 		item.PositionID = strings.TrimSpace(*request.PositionID)
+	}
+	if request.EmploymentStatus != nil {
+		employeeStatus := strings.TrimSpace(*request.EmploymentStatus)
+		if employeeStatus == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "employee_status cannot be empty")
+		}
+		item.EmploymentStatus = employeeStatus
 	}
 	if request.Salary != nil {
 		item.Salary = *request.Salary
