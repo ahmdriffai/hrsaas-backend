@@ -494,6 +494,10 @@ func (c *EmployeeUseCase) Update(ctx context.Context, companyID string, request 
 		employee.User.Email = email
 	}
 
+	if request.IsActive != nil {
+		employee.IsActive = *request.IsActive
+	}
+
 	nowMilli := time.Now().UnixMilli()
 	employee.UpdatedAt = nowMilli
 	employee.User.UpdatedAt = nowMilli

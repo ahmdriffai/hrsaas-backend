@@ -1,0 +1,1 @@
+ALTER TABLE employee_contracts DROP COLUMN IF EXISTS employee_status;
