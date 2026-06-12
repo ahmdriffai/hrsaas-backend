@@ -1,1 +1,1 @@
-ALTER TABLE employee_contracts ADD COLUMN employee_status VARCHAR(10) NOT NULL;
+ALTER TABLE employee_contracts ADD COLUMN employee_status VARCHAR(10) NULL;
