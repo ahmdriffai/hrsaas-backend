@@ -185,8 +185,13 @@ func (c *RouteConfig) SetupShiftRouter() {
 
 func (c *RouteConfig) SetupTimeOffRouter() {
 	// TIME OFF REQUEST ROUTES
-	// admin and employee
+	// employee only
 	timeOffRequest := c.App.Group("/api/time-off-requests", c.AuthMiddleware)
+	employeeRoute := timeOffRequest.Group("/", c.EmployeeMiddleware)
+	employeeRoute.Post("/", c.TimeOffRequestController.CreateRequest)
+	employeeRoute.Get("/_current", c.TimeOffRequestController.ListCurrentRequests)
+
+	// admin and employee
 	timeOffRequest.Get("/:id/detail", c.TimeOffRequestController.GetRequestByID)
 	timeOffRequest.Put("/:id", c.TimeOffRequestController.UpdateRequest)
 	timeOffRequest.Get("/:id/approvals", c.TimeOffApprovalController.ListApprovals)
@@ -196,11 +201,6 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 	adminRoute.Get("/", c.TimeOffRequestController.ListRequests)
 	adminRoute.Delete("/:id", c.TimeOffRequestController.DeleteRequest)
 	adminRoute.Post("/:employee_id", c.TimeOffRequestController.AdminCreateRequest)
-
-	// employee only
-	employeeRoute := timeOffRequest.Group("/", c.EmployeeMiddleware)
-	employeeRoute.Post("/", c.TimeOffRequestController.CreateRequest)
-	employeeRoute.Get("/_current", c.TimeOffRequestController.ListCurrentRequests)
 
 	// TIME OFF REQUEST ROUTES
 	// admin and employee
