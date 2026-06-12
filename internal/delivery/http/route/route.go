@@ -270,16 +270,16 @@ func (c *RouteConfig) SetupVisitRouter() {
 	route := c.App.Group("/api/visits", c.AuthMiddleware)
 	route.Get("/:id/detail", c.VisitController.GetByID)
 
-	adminRoute := route.Group("/", c.AdminMiddleware("VISITS"))
-	adminRoute.Get("/", c.VisitController.List)
-	adminRoute.Put("/:id", c.VisitController.Update)
-	adminRoute.Delete("/:id", c.VisitController.Delete)
-
 	employeeRoute := route.Group("/", c.EmployeeMiddleware)
 	employeeRoute.Post("/", c.VisitController.Create)
 	employeeRoute.Get("/_current", c.VisitController.ListCurrent)
 	employeeRoute.Get("/_current/can-do", c.VisitController.CanDoVisit)
 	employeeRoute.Get("/_current/unclosed", c.VisitController.GetUnclosedVisit)
+
+	adminRoute := route.Group("/", c.AdminMiddleware("VISITS"))
+	adminRoute.Get("/", c.VisitController.List)
+	adminRoute.Put("/:id", c.VisitController.Update)
+	adminRoute.Delete("/:id", c.VisitController.Delete)
 
 }
 
