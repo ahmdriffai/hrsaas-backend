@@ -103,6 +103,7 @@ func (c *RouteConfig) SetupEmployeeRouter() {
 func (c *RouteConfig) SetupEmployeeContractRouter() {
 	route := c.App.Group("/api/employee-contracts", c.AuthMiddleware)
 	route.Get("/", c.EmployeeContractController.List)
+	route.Get("/_current", c.EmployeeMiddleware, c.EmployeeContractController.ListCurrent)
 
 	adminMW := c.AdminMiddleware("EMPLOYEE_CONTRACTS")
 	route.Post("/", adminMW, c.EmployeeContractController.Create)
@@ -260,6 +261,8 @@ func (c *RouteConfig) SetupRoleRouter() {
 
 func (c *RouteConfig) SetupEmployeeDocumentRouter() {
 	route := c.App.Group("/api/employee-docs", c.AuthMiddleware)
+	route.Get("/_current", c.EmployeeMiddleware, c.EmployeeDocumentController.ListCurrent)
+
 	adminMW := c.AdminMiddleware("EMPLOYEE_DOCUMENTS")
 	route.Post("/", adminMW, c.EmployeeDocumentController.Create)
 	route.Get("/", adminMW, c.EmployeeDocumentController.List)
@@ -288,6 +291,8 @@ func (c *RouteConfig) SetupVisitRouter() {
 
 func (c *RouteConfig) SetupEmployeeEducationRouter() {
 	route := c.App.Group("/api/employee-educations", c.AuthMiddleware)
+	route.Get("/_current", c.EmployeeMiddleware, c.EmployeeEducationController.ListCurrent)
+
 	adminMW := c.AdminMiddleware("EMPLOYEE_EDUCATIONS")
 	route.Post("/", adminMW, c.EmployeeEducationController.Create)
 	route.Get("/", adminMW, c.EmployeeEducationController.List)
@@ -298,6 +303,8 @@ func (c *RouteConfig) SetupEmployeeEducationRouter() {
 
 func (c *RouteConfig) SetupEmployeeTrainingRouter() {
 	route := c.App.Group("/api/employee-trainings", c.AuthMiddleware)
+	route.Get("/_current", c.EmployeeMiddleware, c.EmployeeTrainingController.ListCurrent)
+
 	adminMW := c.AdminMiddleware("EMPLOYEE_TRAININGS")
 	route.Post("/", adminMW, c.EmployeeTrainingController.Create)
 	route.Get("/", adminMW, c.EmployeeTrainingController.List)

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
@@ -167,13 +168,17 @@ func (c *TimeOffRequestUseCase) CreateRequest(ctx context.Context, employeeID st
 		c.Log.WithError(err).Error("Failed to build approval chain")
 		return nil, err
 	}
-	// Bind approvals to the newly created request and set initial status.
+	if len(approvals) == 0 {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Tidak ada approver yang tersedia untuk pengajuan cuti ini")
+	}
+	// Bind approvals to the newly created request; approval order is assigned
+	// here (and only here) so it is always sequential 1..N without gaps.
 	for i := range approvals {
 		approvals[i].TimeOffRequestId = item.ID
 		approvals[i].Status = "PENDING"
 		approvals[i].ApprovalOrder = i + 1
 	}
-	// Persist approval records.
+
 	if err := c.TimeOffApprovalRepo.CreateMany(tx, approvals); err != nil {
 		c.Log.WithError(err).Error("Gagal membuat data approval untuk pengajuan cuti")
 		return nil, fiber.ErrInternalServerError
@@ -425,7 +430,10 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		CompanyID  string  `gorm:"column:company_id"`
 	}
 
+	// ApprovalOrder is intentionally not set here; CreateRequest assigns it
+	// sequentially after the full chain is built.
 	approvals := make([]entity.TimeOffApproval, 0, 4)
+	seen := make(map[string]bool)
 	var current positionRow
 	if err := tx.Table("positions").
 		Select("id, parent_id, name, is_approver, company_id").
@@ -448,13 +456,11 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 			return nil, fiber.NewError(fiber.StatusBadRequest, "Parent position not found")
 		}
 
-		// parentName := strings.TrimSpace(parent.Name)
-
 		var approver struct {
 			EmployeeID string `gorm:"column:employee_id"`
 		}
 		// Find the approver (employee) who holds the parent position in same division.
-		if err := tx.Table("employee_contracts").
+		err := tx.Table("employee_contracts").
 			Select("employee_id").
 			Where("is_active = ?", true).
 			Where("position_id = ?", parent.ID).
@@ -462,23 +468,31 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 			// Where("end_date IS NULL OR end_date >= ?", nowEpoch()).
 			Order("start_date DESC").
 			Limit(1).
-			Take(&approver).Error; err != nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "Approver tidak ditemukan untuk posisi "+parent.Name)
+			Take(&approver).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				// Vacant position: skip it and keep walking up the hierarchy.
+				parentID = parent.ParentID
+				continue
+			}
+			c.Log.WithError(err).Error("Failed to resolve approver for position " + parent.Name)
+			return nil, fiber.ErrInternalServerError
 		}
 
-		// Avoid self-approval.
-		if approver.EmployeeID != employeeID {
+		// Avoid self-approval and duplicate approvers in the chain.
+		if approver.EmployeeID != employeeID && !seen[approver.EmployeeID] {
+			seen[approver.EmployeeID] = true
 			approvals = append(approvals, entity.TimeOffApproval{
-				ApproverId:    approver.EmployeeID,
-				IsRequired:    parent.IsApprover,
-				Status:        "PENDING",
-				ApprovalOrder: depth + 1,
+				ApproverId: approver.EmployeeID,
+				IsRequired: parent.IsApprover,
+				Status:     "PENDING",
 			})
 		}
 		parentID = parent.ParentID
 	}
 
 	// Always include all company-wide required approvers (is_approver = true),
+	// ordered deterministically so the approval order is stable across requests.
 	var globalApprovers []struct {
 		EmployeeID string `gorm:"column:employee_id"`
 	}
@@ -489,24 +503,19 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		Where("p.is_approver = ?", true).
 		Where("p.company_id = ?", current.CompanyID).
 		Where("ec.employee_id != ?", employeeID).
+		Order("ec.employee_id ASC").
 		Find(&globalApprovers).Error; err != nil {
 		c.Log.WithError(err).Error("Failed to fetch global required approvers")
 		return nil, fiber.ErrInternalServerError
 	}
 
-	inChain := make(map[string]bool, len(approvals))
-	for _, a := range approvals {
-		inChain[a.ApproverId] = true
-	}
-
-	globalOrder := len(approvals) + 1
 	for _, ga := range globalApprovers {
-		if !inChain[ga.EmployeeID] {
+		if !seen[ga.EmployeeID] {
+			seen[ga.EmployeeID] = true
 			approvals = append(approvals, entity.TimeOffApproval{
-				ApproverId:    ga.EmployeeID,
-				IsRequired:    true,
-				Status:        "PENDING",
-				ApprovalOrder: globalOrder,
+				ApproverId: ga.EmployeeID,
+				IsRequired: true,
+				Status:     "PENDING",
 			})
 		}
 	}

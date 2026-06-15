@@ -1,6 +1,7 @@
 package http
 
 import (
+	"hr-sas/internal/delivery/http/middleware"
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
 	"math"
@@ -36,6 +37,32 @@ func (c *EmployeeDocumentController) Create(ctx *fiber.Ctx) error {
 func (c *EmployeeDocumentController) List(ctx *fiber.Ctx) error {
 	request := &model.SearchEmployeeDocumentRequest{
 		EmployeeID: ctx.Query("employee_id", ""),
+		Page:       ctx.QueryInt("page", 1),
+		Size:       ctx.QueryInt("size", 10),
+	}
+
+	responses, total, err := c.UseCase.List(ctx.UserContext(), request)
+	if err != nil {
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.EmployeeDocumentResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+}
+
+func (c *EmployeeDocumentController) ListCurrent(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+	request := &model.SearchEmployeeDocumentRequest{
+		EmployeeID: user.Employee.ID,
 		Page:       ctx.QueryInt("page", 1),
 		Size:       ctx.QueryInt("size", 10),
 	}
