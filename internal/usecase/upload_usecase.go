@@ -44,7 +44,7 @@ func (u *UploadUseCase) Upload(ctx context.Context, request *model.UploadRequest
 		return nil, fiber.ErrBadRequest
 	}
 
-	if request.File.Size > 2*1024*1024 {
+	if request.File.Size > 3*1024*1024 {
 		u.Log.Error("file too large")
 		return nil, fiber.ErrBadRequest
 	}

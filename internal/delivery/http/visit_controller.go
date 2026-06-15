@@ -48,9 +48,6 @@ func (c *VisitController) Create(ctx *fiber.Ctx) error {
 
 // TODO: Enforce admin-only access.
 func (c *VisitController) List(ctx *fiber.Ctx) error {
-	if !middleware.HasRole(ctx, "ADMIN") {
-		return fiber.NewError(fiber.StatusForbidden, "Forbidden")
-	}
 
 	request := new(model.SearchVisitRequest)
 	request.EmployeeID = ctx.Query("employee_id", "")

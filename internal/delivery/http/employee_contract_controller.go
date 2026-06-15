@@ -1,6 +1,7 @@
 package http
 
 import (
+	"hr-sas/internal/delivery/http/middleware"
 	"hr-sas/internal/model"
 	"hr-sas/internal/usecase"
 	"math"
@@ -44,6 +45,35 @@ func (c *EmployeeContractController) Create(ctx *fiber.Ctx) error {
 func (c *EmployeeContractController) List(ctx *fiber.Ctx) error {
 	request := new(model.SearchEmployeeContractRequest)
 	request.EmployeeID = ctx.Query("employee_id", "")
+	request.DivisionID = ctx.Query("division_id", "")
+	request.PositionID = ctx.Query("position_id", "")
+	request.ActiveOnly = ctx.QueryBool("active_only", false)
+	request.Page = ctx.QueryInt("page", 1)
+	request.Size = ctx.QueryInt("size", 10)
+
+	responses, total, err := c.UseCase.List(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list employee contracts")
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.EmployeeContractResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+}
+
+func (c *EmployeeContractController) ListCurrent(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+	request := new(model.SearchEmployeeContractRequest)
+	request.EmployeeID = user.Employee.ID
 	request.DivisionID = ctx.Query("division_id", "")
 	request.PositionID = ctx.Query("position_id", "")
 	request.ActiveOnly = ctx.QueryBool("active_only", false)

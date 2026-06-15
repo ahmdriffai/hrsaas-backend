@@ -303,8 +303,10 @@ func main() {
 	}
 	fmt.Printf("Assigned %d permissions to role Admin\n", len(permissionNames))
 
-	// ── 6. Users, Employees, Contracts ────────────────────────────────────────
+	// ── 6. Admin user ─────────────────────────────────────────────────────────
 	defaultPassword := hashPassword("Password123!")
+
+	// ── 7. Users, Employees, Contracts ────────────────────────────────────────
 	birthDate := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
 	contractStart := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
 
