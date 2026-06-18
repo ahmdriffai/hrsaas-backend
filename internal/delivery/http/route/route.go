@@ -92,6 +92,8 @@ func (c *RouteConfig) SetupEmployeeRouter() {
 	route := c.App.Group("/api/employees", c.AuthMiddleware)
 	route.Get("/", c.EmployeeController.ListEmployee)
 
+	route.Get("/_current", c.EmployeeMiddleware, c.EmployeeController.GetCurrent)
+
 	adminMW := c.AdminMiddleware("EMPLOYEES")
 	route.Post("/", adminMW, c.EmployeeController.CreateEmployee)
 	route.Post("/import-excel", adminMW, c.EmployeeController.ImportExcel)
