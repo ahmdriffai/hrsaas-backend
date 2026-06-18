@@ -305,24 +305,6 @@ func main() {
 
 	// ── 6. Admin user ─────────────────────────────────────────────────────────
 	defaultPassword := hashPassword("Password123!")
-	var adminUser User
-	if err := db.Where("email = ?", "admin@company.com").First(&adminUser).Error; err != nil {
-		adminUser = User{
-			ID: newID(), Name: "Admin", Email: "admin@company.com",
-			Password: defaultPassword, EmailVerified: true,
-			CompanyID: company.ID, CreatedAt: now(), UpdatedAt: now(),
-		}
-		db.Create(&adminUser)
-		fmt.Printf("Created admin user: %s\n", adminUser.Email)
-	} else {
-		fmt.Printf("Using existing admin user: %s (%s)\n", adminUser.Email, adminUser.ID)
-	}
-
-	var adminUR UserRole
-	if err := db.Where("user_id = ? AND role_id = ?", adminUser.ID, adminRole.ID).First(&adminUR).Error; err != nil {
-		db.Create(&UserRole{UserID: adminUser.ID, RoleID: adminRole.ID})
-		fmt.Printf("Assigned ADMIN role to: %s\n", adminUser.Email)
-	}
 
 	// ── 7. Users, Employees, Contracts ────────────────────────────────────────
 	birthDate := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()

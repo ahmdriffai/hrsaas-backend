@@ -119,6 +119,27 @@ func (c *EmployeeController) DetailEmployee(ctx *fiber.Ctx) error {
 	})
 }
 
+// Current Employee Controller
+func (c *EmployeeController) GetCurrent(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+	user := middleware.GetUser(ctx)
+
+	request := &model.DetailEmployeeRequest{
+		ID:        user.Employee.ID,
+		CompanyID: companyID,
+	}
+
+	response, err := c.EmployeeUseCase.Detail(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to get current employee detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.EmployeeResponse]{
+		Data: response,
+	})
+}
+
 func (c *EmployeeController) UpdateEmployee(ctx *fiber.Ctx) error {
 	request := new(model.UpdateEmployeeRequest)
 	if err := ctx.BodyParser(request); err != nil {

@@ -61,6 +61,33 @@ func (c *EmployeeTrainingController) List(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *EmployeeTrainingController) ListCurrent(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+	request := &model.SearchEmployeeTrainingRequest{
+		CompanyID:  middleware.GetCompanyId(ctx),
+		EmployeeID: user.Employee.ID,
+		Page:       ctx.QueryInt("page", 1),
+		Size:       ctx.QueryInt("size", 10),
+	}
+
+	responses, total, err := c.UseCase.List(ctx.UserContext(), request)
+	if err != nil {
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.EmployeeTrainingResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+}
+
 func (c *EmployeeTrainingController) Detail(ctx *fiber.Ctx) error {
 	response, err := c.UseCase.Detail(ctx.UserContext(), ctx.Params("training_id"))
 	if err != nil {
