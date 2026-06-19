@@ -72,6 +72,23 @@ func (r *ShiftRepository) AssignEmployeeToShift(db *gorm.DB, employeeID, shiftID
 	).Error
 }
 
+func (r *ShiftRepository) DeleteEmployeesByShiftID(db *gorm.DB, shiftID string) error {
+	return db.Exec("DELETE FROM employee_shifts WHERE shift_id = ?", shiftID).Error
+}
+
+func (r *ShiftRepository) BulkAssignEmployees(db *gorm.DB, employeeIDs []string, shiftID string) error {
+	now := int64(time.Now().UnixMilli())
+	for _, employeeID := range employeeIDs {
+		if err := db.Exec(
+			"INSERT INTO employee_shifts (employee_id, shift_id, created_at, updated_at) VALUES (?, ?, ?, ?)",
+			employeeID, shiftID, now, now,
+		).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *ShiftRepository) Search(db *gorm.DB, request *model.SearchShiftRequest) ([]entity.Shift, int64, error) {
 	var shifts []entity.Shift
 	if err := db.Preload("ShiftDays").Scopes(r.FilterSearch(request)).

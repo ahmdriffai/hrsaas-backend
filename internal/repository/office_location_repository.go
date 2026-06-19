@@ -86,3 +86,20 @@ func (r *OfficeLocationRepository) AssignEmployeeToOfficeLocation(db *gorm.DB, e
 		int64(time.Now().UnixMilli()),
 	).Error
 }
+
+func (r *OfficeLocationRepository) DeleteEmployeesByOfficeLocationID(db *gorm.DB, officeLocationID string) error {
+	return db.Exec("DELETE FROM employee_office_locations WHERE office_location_id = ?", officeLocationID).Error
+}
+
+func (r *OfficeLocationRepository) BulkAssignEmployees(db *gorm.DB, employeeIDs []string, officeLocationID string) error {
+	now := int64(time.Now().UnixMilli())
+	for _, employeeID := range employeeIDs {
+		if err := db.Exec(
+			"INSERT INTO employee_office_locations (employee_id, office_location_id, created_at, updated_at) VALUES (?,?,?,?)",
+			employeeID, officeLocationID, now, now,
+		).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}

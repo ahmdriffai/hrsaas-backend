@@ -49,6 +49,12 @@ type AssignEmployeeToOfficeLocationRequest struct {
 	OfficeLocationID string `json:"office_location_id" validate:"required"`
 }
 
+type BulkAssignEmployeesToOfficeLocationRequest struct {
+	CompanyID        string   `json:"-" validate:"required"`
+	OfficeLocationID string   `json:"-" validate:"required"`
+	EmployeeIDs      []string `json:"employee_ids"`
+}
+
 type DetailOfficeLocationRequest struct {
 	CompanyID        string `json:"-" validate:"required"`
 	OfficeLocationID string `json:"-" validate:"required"`
