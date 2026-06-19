@@ -93,6 +93,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 
 	now := time.Now()
 	nowMilli := now.UnixMilli()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
 
 	shifts, err := c.ShiftRepository.FindByEmployeeID(tx, request.EmployeeID)
 	if err != nil {
@@ -144,7 +145,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	attendance := &entity.Attendance{
 		CompanyID:   request.CompanyID,
 		EmployeeID:  request.EmployeeID,
-		Date:        nowMilli,
+		Date:        startOfDay,
 		CheckInTime: nowMilli,
 		Status:      "HADIR",
 	}
