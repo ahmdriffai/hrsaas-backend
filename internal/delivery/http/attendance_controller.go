@@ -62,6 +62,33 @@ func (c *AttendanceController) List(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *AttendanceController) ListCurrent(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+	request := &model.SearchAttendanceRequest{
+		CompanyID:  user.CompanyID,
+		EmployeeID: user.Employee.ID,
+		Page:       ctx.QueryInt("page", 1),
+		Size:       ctx.QueryInt("size", 10),
+	}
+
+	responses, total, err := c.UseCase.Search(ctx.UserContext(), request)
+	if err != nil {
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.AttendanceResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+}
+
 func (c *AttendanceController) Detail(ctx *fiber.Ctx) error {
 	companyID := middleware.GetCompanyId(ctx)
 

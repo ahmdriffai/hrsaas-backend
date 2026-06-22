@@ -80,10 +80,8 @@ func (r *AttendanceRepository) FilterSearch(request *model.SearchAttendanceReque
 }
 
 func (r *AttendanceRepository) FindByEmployeeIDAndDate(db *gorm.DB, entity *entity.Attendance, employeeId string, date int64) error {
-	// Pastikan jamnya 00:00:00
 	t := time.UnixMilli(date)
 
-	// tanggal jam 00:00:00
 	startOfDay := time.Date(
 		t.Year(),
 		t.Month(),

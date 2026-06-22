@@ -175,6 +175,7 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 	route.Post("/check-out", c.EmployeeMiddleware, c.AttendanceController.CheckOut)
 	route.Post("/break-in", c.EmployeeMiddleware, c.AttendanceController.BreakIn)
 	route.Post("/break-out", c.EmployeeMiddleware, c.AttendanceController.BreakOut)
+	route.Get("/_current", c.EmployeeMiddleware, c.AttendanceController.ListCurrent)
 
 	adminMW := c.AdminMiddleware("ATTENDANCES")
 	route.Get("/", adminMW, c.AttendanceController.List)
