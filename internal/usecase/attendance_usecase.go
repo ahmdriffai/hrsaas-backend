@@ -235,6 +235,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 
 	now := time.Now()
 	nowMilli := now.UnixMilli()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).UnixMilli()
 
 	shifts, err := c.ShiftRepository.FindByEmployeeID(tx, request.EmployeeID)
 	if err != nil {
@@ -286,15 +287,15 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 	attendance := &entity.Attendance{
 		CompanyID:   request.CompanyID,
 		EmployeeID:  request.EmployeeID,
-		Date:        nowMilli,
+		Date:        startOfDay,
 		CheckInTime: nowMilli,
 		Status:      "HADIR",
 	}
 
-	faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
-	if err != nil {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah")
-	}
+	// faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
+	// if err != nil {
+	// 	return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah")
+	// }
 
 	attendanceLog := &entity.AttendanceLog{
 		Type:               "CHECK_IN",
@@ -303,10 +304,12 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		Lng:                request.Lng,
 		LocationDistance:   locationDistance,
 		IsLocationVerified: true,
-		IsFaceVerified:     faceResult.IsVerified,
-		FaceConfidence:     faceResult.Confidence,
-		FaceImageURL:       request.FaceImageUrl,
-		DeviceInfo:         request.DeviceInfo,
+		// IsFaceVerified:     faceResult.IsVerified,
+		// FaceConfidence:     faceResult.Confidence,
+		IsFaceVerified: false,
+		FaceConfidence: 0,
+		FaceImageURL:   request.FaceImageUrl,
+		DeviceInfo:     request.DeviceInfo,
 	}
 
 	weekday := int(now.Weekday())
@@ -387,10 +390,10 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		return nil, err
 	}
 
-	faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
-	if err != nil {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah")
-	}
+	// faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
+	// if err != nil {
+	// 	return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah")
+	// }
 
 	attendance.CheckOutTime = nowMilli
 
@@ -414,10 +417,12 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		Lng:                request.Lng,
 		LocationDistance:   distance,
 		IsLocationVerified: true,
-		IsFaceVerified:     faceResult.IsVerified,
-		FaceConfidence:     faceResult.Confidence,
-		FaceImageURL:       request.FaceImageUrl,
-		DeviceInfo:         request.DeviceInfo,
+		// IsFaceVerified:     faceResult.IsVerified,
+		// FaceConfidence:     faceResult.Confidence,
+		IsFaceVerified: false,
+		FaceConfidence: 0,
+		FaceImageURL:   request.FaceImageUrl,
+		DeviceInfo:     request.DeviceInfo,
 	}
 
 	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {

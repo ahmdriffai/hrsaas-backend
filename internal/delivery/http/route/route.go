@@ -166,6 +166,7 @@ func (c *RouteConfig) SetupOfficeLocationRouter() {
 	route.Put("/:officeLocationID", adminMW, c.OfficeLocationController.Update)
 	route.Delete("/:officeLocationID", adminMW, c.OfficeLocationController.Delete)
 	route.Post("/assign-employee", adminMW, c.OfficeLocationController.AssignEmployee)
+	route.Post("/:officeLocationID/employees", adminMW, c.OfficeLocationController.BulkAssignEmployees)
 }
 
 func (c *RouteConfig) SetupAttendanceRouter() {
@@ -191,6 +192,7 @@ func (c *RouteConfig) SetupShiftRouter() {
 	route.Put("/:shiftID", adminMW, c.ShiftController.Update)
 	route.Delete("/:shiftID", adminMW, c.ShiftController.Delete)
 	route.Post("/assign-employee", adminMW, c.ShiftController.AssignEmployee)
+	route.Post("/:shiftID/employees", adminMW, c.ShiftController.BulkAssignEmployees)
 }
 
 func (c *RouteConfig) SetupTimeOffRouter() {
