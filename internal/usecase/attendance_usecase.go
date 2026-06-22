@@ -110,7 +110,7 @@ func (c *AttendanceUseCase) Detail(ctx context.Context, requestID string, compan
 	defer tx.Rollback()
 
 	attendance := new(entity.Attendance)
-	if err := c.AttendanceRepository.FindByIdAndCompany(tx, attendance, requestID, companyID); err != nil {
+	if err := c.AttendanceRepository.FindByIdAndCompany(tx, attendance, requestID, companyID, "Employee", "Employee.EmployeeContract", "Employee.EmployeeContract.Position"); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.NewError(fiber.StatusNotFound, "Attendance tidak ditemukan")
 		}
@@ -148,7 +148,7 @@ func (c *AttendanceUseCase) Update(ctx context.Context, requestID string, compan
 	}
 
 	attendance := new(entity.Attendance)
-	if err := c.AttendanceRepository.FindByIdAndCompany(tx, attendance, requestID, companyID); err != nil {
+	if err := c.AttendanceRepository.FindByIdAndCompany(tx, attendance, requestID, companyID, "Employee", "Employee.EmployeeContract", "Employee.EmployeeContract.Position"); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.NewError(fiber.StatusNotFound, "Attendance tidak ditemukan")
 		}
@@ -173,6 +173,9 @@ func (c *AttendanceUseCase) Update(ctx context.Context, requestID string, compan
 	}
 	if request.Status != nil {
 		attendance.Status = *request.Status
+	}
+	if request.IsApproved != nil {
+		attendance.IsApproved = *request.IsApproved
 	}
 
 	if err := c.AttendanceRepository.Update(tx, attendance); err != nil {
@@ -345,6 +348,11 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 
 	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {
 		c.Log.WithError(err).Error("Failed to create attendance log")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := c.AttendanceRepository.FindById(tx, attendance, attendance.ID, "Employee", "Employee.EmployeeContract", "Employee.EmployeeContract.Position"); err != nil {
+		c.Log.WithError(err).Error("Failed to reload attendance with employee")
 		return nil, fiber.ErrInternalServerError
 	}
 

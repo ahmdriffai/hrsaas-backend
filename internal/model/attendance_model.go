@@ -6,12 +6,15 @@ type AttendanceResponse struct {
 	ID                string                  `json:"id"`
 	CompanyID         string                  `json:"company_id"`
 	EmployeeID        string                  `json:"employee_id"`
+	EmployeeName      string                  `json:"employee_name"`
+	EmployeePosition  string                  `json:"employee_position,omitempty"`
 	Date              int64                   `json:"date"`
 	CheckInTime       int64                   `json:"check_in_time,omitempty"`
 	CheckOutTime      int64                   `json:"check_out_time,omitempty"`
 	TotalWorkMinutes  int                     `json:"total_work_minutes,omitempty"`
 	TotalBreakMinutes int                     `json:"total_break_minutes,omitempty"`
 	Status            string                  `json:"status"`
+	IsApproved        bool                    `json:"is_approved,omitempty"`
 	Logs              []AttendanceLogResponse `json:"logs,omitempty"`
 }
 
@@ -45,6 +48,7 @@ type UpdateAttendanceRequest struct {
 	CheckOutTime      *int64  `json:"check_out_time,omitempty"`
 	TotalWorkMinutes  *int    `json:"total_work_minutes,omitempty"`
 	TotalBreakMinutes *int    `json:"total_break_minutes,omitempty"`
+	IsApproved        *bool   `json:"is_approved,omitempty"`
 	Status            *string `json:"status,omitempty" validate:"omitempty,oneof=HADIR TERLAMBAT ALPHA IZIN SAKIT"`
 }
 
@@ -53,22 +57,34 @@ type SearchAttendanceRequest struct {
 	EmployeeID string `json:"employee_id,omitempty" validate:"omitempty,uuid4"`
 	Date       string `json:"date,omitempty" validate:"omitempty,max=20"`
 	Status     string `json:"status,omitempty" validate:"omitempty,oneof=HADIR TERLAMBAT ALPHA IZIN SAKIT"`
+	IsApproved *bool  `json:"is_approved,omitempty"`
 	Page       int    `json:"page,omitempty" validate:"min=1"`
 	Size       int    `json:"size,omitempty" validate:"min=1,max=100"`
 }
 
 // converter
 func AttendandeToResponse(attendance *entity.Attendance) *AttendanceResponse {
+	employeePosition := ""
+	for _, contract := range attendance.Employee.EmployeeContract {
+		if contract.IsActive {
+			employeePosition = contract.Position.Name
+			break
+		}
+	}
+
 	return &AttendanceResponse{
 		ID:                attendance.ID,
 		CompanyID:         attendance.CompanyID,
 		EmployeeID:        attendance.EmployeeID,
+		EmployeeName:      attendance.Employee.Fullname,
+		EmployeePosition:  employeePosition,
 		Date:              attendance.Date,
 		CheckInTime:       attendance.CheckInTime,
 		CheckOutTime:      attendance.CheckOutTime,
 		TotalWorkMinutes:  attendance.TotalWorkMinutes,
 		TotalBreakMinutes: attendance.TotalBreakMinutes,
 		Status:            attendance.Status,
+		IsApproved:        attendance.IsApproved,
 	}
 }
 

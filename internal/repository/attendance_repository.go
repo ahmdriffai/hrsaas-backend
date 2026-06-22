@@ -29,6 +29,7 @@ func (r *AttendanceRepository) Update(db *gorm.DB, attendance *entity.Attendance
 		"total_work_minutes":  attendance.TotalWorkMinutes,
 		"total_break_minutes": attendance.TotalBreakMinutes,
 		"status":              attendance.Status,
+		"is_approved":         attendance.IsApproved,
 		"updated_at":          attendance.UpdatedAt,
 	}
 
@@ -42,6 +43,9 @@ func (r *AttendanceRepository) Search(db *gorm.DB, request *model.SearchAttendan
 	var attendances []entity.Attendance
 	if err := db.Scopes(r.FilterSearch(request)).
 		Order("date DESC").
+		Preload("Employee").
+		Preload("Employee.EmployeeContract").
+		Preload("Employee.EmployeeContract.Position").
 		Offset((request.Page - 1) * request.Size).
 		Limit(request.Size).
 		Find(&attendances).Error; err != nil {
@@ -68,6 +72,10 @@ func (r *AttendanceRepository) FilterSearch(request *model.SearchAttendanceReque
 			tx = tx.Where("status = ?", request.Status)
 		}
 
+		if request.IsApproved != nil {
+			tx = tx.Where("is_approved = ?", *request.IsApproved)
+		}
+
 		if request.Date != "" {
 			if t, err := time.Parse("2006-01-02", request.Date); err == nil {
 				startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local).UnixMilli()
@@ -91,6 +99,9 @@ func (r *AttendanceRepository) FindByEmployeeIDAndDate(db *gorm.DB, entity *enti
 	).UnixMilli()
 
 	return db.
+		Preload("Employee").
+		Preload("Employee.EmployeeContract").
+		Preload("Employee.EmployeeContract.Position").
 		Where("employee_id = ? AND date = ?", employeeId, startOfDay).
 		Take(entity).
 		Error

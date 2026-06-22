@@ -17,8 +17,12 @@ type Attendance struct {
 	TotalWorkMinutes  int    `gorm:"column:total_work_minutes"`
 	TotalBreakMinutes int    `gorm:"column:total_break_minutes"`
 	Status            string `gorm:"column:status;not null"`
+	IsApproved        bool   `gorm:"column:is_approved;default:false"`
 	CreatedAt         int64  `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt         int64  `gorm:"column:updated_at;autoUpdateTime"`
+
+	// Read-only association (not stored on attendances table)
+	Employee Employee `gorm:"foreignKey:EmployeeID;references:ID"`
 }
 
 // BeforeCreate hook to set UUID
