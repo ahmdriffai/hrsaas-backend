@@ -174,6 +174,12 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 	route.Post("/check-out", c.EmployeeMiddleware, c.AttendanceController.CheckOut)
 	route.Post("/break-in", c.EmployeeMiddleware, c.AttendanceController.BreakIn)
 	route.Post("/break-out", c.EmployeeMiddleware, c.AttendanceController.BreakOut)
+
+	adminMW := c.AdminMiddleware("ATTENDANCES")
+	route.Get("/", adminMW, c.AttendanceController.List)
+	route.Get("/:attendanceID", adminMW, c.AttendanceController.Detail)
+	route.Put("/:attendanceID", adminMW, c.AttendanceController.Update)
+	route.Delete("/:attendanceID", adminMW, c.AttendanceController.Delete)
 }
 
 func (c *RouteConfig) SetupShiftRouter() {
