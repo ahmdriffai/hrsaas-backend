@@ -127,6 +127,25 @@ func (c *OfficeLocationController) Update(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *OfficeLocationController) BulkAssignEmployees(ctx *fiber.Ctx) error {
+	request := new(model.BulkAssignEmployeesToOfficeLocationRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	request.OfficeLocationID = ctx.Params("officeLocationID")
+
+	response, err := c.UseCase.BulkAssignEmployees(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to bulk assign employees to office location")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.OfficeLocationResponse]{Data: response})
+}
+
 func (c *OfficeLocationController) Delete(ctx *fiber.Ctx) error {
 	companyID := middleware.GetCompanyId(ctx)
 

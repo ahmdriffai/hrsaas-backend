@@ -231,6 +231,50 @@ func (c *OfficeLocationUseCase) Update(ctx context.Context, requestID string, co
 	return model.OfficeLocationToResponse(officeLocation), nil
 }
 
+func (c *OfficeLocationUseCase) BulkAssignEmployees(ctx context.Context, request *model.BulkAssignEmployeesToOfficeLocationRequest) (*model.OfficeLocationResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	count, err := c.OfficeLocationRepository.CountByIDAndCompanyID(tx, request.OfficeLocationID, request.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to check office location")
+		return nil, fiber.ErrInternalServerError
+	}
+	if count == 0 {
+		return nil, fiber.ErrNotFound
+	}
+
+	if err := c.OfficeLocationRepository.DeleteEmployeesByOfficeLocationID(tx, request.OfficeLocationID); err != nil {
+		c.Log.WithError(err).Error("Failed to remove existing employees")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(request.EmployeeIDs) > 0 {
+		if err := c.OfficeLocationRepository.BulkAssignEmployees(tx, request.EmployeeIDs, request.OfficeLocationID); err != nil {
+			c.Log.WithError(err).Error("Failed to bulk assign employees")
+			return nil, fiber.ErrInternalServerError
+		}
+	}
+
+	var officeLocation = new(entity.OfficeLocation)
+	if err := c.OfficeLocationRepository.FindByIdAndCompany(tx, officeLocation, request.OfficeLocationID, request.CompanyID, "Employees"); err != nil {
+		c.Log.WithError(err).Error("Failed to reload office location")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.OfficeLocationToResponse(officeLocation), nil
+}
+
 func (c *OfficeLocationUseCase) Delete(ctx context.Context, requestID string, companyID string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()

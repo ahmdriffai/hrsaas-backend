@@ -54,6 +54,12 @@ type AssignEmployeeToShiftRequest struct {
 	ShiftID    string `json:"shift_id" validate:"required"`
 }
 
+type BulkAssignEmployeesToShiftRequest struct {
+	CompanyID   string   `json:"-" validate:"required"`
+	ShiftID     string   `json:"-" validate:"required"`
+	EmployeeIDs []string `json:"employee_ids"`
+}
+
 type SearchShiftRequest struct {
 	CompanyID string `json:"-" validate:"required"`
 	Key       string `json:"key" validate:"max=100"`

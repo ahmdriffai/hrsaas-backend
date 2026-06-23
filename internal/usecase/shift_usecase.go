@@ -335,6 +335,50 @@ func (c *ShiftUseCase) Update(ctx context.Context, shiftID string, companyID str
 	return model.ShiftToResponse(shift), nil
 }
 
+func (c *ShiftUseCase) BulkAssignEmployees(ctx context.Context, request *model.BulkAssignEmployeesToShiftRequest) (*model.ShiftResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	count, err := c.ShiftRepository.CountByIDAndCompanyID(tx, request.ShiftID, request.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to check shift")
+		return nil, fiber.ErrInternalServerError
+	}
+	if count == 0 {
+		return nil, fiber.ErrNotFound
+	}
+
+	if err := c.ShiftRepository.DeleteEmployeesByShiftID(tx, request.ShiftID); err != nil {
+		c.Log.WithError(err).Error("Failed to remove existing employees")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(request.EmployeeIDs) > 0 {
+		if err := c.ShiftRepository.BulkAssignEmployees(tx, request.EmployeeIDs, request.ShiftID); err != nil {
+			c.Log.WithError(err).Error("Failed to bulk assign employees")
+			return nil, fiber.ErrInternalServerError
+		}
+	}
+
+	var shift = new(entity.Shift)
+	if err := c.ShiftRepository.FindByIdAndCompany(tx, shift, request.ShiftID, request.CompanyID, "Employees", "ShiftDays"); err != nil {
+		c.Log.WithError(err).Error("Failed to reload shift")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return model.ShiftToResponse(shift), nil
+}
+
 func (c *ShiftUseCase) Delete(ctx context.Context, shiftID string, companyID string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()

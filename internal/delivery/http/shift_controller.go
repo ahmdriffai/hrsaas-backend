@@ -123,6 +123,25 @@ func (c *ShiftController) Update(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *ShiftController) BulkAssignEmployees(ctx *fiber.Ctx) error {
+	request := new(model.BulkAssignEmployeesToShiftRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	request.ShiftID = ctx.Params("shiftID")
+
+	response, err := c.UseCase.BulkAssignEmployees(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to bulk assign employees to shift")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.ShiftResponse]{Data: response})
+}
+
 func (c *ShiftController) Delete(ctx *fiber.Ctx) error {
 	companyID := middleware.GetCompanyId(ctx)
 
