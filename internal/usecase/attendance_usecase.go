@@ -105,6 +105,34 @@ func (c *AttendanceUseCase) Search(ctx context.Context, request *model.SearchAtt
 	return responses, total, nil
 }
 
+func (c *AttendanceUseCase) SearchLog(ctx context.Context, request *model.SearchAttendanceLogRequest) ([]model.AttendanceLogResponse, int64, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("error validating request body")
+		return nil, 0, fiber.ErrBadRequest
+	}
+
+	logs, total, err := c.AttendanceLogRepo.Search(tx, request)
+	if err != nil {
+		c.Log.WithError(err).Error("error getting attendance logs")
+		return nil, 0, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, 0, fiber.ErrInternalServerError
+	}
+
+	responses := make([]model.AttendanceLogResponse, len(logs))
+	for i, log := range logs {
+		responses[i] = *model.AttendanceLogToResponse(&log)
+	}
+
+	return responses, total, nil
+}
+
 func (c *AttendanceUseCase) Detail(ctx context.Context, requestID string, companyID string) (*model.AttendanceResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
@@ -174,10 +202,6 @@ func (c *AttendanceUseCase) Update(ctx context.Context, requestID string, compan
 	if request.Status != nil {
 		attendance.Status = *request.Status
 	}
-	if request.IsApproved != nil {
-		attendance.IsApproved = *request.IsApproved
-	}
-
 	if err := c.AttendanceRepository.Update(tx, attendance); err != nil {
 		c.Log.WithError(err).Error("Failed to update attendance")
 		return nil, fiber.ErrInternalServerError
@@ -283,9 +307,12 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 			break
 		}
 	}
-	if !isInRange {
-		return nil, fiber.NewError(400, "Anda diluar jangkauan")
+
+	if !request.IsAllowed {
+		return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan check-in disini")
 	}
+
+	isApproved := isInRange
 
 	attendance := &entity.Attendance{
 		CompanyID:   request.CompanyID,
@@ -306,13 +333,14 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		Lat:                request.Lat,
 		Lng:                request.Lng,
 		LocationDistance:   locationDistance,
-		IsLocationVerified: true,
+		IsLocationVerified: isInRange,
 		// IsFaceVerified:     faceResult.IsVerified,
 		// FaceConfidence:     faceResult.Confidence,
 		IsFaceVerified: false,
 		FaceConfidence: 0,
 		FaceImageURL:   request.FaceImageUrl,
 		DeviceInfo:     request.DeviceInfo,
+		IsApproved:     isApproved,
 	}
 
 	weekday := int(now.Weekday())
@@ -393,10 +421,35 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Sudah check-out hari ini")
 	}
 
-	distance, err := c.validateLocation(tx, request.EmployeeID, request.Lat, request.Lng)
-	if err != nil {
-		return nil, err
+	if !request.IsAllowed {
+		return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan check-out disini")
 	}
+
+	isInRange := false
+	locationDistance := 0.0
+	locations, err := c.LocationRepository.GetByEmployeeID(tx, request.EmployeeID)
+	if err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+
+	for _, location := range locations {
+		lat, err := strconv.ParseFloat(location.Lat, 64)
+		if err != nil {
+			continue
+		}
+		lng, err := strconv.ParseFloat(location.Lng, 64)
+		if err != nil {
+			continue
+		}
+		distance := lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
+		if distance <= float64(location.Radius) {
+			isInRange = true
+			locationDistance = distance
+			break
+		}
+	}
+
+	isApproved := isInRange
 
 	// faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
 	// if err != nil {
@@ -406,10 +459,7 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 	attendance.CheckOutTime = nowMilli
 
 	checkInTime := time.UnixMilli(attendance.CheckInTime)
-	totalWorkMinutes := int(now.Sub(checkInTime).Minutes()) - attendance.TotalBreakMinutes
-	if totalWorkMinutes < 0 {
-		totalWorkMinutes = 0
-	}
+	totalWorkMinutes := max(int(now.Sub(checkInTime).Minutes())-attendance.TotalBreakMinutes, 0)
 	attendance.TotalWorkMinutes = totalWorkMinutes
 
 	if err := c.AttendanceRepository.Update(tx, &attendance); err != nil {
@@ -423,14 +473,15 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		Time:               nowMilli,
 		Lat:                request.Lat,
 		Lng:                request.Lng,
-		LocationDistance:   distance,
-		IsLocationVerified: true,
+		LocationDistance:   locationDistance,
+		IsLocationVerified: isInRange,
 		// IsFaceVerified:     faceResult.IsVerified,
 		// FaceConfidence:     faceResult.Confidence,
 		IsFaceVerified: false,
 		FaceConfidence: 0,
 		FaceImageURL:   request.FaceImageUrl,
 		DeviceInfo:     request.DeviceInfo,
+		IsApproved:     isApproved,
 	}
 
 	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {
@@ -485,10 +536,35 @@ func (c *AttendanceUseCase) BreakIn(ctx context.Context, request *model.CheckInA
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Sedang dalam break")
 	}
 
-	distance, err := c.validateLocation(tx, request.EmployeeID, request.Lat, request.Lng)
-	if err != nil {
-		return nil, err
+	if !request.IsAllowed {
+		return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan break-in disini")
 	}
+
+	isInRange := false
+	locationDistance := 0.0
+	locations, err := c.LocationRepository.GetByEmployeeID(tx, request.EmployeeID)
+	if err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+
+	for _, location := range locations {
+		lat, err := strconv.ParseFloat(location.Lat, 64)
+		if err != nil {
+			continue
+		}
+		lng, err := strconv.ParseFloat(location.Lng, 64)
+		if err != nil {
+			continue
+		}
+		distance := lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
+		if distance <= float64(location.Radius) {
+			isInRange = true
+			locationDistance = distance
+			break
+		}
+	}
+
+	isApproved := isInRange
 
 	attendanceLog := &entity.AttendanceLog{
 		AttendanceID:       attendance.ID,
@@ -496,12 +572,13 @@ func (c *AttendanceUseCase) BreakIn(ctx context.Context, request *model.CheckInA
 		Time:               nowMilli,
 		Lat:                request.Lat,
 		Lng:                request.Lng,
-		LocationDistance:   distance,
-		IsLocationVerified: true,
+		LocationDistance:   locationDistance,
+		IsLocationVerified: isInRange,
 		IsFaceVerified:     false,
 		FaceConfidence:     0,
 		FaceImageURL:       request.FaceImageUrl,
 		DeviceInfo:         request.DeviceInfo,
+		IsApproved:         isApproved,
 	}
 
 	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {
@@ -562,10 +639,35 @@ func (c *AttendanceUseCase) BreakOut(ctx context.Context, request *model.CheckIn
 		return nil, fiber.ErrInternalServerError
 	}
 
-	distance, err := c.validateLocation(tx, request.EmployeeID, request.Lat, request.Lng)
-	if err != nil {
-		return nil, err
+	if !request.IsAllowed {
+		return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan break-out disini")
 	}
+
+	isInRange := false
+	locationDistance := 0.0
+	locations, err := c.LocationRepository.GetByEmployeeID(tx, request.EmployeeID)
+	if err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+
+	for _, location := range locations {
+		lat, err := strconv.ParseFloat(location.Lat, 64)
+		if err != nil {
+			continue
+		}
+		lng, err := strconv.ParseFloat(location.Lng, 64)
+		if err != nil {
+			continue
+		}
+		distance := lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
+		if distance <= float64(location.Radius) {
+			isInRange = true
+			locationDistance = distance
+			break
+		}
+	}
+
+	isApproved := isInRange
 
 	breakDuration := int(now.Sub(time.UnixMilli(lastBreakIn.Time)).Minutes())
 	attendance.TotalBreakMinutes += breakDuration
@@ -581,12 +683,13 @@ func (c *AttendanceUseCase) BreakOut(ctx context.Context, request *model.CheckIn
 		Time:               nowMilli,
 		Lat:                request.Lat,
 		Lng:                request.Lng,
-		LocationDistance:   distance,
-		IsLocationVerified: true,
+		LocationDistance:   locationDistance,
+		IsLocationVerified: isInRange,
 		IsFaceVerified:     false,
 		FaceConfidence:     0,
 		FaceImageURL:       request.FaceImageUrl,
 		DeviceInfo:         request.DeviceInfo,
+		IsApproved:         isApproved,
 	}
 
 	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {

@@ -29,7 +29,6 @@ func (r *AttendanceRepository) Update(db *gorm.DB, attendance *entity.Attendance
 		"total_work_minutes":  attendance.TotalWorkMinutes,
 		"total_break_minutes": attendance.TotalBreakMinutes,
 		"status":              attendance.Status,
-		"is_approved":         attendance.IsApproved,
 		"updated_at":          attendance.UpdatedAt,
 	}
 

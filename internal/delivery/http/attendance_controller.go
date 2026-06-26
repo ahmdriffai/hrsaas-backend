@@ -89,6 +89,39 @@ func (c *AttendanceController) ListCurrent(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *AttendanceController) ListLog(ctx *fiber.Ctx) error {
+	request := new(model.SearchAttendanceLogRequest)
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	request.AttendanceID = ctx.Query("attendance_id", "")
+	request.EmployeeID = ctx.Query("employee_id", "")
+	request.Type = ctx.Query("type", "")
+	request.Date = ctx.Query("date", "")
+	if isApproved := ctx.Query("is_approved", ""); isApproved != "" {
+		val := isApproved == "true"
+		request.IsApproved = &val
+	}
+	request.Page = ctx.QueryInt("page", 1)
+	request.Size = ctx.QueryInt("size", 10)
+
+	responses, total, err := c.UseCase.SearchLog(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list attendance logs")
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.AttendanceLogResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+}
+
 func (c *AttendanceController) Detail(ctx *fiber.Ctx) error {
 	companyID := middleware.GetCompanyId(ctx)
 

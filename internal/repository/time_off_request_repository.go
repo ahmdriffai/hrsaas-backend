@@ -25,6 +25,7 @@ func (r *TimeOffRequestRepository) List(db *gorm.DB, request *model.SearchTimeOf
 	query = r.applyFilters(query, request)
 	if withRelations {
 		query = query.
+			Order("created_at DESC").
 			Preload("Employee").
 			Preload("TimeOffType").
 			Preload("Approvals").

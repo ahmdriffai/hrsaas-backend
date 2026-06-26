@@ -179,6 +179,7 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 
 	adminMW := c.AdminMiddleware("ATTENDANCES")
 	route.Get("/", adminMW, c.AttendanceController.List)
+	route.Get("/logs", adminMW, c.AttendanceController.ListLog)
 	route.Get("/:attendanceID", adminMW, c.AttendanceController.Detail)
 	route.Put("/:attendanceID", adminMW, c.AttendanceController.Update)
 	route.Delete("/:attendanceID", adminMW, c.AttendanceController.Delete)

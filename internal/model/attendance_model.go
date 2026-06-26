@@ -11,10 +11,9 @@ type AttendanceResponse struct {
 	Date              int64                   `json:"date"`
 	CheckInTime       int64                   `json:"check_in_time,omitempty"`
 	CheckOutTime      int64                   `json:"check_out_time,omitempty"`
-	TotalWorkMinutes  int                     `json:"total_work_minutes,omitempty"`
-	TotalBreakMinutes int                     `json:"total_break_minutes,omitempty"`
+	TotalWorkMinutes  int                     `json:"total_work_minutes"`
+	TotalBreakMinutes int                     `json:"total_break_minutes"`
 	Status            string                  `json:"status"`
-	IsApproved        bool                    `json:"is_approved,omitempty"`
 	Logs              []AttendanceLogResponse `json:"logs,omitempty"`
 }
 
@@ -30,6 +29,7 @@ type AttendanceLogResponse struct {
 	IsFaceVerified     bool    `json:"is_face_verified"`
 	FaceConfidence     float64 `json:"face_confidence"`
 	FaceImageURL       string  `json:"face_image_url"`
+	IsApproved         bool    `json:"is_approved"`
 	DeviceInfo         string  `json:"device_info"`
 }
 
@@ -40,6 +40,7 @@ type CheckInAttendanceRequest struct {
 	Lng          float64 `json:"lng" validate:"required"`
 	FaceImageUrl string  `json:"face_image_url" validate:"required,url"`
 	DeviceInfo   string  `json:"device_info" validate:"required"`
+	IsAllowed    bool    `json:"is_allowed"`
 }
 
 type UpdateAttendanceRequest struct {
@@ -48,7 +49,7 @@ type UpdateAttendanceRequest struct {
 	CheckOutTime      *int64  `json:"check_out_time,omitempty"`
 	TotalWorkMinutes  *int    `json:"total_work_minutes,omitempty"`
 	TotalBreakMinutes *int    `json:"total_break_minutes,omitempty"`
-	IsApproved        *bool   `json:"is_approved,omitempty"`
+	IsAllowed         *bool   `json:"is_allowed,omitempty"`
 	Status            *string `json:"status,omitempty" validate:"omitempty,oneof=HADIR TERLAMBAT ALPHA IZIN SAKIT"`
 }
 
@@ -60,6 +61,17 @@ type SearchAttendanceRequest struct {
 	IsApproved *bool  `json:"is_approved,omitempty"`
 	Page       int    `json:"page,omitempty" validate:"min=1"`
 	Size       int    `json:"size,omitempty" validate:"min=1,max=100"`
+}
+
+type SearchAttendanceLogRequest struct {
+	CompanyID    string `json:"-" validate:"required,uuid4"`
+	AttendanceID string `json:"attendance_id,omitempty" validate:"omitempty,uuid4"`
+	EmployeeID   string `json:"employee_id,omitempty" validate:"omitempty,uuid4"`
+	Type         string `json:"type,omitempty" validate:"omitempty,oneof=CHECK_IN CHECK_OUT BREAK_IN BREAK_OUT"`
+	Date         string `json:"date,omitempty" validate:"omitempty,max=20"`
+	IsApproved   *bool  `json:"is_approved,omitempty"`
+	Page         int    `json:"page,omitempty" validate:"min=1"`
+	Size         int    `json:"size,omitempty" validate:"min=1,max=100"`
 }
 
 // converter
@@ -84,7 +96,6 @@ func AttendandeToResponse(attendance *entity.Attendance) *AttendanceResponse {
 		TotalWorkMinutes:  attendance.TotalWorkMinutes,
 		TotalBreakMinutes: attendance.TotalBreakMinutes,
 		Status:            attendance.Status,
-		IsApproved:        attendance.IsApproved,
 	}
 }
 
@@ -101,6 +112,7 @@ func AttendanceLogToResponse(log *entity.AttendanceLog) *AttendanceLogResponse {
 		IsFaceVerified:     log.IsFaceVerified,
 		FaceConfidence:     log.FaceConfidence,
 		FaceImageURL:       log.FaceImageURL,
+		IsApproved:         log.IsApproved,
 		DeviceInfo:         log.DeviceInfo,
 	}
 }
