@@ -19,6 +19,9 @@ type Attendance struct {
 	Status            string `gorm:"column:status;not null"`
 	CreatedAt         int64  `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt         int64  `gorm:"column:updated_at;autoUpdateTime"`
+
+	// Read-only association (not stored on attendances table)
+	Employee Employee `gorm:"foreignKey:EmployeeID;references:ID"`
 }
 
 // BeforeCreate hook to set UUID
@@ -43,6 +46,7 @@ type AttendanceLog struct {
 	IsFaceVerified     bool    `gorm:"column:is_face_verified"`
 	FaceConfidence     float64 `gorm:"column:face_confidence"` // Confidence level of face verification
 	FaceImageURL       string  `gorm:"column:face_image_url"`  // URL to the face image
+	IsApproved         bool    `gorm:"column:is_approved"`
 	DeviceInfo         string  `gorm:"column:device_info"`
 	CreatedAt          int64   `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt          int64   `gorm:"column:updated_at;autoUpdateTime"`

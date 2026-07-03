@@ -29,6 +29,14 @@ func (c *AttendanceController) parseRequest(ctx *fiber.Ctx) (*model.CheckInAtten
 		c.Log.WithError(err).Error("failed to parse request body")
 		return nil, fiber.ErrBadRequest
 	}
+
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		c.Log.WithError(err).Error("failed to read face image file")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
+	}
+	request.File = file
+
 	request.CompanyID = user.CompanyID
 	request.EmployeeID = user.Employee.ID
 	return request, nil
@@ -84,6 +92,39 @@ func (c *AttendanceController) ListCurrent(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.JSON(model.WebResponse[[]model.AttendanceResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+}
+
+func (c *AttendanceController) ListLog(ctx *fiber.Ctx) error {
+	request := new(model.SearchAttendanceLogRequest)
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	request.AttendanceID = ctx.Query("attendance_id", "")
+	request.EmployeeID = ctx.Query("employee_id", "")
+	request.Type = ctx.Query("type", "")
+	request.Date = ctx.Query("date", "")
+	if isApproved := ctx.Query("is_approved", ""); isApproved != "" {
+		val := isApproved == "true"
+		request.IsApproved = &val
+	}
+	request.Page = ctx.QueryInt("page", 1)
+	request.Size = ctx.QueryInt("size", 10)
+
+	responses, total, err := c.UseCase.SearchLog(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list attendance logs")
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.AttendanceLogResponse]{
 		Data:   responses,
 		Paging: paging,
 	})
@@ -187,4 +228,84 @@ func (c *AttendanceController) BreakOut(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.JSON(model.WebResponse[*model.AttendanceResponse]{Data: response})
+}
+
+func (c *AttendanceController) RegisterFaceCurrent(ctx *fiber.Ctx) error {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		c.Log.WithError(err).Error("failed to read face image file")
+		return fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
+	}
+
+	user := middleware.GetUser(ctx)
+	request := &model.RegisterFaceRequest{
+		EmployeeID: user.Employee.ID,
+		CompanyID:  user.CompanyID,
+		File:       file,
+	}
+
+	response, err := c.UseCase.RegisterFace(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to register face")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.RegisterFaceResponse]{Data: response})
+}
+
+func (c *AttendanceController) FaceStatusCurrent(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+
+	response, err := c.UseCase.FaceStatus(ctx.UserContext(), user.Employee.ID, user.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to get face status")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.FaceStatusResponse]{Data: response})
+}
+
+func (c *AttendanceController) RegisterFace(ctx *fiber.Ctx) error {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		c.Log.WithError(err).Error("failed to read face image file")
+		return fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
+	}
+
+	request := &model.RegisterFaceRequest{
+		EmployeeID: ctx.Params("employee_id"),
+		CompanyID:  middleware.GetCompanyId(ctx),
+		File:       file,
+	}
+
+	response, err := c.UseCase.RegisterFace(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to register face")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.RegisterFaceResponse]{Data: response})
+}
+
+func (c *AttendanceController) FaceStatus(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.UseCase.FaceStatus(ctx.UserContext(), ctx.Params("employee_id"), companyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to get face status")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.FaceStatusResponse]{Data: response})
+}
+
+func (c *AttendanceController) DeleteFace(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	if err := c.UseCase.DeleteFace(ctx.UserContext(), ctx.Params("employee_id"), companyID); err != nil {
+		c.Log.WithError(err).Error("Failed to delete face")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{Data: nil})
 }

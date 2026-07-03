@@ -55,6 +55,7 @@ func Bootstrap(config *BootstrapConfig) {
 	// setup usecase
 	companyUsecase := usecase.NewCompanyUseCase(config.DB, config.Log, config.Validate, companyRepository, userRepository)
 	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository, roleRepository)
+	uploadUseCase := usecase.NewUploadUseCase(config.Log, config.Validate, config.Config)
 	employeeUseCase := usecase.NewEmployeeUseCase(
 		config.DB,
 		config.Log,
@@ -69,7 +70,7 @@ func Bootstrap(config *BootstrapConfig) {
 	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
-	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository, config.Config.GetString("face.base_url"))
+	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository, employeeRepository, uploadUseCase, config.Config.GetString("face.base_url"))
 	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository, shiftDayRepository)
 	timeOffRequestUseCase := usecase.NewTimeOffRequestUseCase(
 		config.DB,
@@ -132,7 +133,6 @@ func Bootstrap(config *BootstrapConfig) {
 	timeOffTypeController := http.NewTimeOffTypeController(timeOffTypeUseCase, config.Log)
 	timeOffBalanceController := http.NewTimeOffBalanceController(timeOffBalanceUseCase, config.Log)
 	timeOffApprovalController := http.NewTimeOffApprovalController(timeOffApprovalUseCase, timeOffRequestUseCase, config.Log)
-	uploadUseCase := usecase.NewUploadUseCase(config.Log, config.Validate, config.Config)
 	uploadController := http.NewUploadController(uploadUseCase, config.Log)
 	employeeContractController := http.NewEmployeeContractController(employeeContractUseCase, config.Log)
 	divisionController := http.NewDivisionController(divisionUseCase, config.Log)
