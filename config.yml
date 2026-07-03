@@ -32,14 +32,14 @@ s3:
   public_url: "https://is3.cloudhost.id/storage-main" # base URL publik, contoh: https://cdn.example.com atau https://<bucket>.s3.amazonaws.com
 
 face:
-  base_url: "http://localhost:8080"
+  base_url: "http://103.127.133.201:5001"
 
 # mail:
 #   smtp:
 #     host: smtp.gmail.com
 #     port: 587
 #     username: itbawon@gmail.com
-#     password: "ctog pmjh tmff gnsj"
+#     password: "ctog pmjh tmff gnsj
 #     from: "Bank Wonosobo <itbawon@gmail.com>"
 # jwt:
 #   secret: "supersecret"

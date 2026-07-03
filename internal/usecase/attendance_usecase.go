@@ -8,6 +8,8 @@ import (
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"io"
+	"mime/multipart"
 	"strconv"
 	"time"
 
@@ -26,6 +28,8 @@ type AttendanceUseCase struct {
 	ShiftRepository      *repository.ShiftRepository
 	ShiftDayRepo         *repository.ShiftDayRepository
 	AttendanceLogRepo    *repository.AttendanceLogRepository
+	EmployeeRepository   *repository.EmployeeRepository
+	UploadUseCase        *UploadUseCase
 	FaceServiceURL       string
 }
 
@@ -38,6 +42,8 @@ func NewAttendanceUseCase(
 	shiftRepository *repository.ShiftRepository,
 	shiftDayRepo *repository.ShiftDayRepository,
 	attendanceLogRepo *repository.AttendanceLogRepository,
+	employeeRepository *repository.EmployeeRepository,
+	uploadUseCase *UploadUseCase,
 	faceServiceURL string,
 ) *AttendanceUseCase {
 	return &AttendanceUseCase{
@@ -49,8 +55,124 @@ func NewAttendanceUseCase(
 		ShiftRepository:      shiftRepository,
 		ShiftDayRepo:         shiftDayRepo,
 		AttendanceLogRepo:    attendanceLogRepo,
+		EmployeeRepository:   employeeRepository,
+		UploadUseCase:        uploadUseCase,
 		FaceServiceURL:       faceServiceURL,
 	}
+}
+
+func (c *AttendanceUseCase) RegisterFace(ctx context.Context, request *model.RegisterFaceRequest) (*model.RegisterFaceResponse, error) {
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	employee := new(entity.Employee)
+	if err := c.EmployeeRepository.FindByIdAndCompany(c.DB.WithContext(ctx), employee, request.EmployeeID, request.CompanyID); err != nil {
+		c.Log.WithError(err).Error("Failed to find employee by ID")
+		return nil, fiber.ErrNotFound
+	}
+
+	image, err := readMultipart(request.File)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to read face image")
+		return nil, fiber.ErrBadRequest
+	}
+
+	// image, err = resizeImage(image, 1080) // compress dulu
+	// if err != nil {
+	// 	c.Log.WithError(err).Error("Failed to resize image")
+	// 	return nil, fiber.ErrBadRequest
+	// }
+
+	if err := lib.RegisterFace(c.FaceServiceURL+"/register", employee.ID, request.File.Filename, image); err != nil {
+		c.Log.WithError(err).Error("Failed to register face")
+		return nil, fiber.NewError(fiber.StatusBadGateway, "Gagal mendaftarkan wajah")
+	}
+
+	uploadUrl, err := c.uploadFace(ctx, request.File)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to upload face image")
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal mengunggah wajah")
+	}
+
+	return &model.RegisterFaceResponse{
+		EmployeeID:   employee.ID,
+		FaceImageURL: uploadUrl,
+	}, nil
+}
+
+func (c *AttendanceUseCase) FaceStatus(ctx context.Context, id, companyID string) (*model.FaceStatusResponse, error) {
+	employee := new(entity.Employee)
+	if err := c.EmployeeRepository.FindByIdAndCompany(c.DB.WithContext(ctx), employee, id, companyID); err != nil {
+		c.Log.WithError(err).Error("Failed to find employee by ID")
+		return nil, fiber.ErrNotFound
+	}
+
+	result := lib.CheckFaceExistence(c.FaceServiceURL+"/check-exists", employee.ID)
+	return &model.FaceStatusResponse{
+		EmployeeID: employee.ID,
+		Registered: result.Registered,
+	}, nil
+}
+
+func (c *AttendanceUseCase) DeleteFace(ctx context.Context, id, companyID string) error {
+	employee := new(entity.Employee)
+	if err := c.EmployeeRepository.FindByIdAndCompany(c.DB.WithContext(ctx), employee, id, companyID); err != nil {
+		c.Log.WithError(err).Error("Failed to find employee by ID")
+		return fiber.ErrNotFound
+	}
+
+	if err := lib.DeleteFace(c.FaceServiceURL+"/delete", employee.ID); err != nil {
+		c.Log.WithError(err).Error("Failed to delete face")
+		return fiber.NewError(fiber.StatusBadGateway, "Gagal menghapus wajah")
+	}
+
+	return nil
+}
+
+func (c *AttendanceUseCase) uploadFace(ctx context.Context, file *multipart.FileHeader) (string, error) {
+	uploaded, err := c.UploadUseCase.Upload(ctx, &model.UploadRequest{File: file})
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to upload face image")
+		return "", err
+	}
+	return uploaded.Url, nil
+}
+
+func readMultipart(file *multipart.FileHeader) ([]byte, error) {
+	src, err := file.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer src.Close()
+	return io.ReadAll(src)
+}
+
+func (c *AttendanceUseCase) verifyAndStoreFace(ctx context.Context, employeeID string, file *multipart.FileHeader) (string, *lib.FaceRecognizeResponse, error) {
+	image, err := readMultipart(file)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to read face image")
+		return "", nil, fiber.ErrBadRequest
+	}
+
+	result, err := lib.RecognizeFace(c.FaceServiceURL+"/recognize", employeeID, file.Filename, image)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to recognize face")
+		return "", nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah !")
+	}
+
+	if !result.Match {
+		return "", result, nil
+	}
+
+	uploadURL, err := c.uploadFace(ctx, file)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to upload face image")
+		return "", nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal menyimpan wajah !")
+	}
+
+	return uploadURL, result, nil
 }
 
 func (c *AttendanceUseCase) validateLocation(tx *gorm.DB, employeeID string, lat, lng float64) (distance float64, err error) {
@@ -322,10 +444,13 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		Status:      "HADIR",
 	}
 
-	// faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
-	// if err != nil {
-	// 	return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah")
-	// }
+	faceImageURL, faceResult, err := c.verifyAndStoreFace(ctx, request.EmployeeID, request.File)
+	if err != nil {
+		return nil, err
+	}
+	if !faceResult.Match {
+		return nil, fiber.NewError(fiber.StatusBadRequest, faceResult.Message)
+	}
 
 	attendanceLog := &entity.AttendanceLog{
 		Type:               "CHECK_IN",
@@ -334,13 +459,11 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		Lng:                request.Lng,
 		LocationDistance:   locationDistance,
 		IsLocationVerified: isInRange,
-		// IsFaceVerified:     faceResult.IsVerified,
-		// FaceConfidence:     faceResult.Confidence,
-		IsFaceVerified: false,
-		FaceConfidence: 0,
-		FaceImageURL:   request.FaceImageUrl,
-		DeviceInfo:     request.DeviceInfo,
-		IsApproved:     isApproved,
+		IsFaceVerified:     faceResult.Match,
+		// FaceConfidence:     0,
+		FaceImageURL: faceImageURL,
+		DeviceInfo:   request.DeviceInfo,
+		IsApproved:   isApproved,
 	}
 
 	weekday := int(now.Weekday())
@@ -451,10 +574,13 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 
 	isApproved := isInRange
 
-	// faceResult, err := lib.VerifyFace(c.FaceServiceURL+"/verify-face", request.EmployeeID, request.FaceImageUrl)
-	// if err != nil {
-	// 	return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memverifikasi wajah")
-	// }
+	faceImageURL, faceResult, err := c.verifyAndStoreFace(ctx, request.EmployeeID, request.File)
+	if err != nil {
+		return nil, err
+	}
+	if !faceResult.Match {
+		return nil, fiber.NewError(fiber.StatusBadRequest, faceResult.Message)
+	}
 
 	attendance.CheckOutTime = nowMilli
 
@@ -475,13 +601,11 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		Lng:                request.Lng,
 		LocationDistance:   locationDistance,
 		IsLocationVerified: isInRange,
-		// IsFaceVerified:     faceResult.IsVerified,
-		// FaceConfidence:     faceResult.Confidence,
-		IsFaceVerified: false,
-		FaceConfidence: 0,
-		FaceImageURL:   request.FaceImageUrl,
-		DeviceInfo:     request.DeviceInfo,
-		IsApproved:     isApproved,
+		IsFaceVerified:     faceResult.Match,
+		FaceConfidence:     0, // Python /recognize belum mengembalikan confidence
+		FaceImageURL:       faceImageURL,
+		DeviceInfo:         request.DeviceInfo,
+		IsApproved:         isApproved,
 	}
 
 	if err := c.AttendanceLogRepo.Create(tx, attendanceLog); err != nil {
@@ -566,6 +690,11 @@ func (c *AttendanceUseCase) BreakIn(ctx context.Context, request *model.CheckInA
 
 	isApproved := isInRange
 
+	faceImageURL, err := c.uploadFace(ctx, request.File)
+	if err != nil {
+		return nil, err
+	}
+
 	attendanceLog := &entity.AttendanceLog{
 		AttendanceID:       attendance.ID,
 		Type:               "BREAK_IN",
@@ -576,7 +705,7 @@ func (c *AttendanceUseCase) BreakIn(ctx context.Context, request *model.CheckInA
 		IsLocationVerified: isInRange,
 		IsFaceVerified:     false,
 		FaceConfidence:     0,
-		FaceImageURL:       request.FaceImageUrl,
+		FaceImageURL:       faceImageURL,
 		DeviceInfo:         request.DeviceInfo,
 		IsApproved:         isApproved,
 	}
@@ -677,6 +806,11 @@ func (c *AttendanceUseCase) BreakOut(ctx context.Context, request *model.CheckIn
 		return nil, fiber.ErrInternalServerError
 	}
 
+	faceImageURL, err := c.uploadFace(ctx, request.File)
+	if err != nil {
+		return nil, err
+	}
+
 	attendanceLog := &entity.AttendanceLog{
 		AttendanceID:       attendance.ID,
 		Type:               "BREAK_OUT",
@@ -687,7 +821,7 @@ func (c *AttendanceUseCase) BreakOut(ctx context.Context, request *model.CheckIn
 		IsLocationVerified: isInRange,
 		IsFaceVerified:     false,
 		FaceConfidence:     0,
-		FaceImageURL:       request.FaceImageUrl,
+		FaceImageURL:       faceImageURL,
 		DeviceInfo:         request.DeviceInfo,
 		IsApproved:         isApproved,
 	}

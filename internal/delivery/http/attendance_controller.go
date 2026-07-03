@@ -29,6 +29,14 @@ func (c *AttendanceController) parseRequest(ctx *fiber.Ctx) (*model.CheckInAtten
 		c.Log.WithError(err).Error("failed to parse request body")
 		return nil, fiber.ErrBadRequest
 	}
+
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		c.Log.WithError(err).Error("failed to read face image file")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
+	}
+	request.File = file
+
 	request.CompanyID = user.CompanyID
 	request.EmployeeID = user.Employee.ID
 	return request, nil
@@ -220,4 +228,84 @@ func (c *AttendanceController) BreakOut(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.JSON(model.WebResponse[*model.AttendanceResponse]{Data: response})
+}
+
+func (c *AttendanceController) RegisterFaceCurrent(ctx *fiber.Ctx) error {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		c.Log.WithError(err).Error("failed to read face image file")
+		return fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
+	}
+
+	user := middleware.GetUser(ctx)
+	request := &model.RegisterFaceRequest{
+		EmployeeID: user.Employee.ID,
+		CompanyID:  user.CompanyID,
+		File:       file,
+	}
+
+	response, err := c.UseCase.RegisterFace(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to register face")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.RegisterFaceResponse]{Data: response})
+}
+
+func (c *AttendanceController) FaceStatusCurrent(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+
+	response, err := c.UseCase.FaceStatus(ctx.UserContext(), user.Employee.ID, user.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to get face status")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.FaceStatusResponse]{Data: response})
+}
+
+func (c *AttendanceController) RegisterFace(ctx *fiber.Ctx) error {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		c.Log.WithError(err).Error("failed to read face image file")
+		return fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
+	}
+
+	request := &model.RegisterFaceRequest{
+		EmployeeID: ctx.Params("employee_id"),
+		CompanyID:  middleware.GetCompanyId(ctx),
+		File:       file,
+	}
+
+	response, err := c.UseCase.RegisterFace(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to register face")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.RegisterFaceResponse]{Data: response})
+}
+
+func (c *AttendanceController) FaceStatus(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	response, err := c.UseCase.FaceStatus(ctx.UserContext(), ctx.Params("employee_id"), companyID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to get face status")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.FaceStatusResponse]{Data: response})
+}
+
+func (c *AttendanceController) DeleteFace(ctx *fiber.Ctx) error {
+	companyID := middleware.GetCompanyId(ctx)
+
+	if err := c.UseCase.DeleteFace(ctx.UserContext(), ctx.Params("employee_id"), companyID); err != nil {
+		c.Log.WithError(err).Error("Failed to delete face")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{Data: nil})
 }

@@ -5,16 +5,17 @@ import (
 )
 
 type UserResponse struct {
-	ID            string               `json:"id,omitempty"`
-	Name          string               `json:"name,omitempty"`
-	Email         string               `json:"email,omitempty"`
-	EmailVerified bool                 `json:"email_verified,omitempty"`
-	CompanyID     string               `json:"company_id,omitempty"`
-	Employee      *EmployeeResponse    `json:"employee,omitempty"`
-	Roles         []RoleResponse       `json:"roles,omitempty"`
-	Permissions   []PermissionResponse `json:"permissions,omitempty"`
-	CreatedAt     int64                `json:"created_at,omitempty"`
-	UpdatedAt     int64                `json:"updated_at,omitempty"`
+	ID            string            `json:"id,omitempty"`
+	Name          string            `json:"name,omitempty"`
+	Email         string            `json:"email,omitempty"`
+	EmailVerified bool              `json:"email_verified,omitempty"`
+	CompanyID     string            `json:"company_id,omitempty"`
+	Employee      *EmployeeResponse `json:"employee,omitempty"`
+	Roles         []RoleResponse    `json:"roles,omitempty"`
+	// NotificationToken string               `json:"notif_token,omitempty"`
+	Permissions []PermissionResponse `json:"permissions,omitempty"`
+	CreatedAt   int64                `json:"created_at,omitempty"`
+	UpdatedAt   int64                `json:"updated_at,omitempty"`
 }
 
 type LoginUserResponse struct {
@@ -35,6 +36,7 @@ type UpdateUserRequest struct {
 	Image         *string   `json:"image,omitempty"`
 	EmailVerified *bool     `json:"email_verified,omitempty"`
 	RoleIDs       *[]string `json:"role_ids,omitempty"`
+	// NotificationToken string    `json:"notif_token,omitempty"`
 }
 
 type VerifyUserRequest struct {

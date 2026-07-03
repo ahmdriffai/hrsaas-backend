@@ -1,6 +1,9 @@
 package model
 
-import "hr-sas/internal/entity"
+import (
+	"hr-sas/internal/entity"
+	"mime/multipart"
+)
 
 type AttendanceResponse struct {
 	ID                string                  `json:"id"`
@@ -34,13 +37,29 @@ type AttendanceLogResponse struct {
 }
 
 type CheckInAttendanceRequest struct {
-	CompanyID    string  `json:"-" validate:"required,uuid4"`
-	EmployeeID   string  `json:"-" validate:"required,uuid4"`
-	Lat          float64 `json:"lat" validate:"required"`
-	Lng          float64 `json:"lng" validate:"required"`
-	FaceImageUrl string  `json:"face_image_url" validate:"required,url"`
-	DeviceInfo   string  `json:"device_info" validate:"required"`
-	IsAllowed    bool    `json:"is_allowed"`
+	CompanyID  string                `json:"-" form:"-" validate:"required,uuid4"`
+	EmployeeID string                `json:"-" form:"-" validate:"required,uuid4"`
+	Lat        float64               `json:"lat" form:"lat" validate:"required"`
+	Lng        float64               `json:"lng" form:"lng" validate:"required"`
+	DeviceInfo string                `json:"device_info" form:"device_info" validate:"required"`
+	IsAllowed  bool                  `json:"is_allowed" form:"is_allowed"`
+	File       *multipart.FileHeader `json:"-" form:"-" validate:"required"`
+}
+
+type RegisterFaceRequest struct {
+	EmployeeID string                `json:"-" validate:"required,uuid4"`
+	CompanyID  string                `json:"-" validate:"required,uuid4"`
+	File       *multipart.FileHeader `json:"-" validate:"required"`
+}
+
+type RegisterFaceResponse struct {
+	EmployeeID   string `json:"employee_id"`
+	FaceImageURL string `json:"face_image_url"`
+}
+
+type FaceStatusResponse struct {
+	EmployeeID string `json:"employee_id"`
+	Registered bool   `json:"registered"`
 }
 
 type UpdateAttendanceRequest struct {
