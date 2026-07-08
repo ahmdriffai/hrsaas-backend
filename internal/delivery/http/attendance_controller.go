@@ -309,3 +309,55 @@ func (c *AttendanceController) DeleteFace(ctx *fiber.Ctx) error {
 
 	return ctx.JSON(model.WebResponse[any]{Data: nil})
 }
+
+func (c *AttendanceController) parseLendRequest(ctx *fiber.Ctx) (*model.CheckInAttendanceRequest, error) {
+	request := new(model.CheckInAttendanceRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	if request.EmployeeID == "" {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "employee_id wajib diisi")
+	}
+
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		c.Log.WithError(err).Error("failed to read face image file")
+		return nil, fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
+	}
+	request.File = file
+
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	return request, nil
+}
+
+func (c *AttendanceController) LendCheckIn(ctx *fiber.Ctx) error {
+	request, err := c.parseLendRequest(ctx)
+	if err != nil {
+		return err
+	}
+
+	response, err := c.UseCase.CheckIn(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to lend check in attendance")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.AttendanceResponse]{Data: response})
+}
+
+func (c *AttendanceController) LendCheckOut(ctx *fiber.Ctx) error {
+	request, err := c.parseLendRequest(ctx)
+	if err != nil {
+		return err
+	}
+
+	response, err := c.UseCase.CheckOut(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to lend check out attendance")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.AttendanceResponse]{Data: response})
+}

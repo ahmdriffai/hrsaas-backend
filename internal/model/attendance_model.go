@@ -38,7 +38,7 @@ type AttendanceLogResponse struct {
 
 type CheckInAttendanceRequest struct {
 	CompanyID  string                `json:"-" form:"-" validate:"required,uuid4"`
-	EmployeeID string                `json:"-" form:"-" validate:"required,uuid4"`
+	EmployeeID string                `json:"-" form:"employee_id" validate:"required,uuid4"`
 	Lat        float64               `json:"lat" form:"lat" validate:"required"`
 	Lng        float64               `json:"lng" form:"lng" validate:"required"`
 	DeviceInfo string                `json:"device_info" form:"device_info" validate:"required"`

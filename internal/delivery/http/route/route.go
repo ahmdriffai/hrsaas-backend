@@ -175,6 +175,8 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 	route.Post("/check-out", c.EmployeeMiddleware, c.AttendanceController.CheckOut)
 	route.Post("/break-in", c.EmployeeMiddleware, c.AttendanceController.BreakIn)
 	route.Post("/break-out", c.EmployeeMiddleware, c.AttendanceController.BreakOut)
+	route.Post("/lend/check-in", c.EmployeeMiddleware, c.AttendanceController.LendCheckIn)
+	route.Post("/lend/check-out", c.EmployeeMiddleware, c.AttendanceController.LendCheckOut)
 	route.Get("/_current", c.EmployeeMiddleware, c.AttendanceController.ListCurrent)
 	route.Post("/_current/register-face", c.EmployeeMiddleware, c.AttendanceController.RegisterFaceCurrent)
 	// route.Get("/_current/face", c.EmployeeMiddleware, c.AttendanceController.FaceStatusCurrent)
