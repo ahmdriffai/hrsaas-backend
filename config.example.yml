@@ -32,6 +32,9 @@ s3:
 
 face:
   base_url: "http://localhost:8080"
+
+nasabah:
+  base_url: "http://localhost:8000" 
 # mail:
 #   smtp:
 #     host: smtp.gmail.com

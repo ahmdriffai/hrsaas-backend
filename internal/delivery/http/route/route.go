@@ -36,6 +36,7 @@ type RouteConfig struct {
 	EmployeeDocumentController  *http.EmployeeDocumentController
 	EmployeeEducationController *http.EmployeeEducationController
 	EmployeeTrainingController  *http.EmployeeTrainingController
+	RemidialVisitController     *http.RemidialVisitController
 }
 
 func (c *RouteConfig) Setup() {
@@ -61,6 +62,7 @@ func (c *RouteConfig) Setup() {
 	c.SetupHolidayRouter()
 	c.SetupEmployeeEducationRouter()
 	c.SetupEmployeeTrainingRouter()
+	c.SetupRemidialVisitRouter()
 }
 
 func (c *RouteConfig) SetupGuestRouter() {
@@ -339,4 +341,17 @@ func (c *RouteConfig) SetupHolidayRouter() {
 	route.Get("/", adminMW, c.HolidayController.List)
 	route.Put("/:id", adminMW, c.HolidayController.Update)
 	route.Delete("/:id", adminMW, c.HolidayController.Delete)
+}
+
+func (c *RouteConfig) SetupRemidialVisitRouter() {
+	route := c.App.Group("/api/remidial-visits", c.AuthMiddleware)
+
+	// Employee routes
+	route.Post("/search-nasabah", c.EmployeeMiddleware, c.RemidialVisitController.SearchNasabah)
+	route.Post("/", c.EmployeeMiddleware, c.RemidialVisitController.Create)
+	route.Get("/_current", c.EmployeeMiddleware, c.RemidialVisitController.ListCurrent)
+
+	// Admin routes
+	adminMW := c.AdminMiddleware("REMIDIAL_VISITS")
+	route.Get("/admin", adminMW, c.RemidialVisitController.ListAdmin)
 }

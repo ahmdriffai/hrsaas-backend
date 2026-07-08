@@ -49,6 +49,7 @@ func Bootstrap(config *BootstrapConfig) {
 	holidayRepository := repository.NewHolidayRepository(config.Log)
 	employeeEducationRepository := repository.NewEmployeeEducationRepository(config.Log)
 	employeeTrainingRepository := repository.NewEmployeeTrainingRepository(config.Log)
+	remidialVisitRepository := repository.NewRemidialVisitRepository(config.Log, config.Config.GetString("nasabah.base_url"))
 
 	// setup producer
 
@@ -119,6 +120,7 @@ func Bootstrap(config *BootstrapConfig) {
 	holidayUseCase := usecase.NewHolidayUseCase(config.DB, config.Log, config.Validate, holidayRepository)
 	employeeEducationUseCase := usecase.NewEmployeeEducationUseCase(config.DB, config.Log, config.Validate, employeeEducationRepository)
 	employeeTrainingUseCase := usecase.NewEmployeeTrainingUseCase(config.DB, config.Log, config.Validate, employeeTrainingRepository)
+	remidialVisitUseCase := usecase.NewRemidialVisitUseCase(config.DB, config.Log, config.Validate, remidialVisitRepository, employeeRepository)
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
 	userController := http.NewUserController(userUseCase, config.Log, config.Config)
@@ -143,6 +145,7 @@ func Bootstrap(config *BootstrapConfig) {
 	holidayController := http.NewHolidayController(holidayUseCase, config.Log)
 	employeeEducationController := http.NewEmployeeEducationController(employeeEducationUseCase, config.Log)
 	employeeTrainingController := http.NewEmployeeTrainingController(employeeTrainingUseCase, config.Log)
+	remidialVisitController := http.NewRemidialVisitController(remidialVisitUseCase, config.Log)
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
 	adminMiddleware := middleware.NewAdmin
@@ -179,6 +182,7 @@ func Bootstrap(config *BootstrapConfig) {
 		HolidayController:           holidayController,
 		EmployeeEducationController: employeeEducationController,
 		EmployeeTrainingController:  employeeTrainingController,
+		RemidialVisitController:     remidialVisitController,
 	}
 
 	routeConfig.Setup()
