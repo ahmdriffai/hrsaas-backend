@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"errors"
-	"fmt"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
@@ -409,8 +408,6 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		return nil, fiber.ErrInternalServerError
 	}
 
-	fmt.Println(locations)
-
 	isInRange := false
 	locationDistance := 0.0
 	for _, location := range locations {
@@ -423,15 +420,13 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 			continue
 		}
 		distance := lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
+		locationDistance = distance
 		if distance <= float64(location.Radius) {
 			isInRange = true
-			locationDistance = distance
+		} else {
+			isInRange = false
 			break
 		}
-	}
-
-	if !request.IsAllowed {
-		return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan check-in disini")
 	}
 
 	isApproved := isInRange
@@ -544,9 +539,9 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Sudah check-out hari ini")
 	}
 
-	if !request.IsAllowed {
-		return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan check-out disini")
-	}
+	// if !request.IsAllowed {
+	// 	return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan check-out disini")
+	// }
 
 	isInRange := false
 	locationDistance := 0.0
@@ -565,10 +560,12 @@ func (c *AttendanceUseCase) CheckOut(ctx context.Context, request *model.CheckIn
 			continue
 		}
 		distance := lib.DistanceMeter(request.Lat, request.Lng, lat, lng)
+		locationDistance = distance
+
 		if distance <= float64(location.Radius) {
 			isInRange = true
-			locationDistance = distance
-			break
+		} else {
+			isInRange = false
 		}
 	}
 
@@ -660,9 +657,9 @@ func (c *AttendanceUseCase) BreakIn(ctx context.Context, request *model.CheckInA
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Sedang dalam break")
 	}
 
-	if !request.IsAllowed {
-		return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan break-in disini")
-	}
+	// if !request.IsAllowed {
+	// 	return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan break-in disini")
+	// }
 
 	isInRange := false
 	locationDistance := 0.0
@@ -768,9 +765,9 @@ func (c *AttendanceUseCase) BreakOut(ctx context.Context, request *model.CheckIn
 		return nil, fiber.ErrInternalServerError
 	}
 
-	if !request.IsAllowed {
-		return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan break-out disini")
-	}
+	// if !request.IsAllowed {
+	// 	return nil, fiber.NewError(400, "Anda tidak diizinkan melakukan break-out disini")
+	// }
 
 	isInRange := false
 	locationDistance := 0.0

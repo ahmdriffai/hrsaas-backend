@@ -38,6 +38,11 @@ func (r *OfficeLocationRepository) FilterSearch(request *model.SearchOfficeLocat
 	return func(tx *gorm.DB) *gorm.DB {
 		tx = tx.Where("company_id = ?", request.CompanyID)
 
+		if request.EmployeeID != "" {
+			tx = tx.Joins("JOIN employee_office_locations ON employee_office_locations.office_location_id = office_locations.id").
+				Where("employee_office_locations.employee_id = ?", request.EmployeeID)
+		}
+
 		if key := request.Key; key != "" {
 			key = "%" + key + "%"
 			tx = tx.Where("name LIKE ?", key)

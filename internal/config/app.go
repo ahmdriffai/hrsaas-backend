@@ -50,6 +50,7 @@ func Bootstrap(config *BootstrapConfig) {
 	employeeEducationRepository := repository.NewEmployeeEducationRepository(config.Log)
 	employeeTrainingRepository := repository.NewEmployeeTrainingRepository(config.Log)
 	remidialVisitRepository := repository.NewRemidialVisitRepository(config.Log, config.Config.GetString("nasabah.base_url"))
+	announcementRepository := repository.NewAnnouncementRepository(config.Log)
 
 	// setup producer
 
@@ -121,6 +122,7 @@ func Bootstrap(config *BootstrapConfig) {
 	employeeEducationUseCase := usecase.NewEmployeeEducationUseCase(config.DB, config.Log, config.Validate, employeeEducationRepository)
 	employeeTrainingUseCase := usecase.NewEmployeeTrainingUseCase(config.DB, config.Log, config.Validate, employeeTrainingRepository)
 	remidialVisitUseCase := usecase.NewRemidialVisitUseCase(config.DB, config.Log, config.Validate, remidialVisitRepository, employeeRepository)
+	announcementUseCase := usecase.NewAnnouncementUsecase(config.DB, config.Log, config.Validate, announcementRepository, employeeRepository)
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
 	userController := http.NewUserController(userUseCase, config.Log, config.Config)
@@ -146,6 +148,7 @@ func Bootstrap(config *BootstrapConfig) {
 	employeeEducationController := http.NewEmployeeEducationController(employeeEducationUseCase, config.Log)
 	employeeTrainingController := http.NewEmployeeTrainingController(employeeTrainingUseCase, config.Log)
 	remidialVisitController := http.NewRemidialVisitController(remidialVisitUseCase, config.Log)
+	announcementController := http.NewAnnouncementController(announcementUseCase, config.Log)
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
 	adminMiddleware := middleware.NewAdmin
@@ -183,6 +186,7 @@ func Bootstrap(config *BootstrapConfig) {
 		EmployeeEducationController: employeeEducationController,
 		EmployeeTrainingController:  employeeTrainingController,
 		RemidialVisitController:     remidialVisitController,
+		AnnouncementController:      announcementController,
 	}
 
 	routeConfig.Setup()
