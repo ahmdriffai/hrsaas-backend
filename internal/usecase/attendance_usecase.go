@@ -28,6 +28,7 @@ type AttendanceUseCase struct {
 	ShiftDayRepo         *repository.ShiftDayRepository
 	AttendanceLogRepo    *repository.AttendanceLogRepository
 	EmployeeRepository   *repository.EmployeeRepository
+	UserRepository       *repository.UserRepository
 	UploadUseCase        *UploadUseCase
 	FaceServiceURL       string
 }
@@ -42,6 +43,7 @@ func NewAttendanceUseCase(
 	shiftDayRepo *repository.ShiftDayRepository,
 	attendanceLogRepo *repository.AttendanceLogRepository,
 	employeeRepository *repository.EmployeeRepository,
+	userRepository *repository.UserRepository,
 	uploadUseCase *UploadUseCase,
 	faceServiceURL string,
 ) *AttendanceUseCase {
@@ -55,6 +57,7 @@ func NewAttendanceUseCase(
 		ShiftDayRepo:         shiftDayRepo,
 		AttendanceLogRepo:    attendanceLogRepo,
 		EmployeeRepository:   employeeRepository,
+		UserRepository:       userRepository,
 		UploadUseCase:        uploadUseCase,
 		FaceServiceURL:       faceServiceURL,
 	}
@@ -94,6 +97,10 @@ func (c *AttendanceUseCase) RegisterFace(ctx context.Context, request *model.Reg
 		c.Log.WithError(err).Error("Failed to upload face image")
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal mengunggah wajah")
 	}
+
+	c.UserRepository.Update(c.DB.WithContext(ctx), &entity.User{
+		Image: &uploadUrl,
+	})
 
 	return &model.RegisterFaceResponse{
 		EmployeeID:   employee.ID,

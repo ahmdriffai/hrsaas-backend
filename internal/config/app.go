@@ -70,7 +70,7 @@ func Bootstrap(config *BootstrapConfig) {
 	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
-	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository, employeeRepository, uploadUseCase, config.Config.GetString("face.base_url"))
+	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository, employeeRepository, userRepository, uploadUseCase, config.Config.GetString("face.base_url"))
 	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository, shiftDayRepository)
 	timeOffRequestUseCase := usecase.NewTimeOffRequestUseCase(
 		config.DB,
