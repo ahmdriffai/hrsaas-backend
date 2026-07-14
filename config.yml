@@ -34,6 +34,8 @@ s3:
 face:
   base_url: "http://103.127.133.201:5001"
 
+nasabah:
+  base_url: "https://ptkbm.com:8443"
 # mail:
 #   smtp:
 #     host: smtp.gmail.com

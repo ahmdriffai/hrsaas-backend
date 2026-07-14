@@ -36,6 +36,8 @@ type RouteConfig struct {
 	EmployeeDocumentController  *http.EmployeeDocumentController
 	EmployeeEducationController *http.EmployeeEducationController
 	EmployeeTrainingController  *http.EmployeeTrainingController
+	RemidialVisitController     *http.RemidialVisitController
+	AnnouncementController      *http.AnnouncementController
 }
 
 func (c *RouteConfig) Setup() {
@@ -61,6 +63,8 @@ func (c *RouteConfig) Setup() {
 	c.SetupHolidayRouter()
 	c.SetupEmployeeEducationRouter()
 	c.SetupEmployeeTrainingRouter()
+	c.SetupRemidialVisitRouter()
+	c.SetupAnnouncementRouter()
 }
 
 func (c *RouteConfig) SetupGuestRouter() {
@@ -159,6 +163,8 @@ func (c *RouteConfig) SetupPositionRouter() {
 
 func (c *RouteConfig) SetupOfficeLocationRouter() {
 	route := c.App.Group("/api/office-locations", c.AuthMiddleware)
+	route.Get("/_current", c.EmployeeMiddleware, c.OfficeLocationController.ListCurrent)
+
 	adminMW := c.AdminMiddleware("OFFICE_LOCATIONS")
 	route.Get("/", adminMW, c.OfficeLocationController.List)
 	route.Post("/", adminMW, c.OfficeLocationController.Create)
@@ -175,6 +181,8 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 	route.Post("/check-out", c.EmployeeMiddleware, c.AttendanceController.CheckOut)
 	route.Post("/break-in", c.EmployeeMiddleware, c.AttendanceController.BreakIn)
 	route.Post("/break-out", c.EmployeeMiddleware, c.AttendanceController.BreakOut)
+	route.Post("/lend/check-in", c.EmployeeMiddleware, c.AttendanceController.LendCheckIn)
+	route.Post("/lend/check-out", c.EmployeeMiddleware, c.AttendanceController.LendCheckOut)
 	route.Get("/_current", c.EmployeeMiddleware, c.AttendanceController.ListCurrent)
 	route.Post("/_current/register-face", c.EmployeeMiddleware, c.AttendanceController.RegisterFaceCurrent)
 	// route.Get("/_current/face", c.EmployeeMiddleware, c.AttendanceController.FaceStatusCurrent)
@@ -192,6 +200,8 @@ func (c *RouteConfig) SetupAttendanceRouter() {
 
 func (c *RouteConfig) SetupShiftRouter() {
 	route := c.App.Group("/api/shifts", c.AuthMiddleware)
+	route.Get("/_current", c.EmployeeMiddleware, c.ShiftController.ListCurrent)
+
 	adminMW := c.AdminMiddleware("SHIFTS")
 	route.Get("/", adminMW, c.ShiftController.List)
 	route.Post("/", adminMW, c.ShiftController.Create)
@@ -200,6 +210,7 @@ func (c *RouteConfig) SetupShiftRouter() {
 	route.Delete("/:shiftID", adminMW, c.ShiftController.Delete)
 	route.Post("/assign-employee", adminMW, c.ShiftController.AssignEmployee)
 	route.Post("/:shiftID/employees", adminMW, c.ShiftController.BulkAssignEmployees)
+
 }
 
 func (c *RouteConfig) SetupTimeOffRouter() {
@@ -337,4 +348,28 @@ func (c *RouteConfig) SetupHolidayRouter() {
 	route.Get("/", adminMW, c.HolidayController.List)
 	route.Put("/:id", adminMW, c.HolidayController.Update)
 	route.Delete("/:id", adminMW, c.HolidayController.Delete)
+}
+
+func (c *RouteConfig) SetupRemidialVisitRouter() {
+	route := c.App.Group("/api/remidial-visits", c.AuthMiddleware)
+
+	// Employee routes
+	route.Post("/search-nasabah", c.EmployeeMiddleware, c.RemidialVisitController.SearchNasabah)
+	route.Post("/", c.EmployeeMiddleware, c.RemidialVisitController.Create)
+	route.Get("/_current", c.EmployeeMiddleware, c.RemidialVisitController.ListCurrent)
+
+	// Admin routes
+	adminMW := c.AdminMiddleware("REMIDIAL_VISITS")
+	route.Get("/admin", adminMW, c.RemidialVisitController.ListAdmin)
+}
+
+func (c *RouteConfig) SetupAnnouncementRouter() {
+	route := c.App.Group("/api/announcements", c.AuthMiddleware)
+	route.Get("/", c.AnnouncementController.List)
+	route.Get("/:announce_id", c.AnnouncementController.Detail)
+
+	adminMW := c.AdminMiddleware("ANNOUNCEMENTS")
+	route.Post("/", adminMW, c.AnnouncementController.Create)
+	route.Put("/:announce_id", adminMW, c.AnnouncementController.Update)
+	route.Delete("/:announce_id", adminMW, c.AnnouncementController.Delete)
 }
