@@ -98,9 +98,18 @@ func (c *AttendanceUseCase) RegisterFace(ctx context.Context, request *model.Reg
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal mengunggah wajah")
 	}
 
-	c.UserRepository.Update(c.DB.WithContext(ctx), &entity.User{
-		Image: &uploadUrl,
-	})
+	user := new(entity.User)
+	if err := c.UserRepository.FindById(c.DB.WithContext(ctx), user, employee.UserID); err != nil {
+		c.Log.WithError(err).Error("Failed to find user")
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal menemukan data user")
+	}
+
+	user.Image = &uploadUrl
+
+	if err := c.UserRepository.Update(c.DB.WithContext(ctx), user); err != nil {
+		c.Log.WithError(err).Error("Failed to update user image")
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal memperbarui data user")
+	}
 
 	return &model.RegisterFaceResponse{
 		EmployeeID:   employee.ID,
