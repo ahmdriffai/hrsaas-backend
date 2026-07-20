@@ -3,10 +3,12 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
 	"hr-sas/internal/repository"
+	"sort"
 	"strings"
 	"time"
 
@@ -430,10 +432,6 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		CompanyID  string  `gorm:"column:company_id"`
 	}
 
-	// ApprovalOrder is intentionally not set here; CreateRequest assigns it
-	// sequentially after the full chain is built.
-	approvals := make([]entity.TimeOffApproval, 0, 4)
-	seen := make(map[string]bool)
 	var current positionRow
 	if err := tx.Table("positions").
 		Select("id, parent_id, name, is_approver, company_id").
@@ -441,6 +439,17 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 		Take(&current).Error; err != nil {
 		return nil, fiber.NewError(fiber.StatusBadRequest, "Position not found")
 	}
+
+	// Intermediate struct to collect approvers from both sources before sorting.
+	type approverCandidate struct {
+		EmployeeID string
+		IsRequired bool
+		Depth      int // depth from root: 0 = root, higher = closer to employee
+	}
+
+	candidates := make([]approverCandidate, 0, 8)
+	// Cache depth-from-root per positionID to avoid repeated walks.
+	depthCache := make(map[string]int)
 
 	parentID := current.ParentID
 
@@ -479,15 +488,18 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 			return nil, fiber.ErrInternalServerError
 		}
 
-		// Avoid self-approval and duplicate approvers in the chain.
-		if approver.EmployeeID != employeeID && !seen[approver.EmployeeID] {
-			seen[approver.EmployeeID] = true
-			approvals = append(approvals, entity.TimeOffApproval{
-				ApproverId: approver.EmployeeID,
-				IsRequired: parent.IsApprover,
-				Status:     "PENDING",
-			})
+		// Resolve depth-from-root for this parent position.
+		posDepth, err := c.resolveDepthFromRoot(tx, parent.ID, depthCache)
+		if err != nil {
+			c.Log.WithError(err).Error("Failed to resolve depth for position " + parent.Name)
+			return nil, fiber.ErrInternalServerError
 		}
+
+		candidates = append(candidates, approverCandidate{
+			EmployeeID: approver.EmployeeID,
+			IsRequired: parent.IsApprover,
+			Depth:      posDepth,
+		})
 		parentID = parent.ParentID
 	}
 
@@ -495,9 +507,10 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 	// ordered deterministically so the approval order is stable across requests.
 	var globalApprovers []struct {
 		EmployeeID string `gorm:"column:employee_id"`
+		PositionID string `gorm:"column:position_id"`
 	}
 	if err := tx.Table("employee_contracts ec").
-		Select("ec.employee_id").
+		Select("ec.employee_id, ec.position_id").
 		Joins("JOIN positions p ON p.id = ec.position_id").
 		Where("ec.is_active = ?", true).
 		Where("p.is_approver = ?", true).
@@ -510,14 +523,142 @@ func (c *TimeOffRequestUseCase) buildApprovalsFromPositionChain(tx *gorm.DB, emp
 	}
 
 	for _, ga := range globalApprovers {
-		if !seen[ga.EmployeeID] {
-			seen[ga.EmployeeID] = true
-			approvals = append(approvals, entity.TimeOffApproval{
-				ApproverId: ga.EmployeeID,
-				IsRequired: true,
-				Status:     "PENDING",
-			})
+		posDepth, err := c.resolveDepthFromRoot(tx, ga.PositionID, depthCache)
+		if err != nil {
+			c.Log.WithError(err).Error("Failed to resolve depth for global approver")
+			return nil, fiber.ErrInternalServerError
+		}
+		candidates = append(candidates, approverCandidate{
+			EmployeeID: ga.EmployeeID,
+			IsRequired: true,
+			Depth:      posDepth,
+		})
+	}
+
+	// Sort candidates: identify the root position first (Depth == 0),
+	// then split the rest into "required" (is_approver = true) and
+	// "non-required" groups. Non-required approvers keep depth-based order
+	// (closest to employee first). Required approvers are always grouped
+	// immediately before root, regardless of their actual depth. Root — if
+	// reached — always comes last.
+	var rootCandidate *approverCandidate
+	nonRequired := make([]approverCandidate, 0, len(candidates))
+	required := make([]approverCandidate, 0, len(candidates))
+
+	for i := range candidates {
+		cand := candidates[i]
+		if cand.Depth == 0 {
+			// First candidate found at depth 0 is treated as root.
+			if rootCandidate == nil {
+				rootCandidate = &candidates[i]
+			}
+			continue
+		}
+		if cand.IsRequired {
+			required = append(required, cand)
+		} else {
+			nonRequired = append(nonRequired, cand)
 		}
 	}
+
+	// Dedup within required group by EmployeeID before sorting, since the
+	// same position (and its approver) may be reached both via chain walk
+	// and the global query.
+	requiredSeen := make(map[string]bool)
+	dedupedRequired := make([]approverCandidate, 0, len(required))
+	for _, cand := range required {
+		if requiredSeen[cand.EmployeeID] {
+			continue
+		}
+		requiredSeen[cand.EmployeeID] = true
+		dedupedRequired = append(dedupedRequired, cand)
+	}
+	required = dedupedRequired
+
+	sort.Slice(required, func(i, j int) bool {
+		return required[i].EmployeeID < required[j].EmployeeID
+	})
+
+	sort.Slice(nonRequired, func(i, j int) bool {
+		return nonRequired[i].Depth > nonRequired[j].Depth
+	})
+	// Deterministic order within the required group.
+	sort.Slice(required, func(i, j int) bool {
+		return required[i].EmployeeID < required[j].EmployeeID
+	})
+
+	ordered := make([]approverCandidate, 0, len(candidates))
+	ordered = append(ordered, nonRequired...)
+	ordered = append(ordered, required...)
+	if rootCandidate != nil {
+		ordered = append(ordered, *rootCandidate)
+	}
+
+	// ApprovalOrder is intentionally not set here; CreateRequest assigns it
+	// sequentially after the full chain is built.
+	approvals := make([]entity.TimeOffApproval, 0, len(ordered))
+	seen := make(map[string]bool)
+	// Dedup + exclude self AFTER sorting so final order reflects hierarchy depth.
+	for _, cand := range ordered {
+		if cand.EmployeeID == employeeID || seen[cand.EmployeeID] {
+			continue
+		}
+		seen[cand.EmployeeID] = true
+		approvals = append(approvals, entity.TimeOffApproval{
+			ApproverId: cand.EmployeeID,
+			IsRequired: cand.IsRequired,
+			Status:     "PENDING",
+		})
+	}
 	return approvals, nil
+}
+
+// resolveDepthFromRoot walks parent_id from positionID up to the root (parent_id IS NULL)
+// and returns the depth (root = 0). Results are cached in depthCache to avoid
+// redundant queries when the same position appears in both chain and global sources.
+func (c *TimeOffRequestUseCase) resolveDepthFromRoot(tx *gorm.DB, positionID string, depthCache map[string]int) (int, error) {
+	if d, ok := depthCache[positionID]; ok {
+		return d, nil
+	}
+
+	// Collect the path from positionID to root so we can cache every node along the way.
+	path := []string{positionID}
+	currentID := positionID
+
+	const maxDepth = 20
+	for i := 0; i < maxDepth; i++ {
+		var row struct {
+			ID       string  `gorm:"column:id"`
+			ParentID *string `gorm:"column:parent_id"`
+		}
+		if err := tx.Table("positions").
+			Select("id, parent_id").
+			Where("id = ?", currentID).
+			Take(&row).Error; err != nil {
+			return 0, fmt.Errorf("position %s not found: %w", currentID, err)
+		}
+
+		if row.ParentID == nil {
+			// Reached root. path[0] = original positionID, path[last] = root.
+			// Root depth = 0, original position depth = len(path)-1.
+			for idx, pid := range path {
+				depthCache[pid] = len(path) - 1 - idx
+			}
+			return depthCache[positionID], nil
+		}
+
+		// Check if parent is already cached — shortcut the walk.
+		if cachedDepth, ok := depthCache[*row.ParentID]; ok {
+			// Parent's depth is known; assign depths to the rest of the path.
+			for idx, pid := range path {
+				depthCache[pid] = cachedDepth + len(path) - idx
+			}
+			return depthCache[positionID], nil
+		}
+
+		path = append(path, *row.ParentID)
+		currentID = *row.ParentID
+	}
+
+	return 0, fmt.Errorf("position hierarchy exceeds max depth (%d) — possible cycle", maxDepth)
 }
