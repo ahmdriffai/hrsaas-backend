@@ -25,7 +25,7 @@ database:
 
 s3:
   endpoint: "https://is3.cloudhost.id" # kosongkan untuk AWS, isi untuk MinIO/Cloudflare R2 (contoh: http://localhost:9000)
-  region: "us-east-1"
+  region: "id-jkt-1"
   bucket: "storage-main"
   access_key: "3NOZV1CMLZXW8O96GA75"
   secret_key: "GKwAXoAdaybFfk4cC92rJDtE3ArUH6zwpghjgD2r"

@@ -7,6 +7,7 @@ import (
 	"hr-sas/internal/repository"
 	"hr-sas/internal/usecase"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -20,6 +21,7 @@ type BootstrapConfig struct {
 	Log      *logrus.Logger
 	Validate *validator.Validate
 	Config   *viper.Viper
+	S3       *s3.Client
 }
 
 func Bootstrap(config *BootstrapConfig) {
@@ -55,7 +57,7 @@ func Bootstrap(config *BootstrapConfig) {
 	// setup usecase
 	companyUsecase := usecase.NewCompanyUseCase(config.DB, config.Log, config.Validate, companyRepository, userRepository)
 	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository, roleRepository)
-	uploadUseCase := usecase.NewUploadUseCase(config.Log, config.Validate, config.Config)
+	uploadUseCase := usecase.NewUploadUseCase(config.Log, config.Validate, config.S3, config.Config)
 	employeeUseCase := usecase.NewEmployeeUseCase(
 		config.DB,
 		config.Log,

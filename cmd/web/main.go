@@ -11,12 +11,14 @@ func main() {
 	log := config.NewLogger(viperConfig)
 	db := config.NewDatabase(viperConfig, log)
 	validate := config.NewValidator(viperConfig)
+	s3 := config.NewS3Client(viperConfig)
 
 	config.Bootstrap(&config.BootstrapConfig{
 		DB:       db,
 		App:      app,
 		Log:      log,
 		Validate: validate,
+		S3:       s3,
 		Config:   viperConfig,
 	})
 

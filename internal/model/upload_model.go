@@ -17,3 +17,13 @@ type UploadResponse struct {
 type UploadResponses struct {
 	Urls []string `json:"urls"`
 }
+
+type PresignResponse struct {
+	UploadURL string `json:"upload_url"`
+	ObjectKey string `json:"object_key"`
+}
+
+type PresignRequest struct {
+	MimeType string `json:"mime_type" validate:"required"`
+	Folder   string `json:"folder" validate:"required"`
+}

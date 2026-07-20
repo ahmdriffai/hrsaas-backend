@@ -3,9 +3,11 @@ package usecase
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"hr-sas/internal/model"
 	"io"
+	"mime"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -27,14 +29,16 @@ import (
 type UploadUseCase struct {
 	Log       *logrus.Logger
 	Validator *validator.Validate
+	S3Client  *s3.Client
 	Viper     *viper.Viper
 }
 
-func NewUploadUseCase(log *logrus.Logger, validator *validator.Validate, viper *viper.Viper) *UploadUseCase {
+func NewUploadUseCase(log *logrus.Logger, validator *validator.Validate, s3Client *s3.Client, viper *viper.Viper) *UploadUseCase {
 	return &UploadUseCase{
 		Log:       log,
 		Validator: validator,
 		Viper:     viper,
+		S3Client:  s3Client,
 	}
 }
 
@@ -221,4 +225,52 @@ func (u *UploadUseCase) SaveToS3(ctx context.Context, file *multipart.FileHeader
 	}
 
 	return &url, nil
+}
+
+var allowedMimeTypes = map[string]bool{
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/webp":      true,
+	"application/pdf": true,
+}
+
+func (u *UploadUseCase) GenerateUploadURL(ctx context.Context, request *model.PresignRequest) (*model.PresignResponse, error) {
+	if !allowedMimeTypes[request.MimeType] {
+		return nil, errors.New("unsupported mime type")
+	}
+
+	bucket := u.Viper.GetString("s3.bucket")
+
+	exts, _ := mime.ExtensionsByType(request.MimeType)
+	ext := ""
+	if len(exts) > 0 {
+		ext = exts[0]
+	}
+	filename := fmt.Sprintf(
+		"%s/%d%s",
+		request.Folder,
+		time.Now().UnixMilli(),
+		ext,
+	)
+
+	presignClient := s3.NewPresignClient(u.S3Client)
+
+	req, err := presignClient.PresignPutObject(
+		context.Background(),
+		&s3.PutObjectInput{
+			Bucket:      aws.String(bucket),
+			Key:         aws.String(filename),
+			ContentType: aws.String(request.MimeType),
+		},
+		s3.WithPresignExpires(5*time.Minute),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.PresignResponse{
+		UploadURL: req.URL,
+		ObjectKey: filename,
+	}, nil
 }
