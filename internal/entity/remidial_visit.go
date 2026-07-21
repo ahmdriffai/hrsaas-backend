@@ -11,6 +11,9 @@ type RemidialVisit struct {
 	ID                        string `gorm:"column:id;primaryKey"`
 	CompanyID                 string `gorm:"column:company_id;not null"`
 	EmployeeID                string `gorm:"column:employee_id;not null"`
+	Img_Url                   string `gorm:"column:img_url;not null"`
+	Latitude                  string `gorm:"column:latitude;not null"`
+	Longitude                 string `gorm:"column:longitude;not null"`
 	NasabahID                 string `gorm:"column:nasabah_id;not null"`
 	NasabahName               string `gorm:"column:nasabah_name;not null"`
 	NoPjm                     string `gorm:"column:no_pjm;not null"`
@@ -28,7 +31,7 @@ type RemidialVisit struct {
 	OverdueInterestDays       int64  `gorm:"column:overdue_interest_days;not null"`
 	LoanStatus                string `gorm:"column:loan_status;not null"`
 	TotalPaid                 int64  `gorm:"column:total_paid;not null"`
-	Note                      string `gorm:"column:note"`
+	Commitment                string `gorm:"column:commitment"`
 	CreatedAt                 int64  `gorm:"column:created_at;not null"`
 }
 

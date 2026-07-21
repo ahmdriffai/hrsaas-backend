@@ -127,3 +127,38 @@ func (c *RemidialVisitController) ListAdmin(ctx *fiber.Ctx) error {
 		Paging: paging,
 	})
 }
+
+func (c *RemidialVisitController) Update(ctx *fiber.Ctx) error {
+	request := new(model.UpdateRemidialVisitRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.ErrBadRequest
+	}
+
+	user := middleware.GetUser(ctx)
+	request.CompanyID = user.CompanyID
+	request.ID = ctx.Params("remidial_visit_id")
+
+	response, err := c.UseCase.Update(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to update remidial visit")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.RemidialVisitResponse]{
+		Data: response,
+	})
+}
+
+func (c *RemidialVisitController) Delete(ctx *fiber.Ctx) error {
+	requestID := ctx.Params("remidial_visit_id")
+	if requestID == "" {
+		return fiber.ErrBadRequest
+	}
+	if err := c.UseCase.Delete(ctx.UserContext(), requestID); err != nil {
+		c.Log.WithError(err).Error("failed to delete visit")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[any]{Data: nil})
+}
