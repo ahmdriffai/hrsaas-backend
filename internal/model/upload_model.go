@@ -25,5 +25,4 @@ type PresignResponse struct {
 
 type PresignRequest struct {
 	MimeType string `json:"mime_type" validate:"required"`
-	Folder   string `json:"folder" validate:"required"`
 }

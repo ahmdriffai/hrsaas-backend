@@ -4,10 +4,10 @@ import (
 	"hr-sas/internal/delivery/http"
 	"hr-sas/internal/delivery/http/middleware"
 	"hr-sas/internal/delivery/http/route"
+	"hr-sas/internal/pkg"
 	"hr-sas/internal/repository"
 	"hr-sas/internal/usecase"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -21,7 +21,7 @@ type BootstrapConfig struct {
 	Log      *logrus.Logger
 	Validate *validator.Validate
 	Config   *viper.Viper
-	S3       *s3.Client
+	S3Client *pkg.S3Client
 }
 
 func Bootstrap(config *BootstrapConfig) {
@@ -57,7 +57,7 @@ func Bootstrap(config *BootstrapConfig) {
 	// setup usecase
 	companyUsecase := usecase.NewCompanyUseCase(config.DB, config.Log, config.Validate, companyRepository, userRepository)
 	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository, roleRepository)
-	uploadUseCase := usecase.NewUploadUseCase(config.Log, config.Validate, config.S3, config.Config)
+	uploadUseCase := usecase.NewUploadUseCase(config.Log, config.Validate, config.S3Client, config.Config)
 	employeeUseCase := usecase.NewEmployeeUseCase(
 		config.DB,
 		config.Log,
@@ -69,7 +69,7 @@ func Bootstrap(config *BootstrapConfig) {
 		divisionRepository,
 	)
 	sanctionUseCase := usecase.NewSantionUseCase(config.DB, config.Log, config.Validate, sanctionRepository)
-	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository)
+	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository, config.S3Client)
 	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
 	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
 	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository, employeeRepository, userRepository, uploadUseCase, config.Config.GetString("face.base_url"))
@@ -114,7 +114,7 @@ func Bootstrap(config *BootstrapConfig) {
 		timeOffBalanceRepository,
 	)
 	divisionUseCase := usecase.NewDivisionUseCase(config.DB, config.Log, config.Validate, divisionRepository)
-	visitUseCase := usecase.NewVisitUseCase(config.DB, config.Log, config.Validate, visitRepository)
+	visitUseCase := usecase.NewVisitUseCase(config.DB, config.Log, config.Validate, visitRepository, config.S3Client)
 	permissionUseCase := usecase.NewPermissionUseCase(config.DB, config.Log, config.Validate, permissionRepository)
 	roleUseCase := usecase.NewRoleUseCase(config.DB, config.Log, config.Validate, roleRepository, permissionRepository)
 	employeeDocumentUseCase := usecase.NewEmployeeDocumentUseCase(config.DB, config.Log, config.Validate, employeeDocumentRepository)
