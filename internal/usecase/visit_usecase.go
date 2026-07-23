@@ -4,10 +4,12 @@ import (
 	"context"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
+	"hr-sas/internal/pkg"
 	"hr-sas/internal/repository"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -19,14 +21,16 @@ type VisitUseCase struct {
 	Log      *logrus.Logger
 	Validate *validator.Validate
 	Repo     *repository.VisitRepository
+	S3Client *pkg.S3Client
 }
 
-func NewVisitUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate, repo *repository.VisitRepository) *VisitUseCase {
+func NewVisitUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate, repo *repository.VisitRepository, s3Client *pkg.S3Client) *VisitUseCase {
 	return &VisitUseCase{
 		DB:       db,
 		Log:      log,
 		Validate: validate,
 		Repo:     repo,
+		S3Client: s3Client,
 	}
 }
 
@@ -160,7 +164,15 @@ func (c *VisitUseCase) List(ctx context.Context, request *model.SearchVisitReque
 	}
 
 	responses := make([]model.VisitResponse, len(items))
+	presignClient := s3.NewPresignClient(c.S3Client.Client)
 	for i := range items {
+		for idx, v := range items[i].Details {
+			url, err := c.S3Client.GenerateDownloadURL(presignClient, *v.FileUrl)
+			if err != nil {
+				return nil, 0, err
+			}
+			items[i].Details[idx].FileUrl = &url
+		}
 		responses[i] = *model.VisitToResponse(&items[i])
 	}
 

@@ -24,12 +24,12 @@ database:
     lifetime: 300
 
 s3:
-  endpoint: "https://is3.cloudhost.id" # kosongkan untuk AWS, isi untuk MinIO/Cloudflare R2 (contoh: http://localhost:9000)
-  region: "us-east-1"
-  bucket: "storage-main"
-  access_key: "3NOZV1CMLZXW8O96GA75"
-  secret_key: "GKwAXoAdaybFfk4cC92rJDtE3ArUH6zwpghjgD2r"
-  public_url: "https://is3.cloudhost.id/storage-main" # base URL publik, contoh: https://cdn.example.com atau https://<bucket>.s3.amazonaws.com
+  endpoint: "https://f25f6724d94ab200c9116b49d8acc632.r2.cloudflarestorage.com" # kosongkan untuk AWS, isi untuk MinIO/Cloudflare R2 (contoh: http://localhost:9000)
+  region: "apac"
+  bucket: "bw-akses-plus"
+  access_key: "453ce78d7559fa4720aa5f164108af0a"
+  secret_key: "186829944f018834af8b664642f1f61fea8d1bf4a6dcb26470218341e267cf4c"
+  public_url: "https://f25f6724d94ab200c9116b49d8acc632.r2.cloudflarestorage.com/bw-akses-plus" # base URL publik, contoh: https://cdn.example.com atau https://<bucket>.s3.amazonaws.com
 
 face:
   base_url: "http://103.127.133.201:5001"

@@ -253,9 +253,10 @@ func (c *RouteConfig) SetupTimeOffRouter() {
 }
 
 func (c *RouteConfig) SetupCommonRouter() {
-	route := c.App.Group("/api", c.AuthMiddleware)
+	route := c.App.Group("/api")
 	route.Post("/upload", c.UploadController.Upload)
 	route.Post("/uploads", c.UploadController.Uploads)
+	route.Get("/generate-url", c.UploadController.GenerateUploadUrl)
 }
 
 func (c *RouteConfig) SetupTimeOffApprovalRouter() {

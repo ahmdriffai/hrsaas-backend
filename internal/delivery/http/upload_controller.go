@@ -60,3 +60,19 @@ func (c *UploadController) Uploads(ctx *fiber.Ctx) error {
 
 	return ctx.JSON(model.WebResponse[*model.UploadResponses]{Data: response})
 }
+
+func (c *UploadController) GenerateUploadUrl(ctx *fiber.Ctx) error {
+	request := new(model.PresignRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	response, err := c.UseCase.GenerateUploadURL(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to upload file")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.PresignResponse]{Data: response})
+}

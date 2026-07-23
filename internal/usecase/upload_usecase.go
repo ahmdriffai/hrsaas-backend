@@ -3,8 +3,10 @@ package usecase
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"hr-sas/internal/model"
+	"hr-sas/internal/pkg"
 	"io"
 	"mime/multipart"
 	"os"
@@ -27,14 +29,16 @@ import (
 type UploadUseCase struct {
 	Log       *logrus.Logger
 	Validator *validator.Validate
+	S3Client  *pkg.S3Client
 	Viper     *viper.Viper
 }
 
-func NewUploadUseCase(log *logrus.Logger, validator *validator.Validate, viper *viper.Viper) *UploadUseCase {
+func NewUploadUseCase(log *logrus.Logger, validator *validator.Validate, s3Client *pkg.S3Client, viper *viper.Viper) *UploadUseCase {
 	return &UploadUseCase{
 		Log:       log,
 		Validator: validator,
 		Viper:     viper,
+		S3Client:  s3Client,
 	}
 }
 
@@ -221,4 +225,27 @@ func (u *UploadUseCase) SaveToS3(ctx context.Context, file *multipart.FileHeader
 	}
 
 	return &url, nil
+}
+
+var allowedMimeTypes = map[string]bool{
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/webp":      true,
+	"application/pdf": true,
+}
+
+func (u *UploadUseCase) GenerateUploadURL(ctx context.Context, request *model.PresignRequest) (*model.PresignResponse, error) {
+	if !allowedMimeTypes[request.MimeType] {
+		return nil, errors.New("unsupported mime type")
+	}
+
+	uploadUrl, filename, err := u.S3Client.GeneratPresignURL(request.MimeType)
+	if err != nil {
+		return nil, errors.New("error generate url")
+	}
+
+	return &model.PresignResponse{
+		UploadURL: uploadUrl,
+		ObjectKey: filename,
+	}, nil
 }

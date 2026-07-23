@@ -5,10 +5,12 @@ import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
+	"hr-sas/internal/pkg"
 	"hr-sas/internal/repository"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -22,9 +24,10 @@ type EmSancUseCase struct {
 	EmSancRepository   *repository.EmSancRepository
 	SanctionRepository *repository.SanctionRepository
 	EmployeeRepository *repository.EmployeeRepository
+	S3Client           *pkg.S3Client
 }
 
-func NewEmSancUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate, emSancRepository *repository.EmSancRepository, sanctionRepository *repository.SanctionRepository, employeeRepository *repository.EmployeeRepository) *EmSancUseCase {
+func NewEmSancUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate, emSancRepository *repository.EmSancRepository, sanctionRepository *repository.SanctionRepository, employeeRepository *repository.EmployeeRepository, s3Client *pkg.S3Client) *EmSancUseCase {
 	return &EmSancUseCase{
 		DB:                 db,
 		Log:                log,
@@ -32,6 +35,7 @@ func NewEmSancUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Valid
 		EmSancRepository:   emSancRepository,
 		SanctionRepository: sanctionRepository,
 		EmployeeRepository: employeeRepository,
+		S3Client:           s3Client,
 	}
 }
 
@@ -123,8 +127,14 @@ func (c *EmSancUseCase) Search(ctx context.Context, request *model.SearchEmSancR
 	}
 
 	responses := make([]model.EmSancResponse, len(emSancs))
-	for i, contact := range emSancs {
-		responses[i] = *model.EmSancToResponse(&contact)
+	presignClient := s3.NewPresignClient(c.S3Client.Client)
+	for i, emSanc := range emSancs {
+		url, err := c.S3Client.GenerateDownloadURL(presignClient, emSancs[i].DocumentUrl)
+		if err != nil {
+			return nil, 0, err
+		}
+		emSanc.DocumentUrl = url
+		responses[i] = *model.EmSancToResponse(&emSanc)
 	}
 
 	return responses, total, nil
