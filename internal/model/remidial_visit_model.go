@@ -40,34 +40,31 @@ type NasabahData struct {
 }
 
 type RemidialVisitResponse struct {
-	ID                        string `json:"id"`
-	CompanyID                 string `json:"company_id"`
-	EmployeeID                string `json:"employee_id"`
-	EmployeeName              string `json:"employee_name,omitempty"`
-	NasabahID                 string `json:"nasabah_id"`
-	NasabahName               string `json:"nasabah_name,omitempty"`
-	NoPjm                     string `json:"no_pjm"`
-	LoanType                  string `json:"loan_type"`
-	Unit                      string `json:"unit"`
-	Collectibility            string `json:"collectibility"`
-	LoanLimit                 int64  `json:"loan_limit"`
-	OutstandingBalance        int64  `json:"outstanding_balance"`
-	OverduePrincipal          int64  `json:"overdue_principal"`
-	OverdueInterest           int64  `json:"overdue_interest"`
-	OverdueTotal              int64  `json:"overdue_total"`
-	OverduePrincipalFrequency int64  `json:"overdue_principal_frequency"`
-	OverdueInterestFrequency  int64  `json:"overdue_interest_frequency"`
-	OverduePrincipalDays      int64  `json:"overdue_principal_days"`
-	OverdueInterestDays       int64  `json:"overdue_interest_days"`
-	LoanStatus                string `json:"loan_status"`
-	TotalPaid                 int64  `json:"total_paid"`
-	Note                      string `json:"note"`
-	CreatedAt                 int64  `json:"created_at"`
+	ID           string                 `json:"id"`
+	CompanyID    string                 `json:"company_id"`
+	EmployeeID   string                 `json:"employee_id"`
+	EmployeeName string                 `json:"employee_name,omitempty"`
+	ImgUrl       string                 `json:"img_url"`
+	Lat          string                 `json:"lat"`
+	Lng          string                 `json:"lng"`
+	Pinjaman     DetailPinjamanResponse `json:"pinjaman"`
+	TotalPaid    int64                  `json:"total_paid"`
+	Commitment   string                 `json:"commitment"`
+	CreatedAt    int64                  `json:"created_at"`
 }
 
 type CreateRemidialVisitRequest struct {
-	CompanyID                 string `json:"-" form:"-" validate:"required,uuid4"`
-	EmployeeID                string `json:"-" form:"-" validate:"required,uuid4"`
+	CompanyID  string                 `json:"-"`
+	EmployeeID string                 `json:"-"`
+	ImgUrl     string                 `json:"img_url" validate:"required"`
+	Lat        string                 `json:"lat" validate:"required"`
+	Lng        string                 `json:"lng" validate:"required"`
+	Pinjaman   DetailPinjamanResponse `json:"pinjaman" validate:"required"`
+	TotalPaid  int64                  `json:"total_paid"`
+	Commitment string                 `json:"commitment,omitempty"`
+}
+
+type DetailPinjamanResponse struct {
 	NasabahID                 string `json:"nasabah_id" validate:"required"`
 	NasabahName               string `json:"nasabah_name"`
 	NoPjm                     string `json:"no_pjm"`
@@ -84,9 +81,6 @@ type CreateRemidialVisitRequest struct {
 	OverduePrincipalDays      int64  `json:"overdue_principal_days"`
 	OverdueInterestDays       int64  `json:"overdue_interest_days"`
 	LoanStatus                string `json:"loan_status"`
-	TotalPaid                 int64  `json:"total_paid"`
-	Note                      string `json:"note"`
-	CreatedAt                 int64  `json:"created_at"`
 }
 
 type SearchRemidialVisitRequest struct {
@@ -100,6 +94,12 @@ type SearchRemidialVisitRequest struct {
 }
 
 type UpdateRemidialVisitRequest struct {
-	TotalPaid int64  `json:"total_paid" validate:"required"`
-	Note      string `json:"note,omitempty"`
+	ID         string `json:"-"`
+	CompanyID  string `json:"-"`
+	EmployeeID string `json:"-"`
+	ImgUrl     string `json:"img_url" validate:"required"`
+	Lat        string `json:"lat" validate:"required"`
+	Lng        string `json:"lng" validate:"required"`
+	TotalPaid  int64  `json:"total_paid"`
+	Commitment string `json:"commitment,omitempty"`
 }

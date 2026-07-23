@@ -358,6 +358,8 @@ func (c *RouteConfig) SetupRemidialVisitRouter() {
 
 	// Admin routes
 	adminMW := c.AdminMiddleware("REMIDIAL_VISITS")
+	route.Put("/:remidial_visit_id", adminMW, c.RemidialVisitController.Update)
+	route.Delete("/:remidial_visit_id/delete", adminMW, c.RemidialVisitController.Delete)
 	route.Get("/admin", adminMW, c.RemidialVisitController.ListAdmin)
 }
 

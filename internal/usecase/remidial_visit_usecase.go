@@ -62,24 +62,27 @@ func (c *RemidialVisitUseCase) Create(ctx context.Context, request *model.Create
 	visit := &entity.RemidialVisit{
 		CompanyID:                 request.CompanyID,
 		EmployeeID:                request.EmployeeID,
-		NasabahID:                 request.NasabahID,
-		NasabahName:               request.NasabahName,
-		NoPjm:                     request.NoPjm,
-		LoanType:                  request.LoanType,
-		Unit:                      request.Unit,
-		Collectibility:            request.Collectibility,
-		LoanLimit:                 request.LoanLimit,
-		OutstandingBalance:        request.OutstandingBalance,
-		OverduePrincipal:          request.OverduePrincipal,
-		OverdueInterest:           request.OverdueInterest,
-		OverdueTotal:              request.OverdueTotal,
-		OverduePrincipalFrequency: request.OverduePrincipalFrequency,
-		OverdueInterestFrequency:  request.OverdueInterestFrequency,
-		OverduePrincipalDays:      request.OverduePrincipalDays,
-		OverdueInterestDays:       request.OverdueInterestDays,
-		LoanStatus:                request.LoanStatus,
+		Img_Url:                   request.ImgUrl,
+		Latitude:                  request.Lat,
+		Longitude:                 request.Lng,
+		NasabahID:                 request.Pinjaman.NasabahID,
+		NasabahName:               request.Pinjaman.NasabahName,
+		NoPjm:                     request.Pinjaman.NoPjm,
+		LoanType:                  request.Pinjaman.LoanType,
+		Unit:                      request.Pinjaman.Unit,
+		Collectibility:            request.Pinjaman.Collectibility,
+		LoanLimit:                 request.Pinjaman.LoanLimit,
+		OutstandingBalance:        request.Pinjaman.OutstandingBalance,
+		OverduePrincipal:          request.Pinjaman.OverduePrincipal,
+		OverdueInterest:           request.Pinjaman.OverdueInterest,
+		OverdueTotal:              request.Pinjaman.OverdueTotal,
+		OverduePrincipalFrequency: request.Pinjaman.OverduePrincipalFrequency,
+		OverdueInterestFrequency:  request.Pinjaman.OverdueInterestFrequency,
+		OverduePrincipalDays:      request.Pinjaman.OverduePrincipalDays,
+		OverdueInterestDays:       request.Pinjaman.OverdueInterestDays,
+		LoanStatus:                request.Pinjaman.LoanStatus,
 		TotalPaid:                 request.TotalPaid,
-		Note:                      request.Note,
+		Commitment:                request.Commitment,
 	}
 
 	if err := c.RemidialVisitRepository.Create(tx, visit); err != nil {
@@ -131,28 +134,90 @@ func (c *RemidialVisitUseCase) toResponse(ctx context.Context, visit *entity.Rem
 	}
 
 	return &model.RemidialVisitResponse{
-		ID:                        visit.ID,
-		CompanyID:                 visit.CompanyID,
-		EmployeeID:                visit.EmployeeID,
-		EmployeeName:              employeeName,
-		NasabahID:                 visit.NasabahID,
-		NasabahName:               visit.NasabahName,
-		NoPjm:                     visit.NoPjm,
-		LoanType:                  visit.LoanType,
-		Unit:                      visit.Unit,
-		Collectibility:            visit.Collectibility,
-		LoanLimit:                 visit.LoanLimit,
-		OutstandingBalance:        visit.OutstandingBalance,
-		OverduePrincipal:          visit.OverduePrincipal,
-		OverdueInterest:           visit.OverdueInterest,
-		OverdueTotal:              visit.OverdueTotal,
-		OverduePrincipalFrequency: visit.OverduePrincipalFrequency,
-		OverdueInterestFrequency:  visit.OverdueInterestFrequency,
-		OverduePrincipalDays:      visit.OverduePrincipalDays,
-		OverdueInterestDays:       visit.OverdueInterestDays,
-		LoanStatus:                visit.LoanStatus,
-		TotalPaid:                 visit.TotalPaid,
-		Note:                      visit.Note,
-		CreatedAt:                 visit.CreatedAt,
+		ID:           visit.ID,
+		CompanyID:    visit.CompanyID,
+		EmployeeID:   visit.EmployeeID,
+		EmployeeName: employeeName,
+		ImgUrl:       visit.Img_Url,
+		Lat:          visit.Latitude,
+		Lng:          visit.Longitude,
+		Pinjaman: model.DetailPinjamanResponse{
+			NasabahID:                 visit.NasabahID,
+			NasabahName:               visit.NasabahName,
+			NoPjm:                     visit.NoPjm,
+			LoanType:                  visit.LoanType,
+			Unit:                      visit.Unit,
+			Collectibility:            visit.Collectibility,
+			LoanLimit:                 visit.LoanLimit,
+			OutstandingBalance:        visit.OutstandingBalance,
+			OverduePrincipal:          visit.OverduePrincipal,
+			OverdueInterest:           visit.OverdueInterest,
+			OverdueTotal:              visit.OverdueTotal,
+			OverduePrincipalFrequency: visit.OverduePrincipalFrequency,
+			OverdueInterestFrequency:  visit.OverdueInterestFrequency,
+			OverduePrincipalDays:      visit.OverduePrincipalDays,
+			OverdueInterestDays:       visit.OverdueInterestDays,
+			LoanStatus:                visit.LoanStatus,
+		},
+		TotalPaid:  visit.TotalPaid,
+		Commitment: visit.Commitment,
+		CreatedAt:  visit.CreatedAt,
 	}
+}
+
+func (c *RemidialVisitUseCase) Update(ctx context.Context, request *model.UpdateRemidialVisitRequest) (*model.RemidialVisitResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("Failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	visit := new(entity.RemidialVisit)
+	if err := c.RemidialVisitRepository.FindById(tx, visit, request.ID); err != nil {
+		c.Log.WithError(err).Error("Remidial visit not found")
+		return nil, fiber.ErrNotFound
+	}
+
+	visit.Img_Url = request.ImgUrl
+	visit.Latitude = request.Lat
+	visit.Longitude = request.Lng
+	visit.TotalPaid = request.TotalPaid
+	visit.Commitment = request.Commitment
+
+	if err := c.RemidialVisitRepository.Update(tx, visit); err != nil {
+		c.Log.WithError(err).Error("Failed to update remidial visit")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return c.toResponse(ctx, visit), nil
+}
+
+func (c *RemidialVisitUseCase) Delete(ctx context.Context, id string) error {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	visit := new(entity.RemidialVisit)
+	if err := c.RemidialVisitRepository.FindById(tx, visit, id); err != nil {
+		c.Log.WithError(err).Error("Kunjungan tidak ditemukan")
+		return fiber.ErrNotFound
+	}
+
+	if err := c.RemidialVisitRepository.Delete(tx, visit); err != nil {
+		c.Log.WithError(err).Error("Gagal menghapus kunjungan")
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
 }
