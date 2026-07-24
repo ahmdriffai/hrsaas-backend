@@ -8,13 +8,13 @@ import (
 )
 
 type User struct {
-	ID            string `gorm:"column:id;primaryKey"`
-	Name          string `gorm:"column:name;not null"`
-	Email         string `gorm:"column:email;uniqueIndex;not null"`
-	EmailVerified bool   `gorm:"column:email_verified;default:false"`
-	Image         *string
-	CompanyID     string `gorm:"column:company_id"`
-	Password      string `gorm:"column:password;not null"`
+	ID            string  `gorm:"column:id;primaryKey"`
+	Name          string  `gorm:"column:name;not null"`
+	Email         string  `gorm:"column:email;uniqueIndex;not null"`
+	EmailVerified bool    `gorm:"column:email_verified;default:false"`
+	Image         *string `gorm:"column:image"`
+	CompanyID     string  `gorm:"column:company_id"`
+	Password      string  `gorm:"column:password;not null"`
 	// NotificationToken string `gorm:"column:notif_token"`
 
 	Roles     []Role `gorm:"many2many:user_roles;"`
