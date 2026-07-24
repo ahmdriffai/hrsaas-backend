@@ -35,7 +35,7 @@ func (c *RemidialVisitController) SearchNasabah(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	return ctx.JSON(model.WebResponse[[]model.NasabahData]{
+	return ctx.JSON(model.WebResponse[[]model.SearchNasabahResponse]{
 		Data: responses,
 	})
 }

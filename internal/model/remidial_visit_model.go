@@ -36,7 +36,33 @@ type NasabahData struct {
 	TunggakanBungaFrek int    `json:"TgkBungaFrek"`
 	TunggakanPokokHari int    `json:"TgkPokokHari"`
 	TunggakanBungaHari int    `json:"TgkBungaHAri"`
-	StatusPinjaman     string `json:"StsPjm"`
+	StatusPinjaman     string `json:"Loan"`
+}
+
+type SearchNasabahResponse struct {
+	BranchCode                string `json:"branch_code"`
+	NoPjm                     string `json:"no_pjm"`
+	NasabahID                 string `json:"nasabah_id"`
+	NasabahName               string `json:"nasabah_name"`
+	NIK                       string `json:"nik"`
+	PlaceOfBirth              string `json:"place_of_birth"`
+	DateOfBirth               string `json:"date_of_birth"`
+	Address                   string `json:"address"`
+	Phone                     string `json:"phone"`
+	Email                     string `json:"email"`
+	LoanType                  string `json:"loan_type"`
+	Unit                      string `json:"unit"`
+	Collectibility            string `json:"collectibility"`
+	LoanLimit                 int64  `json:"loan_limit"`
+	OutstandingBalance        int64  `json:"outstanding_balance"`
+	OverduePrincipal          int64  `json:"overdue_principal"`
+	OverdueInterest           int64  `json:"overdue_interest"`
+	OverdueTotal              int64  `json:"overdue_total"`
+	OverduePrincipalFrequency int    `json:"overdue_principal_frequency"`
+	OverdueInterestFrequency  int    `json:"overdue_interest_frequency"`
+	OverduePrincipalDays      int    `json:"overdue_principal_days"`
+	OverdueInterestDays       int    `json:"overdue_interest_days"`
+	LoanStatus                string `json:"loan_status"`
 }
 
 type RemidialVisitResponse struct {

@@ -36,7 +36,7 @@ func NewRemidialVisitUseCase(
 	}
 }
 
-func (c *RemidialVisitUseCase) SearchNasabah(ctx context.Context, request *model.SearchNasabahRequest) ([]model.NasabahData, error) {
+func (c *RemidialVisitUseCase) SearchNasabah(ctx context.Context, request *model.SearchNasabahRequest) ([]model.SearchNasabahResponse, error) {
 	if err := c.Validate.Struct(request); err != nil {
 		c.Log.WithError(err).Error("Failed to validate request body")
 		return nil, fiber.ErrBadRequest
@@ -47,7 +47,36 @@ func (c *RemidialVisitUseCase) SearchNasabah(ctx context.Context, request *model
 		return nil, err
 	}
 
-	return data, nil
+	var responses []model.SearchNasabahResponse
+	for _, nasabah := range data {
+		responses = append(responses, model.SearchNasabahResponse{
+			BranchCode:                nasabah.KodeCabang,
+			NoPjm:                     nasabah.NoPjm,
+			NasabahID:                 nasabah.NasabahID,
+			NasabahName:               nasabah.Nama,
+			NIK:                       nasabah.NIK,
+			PlaceOfBirth:              nasabah.TmpLahir,
+			DateOfBirth:               nasabah.TglLahir,
+			Address:                   nasabah.Alamat,
+			Phone:                     nasabah.Phone,
+			Email:                     nasabah.Email,
+			LoanType:                  nasabah.JnsPjm,
+			Unit:                      nasabah.Unit,
+			Collectibility:            nasabah.Col,
+			LoanLimit:                 nasabah.Plafond,
+			OutstandingBalance:        nasabah.Saldo,
+			OverduePrincipal:          nasabah.TunggakanPokok,
+			OverdueInterest:           nasabah.TunggakanBunga,
+			OverdueTotal:              nasabah.TunggakanTotal,
+			OverduePrincipalFrequency: nasabah.TunggakanPokokFrek,
+			OverdueInterestFrequency:  nasabah.TunggakanBungaFrek,
+			OverduePrincipalDays:      nasabah.TunggakanPokokHari,
+			OverdueInterestDays:       nasabah.TunggakanBungaHari,
+			LoanStatus:                nasabah.StatusPinjaman,
+		})
+	}
+
+	return responses, nil
 }
 
 func (c *RemidialVisitUseCase) Create(ctx context.Context, request *model.CreateRemidialVisitRequest) (*model.RemidialVisitResponse, error) {
