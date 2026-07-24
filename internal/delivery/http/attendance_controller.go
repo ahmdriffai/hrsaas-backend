@@ -231,18 +231,14 @@ func (c *AttendanceController) BreakOut(ctx *fiber.Ctx) error {
 }
 
 func (c *AttendanceController) RegisterFaceCurrent(ctx *fiber.Ctx) error {
-	file, err := ctx.FormFile("file")
-	if err != nil {
-		c.Log.WithError(err).Error("failed to read face image file")
-		return fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
-	}
-
 	user := middleware.GetUser(ctx)
-	request := &model.RegisterFaceRequest{
-		EmployeeID: user.Employee.ID,
-		CompanyID:  user.CompanyID,
-		File:       file,
+	request := new(model.RegisterFaceRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.WithError(err).Error("failed to parse request body")
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
+	request.EmployeeID = user.Employee.ID
+	request.CompanyID = user.CompanyID
 
 	response, err := c.UseCase.RegisterFace(ctx.UserContext(), request)
 	if err != nil {
@@ -266,16 +262,10 @@ func (c *AttendanceController) FaceStatusCurrent(ctx *fiber.Ctx) error {
 }
 
 func (c *AttendanceController) RegisterFace(ctx *fiber.Ctx) error {
-	file, err := ctx.FormFile("file")
-	if err != nil {
-		c.Log.WithError(err).Error("failed to read face image file")
-		return fiber.NewError(fiber.StatusBadRequest, "File gambar wajah wajib diisi")
-	}
-
 	request := &model.RegisterFaceRequest{
 		EmployeeID: ctx.Params("employee_id"),
 		CompanyID:  middleware.GetCompanyId(ctx),
-		File:       file,
+		ObjectKey:  ctx.Params("object_key"),
 	}
 
 	response, err := c.UseCase.RegisterFace(ctx.UserContext(), request)

@@ -3,7 +3,9 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"io"
 	"mime"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -42,11 +44,16 @@ func NewS3Client(config *viper.Viper) *S3Client {
 	}
 }
 
-func (s *S3Client) GenerateDownloadURL(presignClient *s3.PresignClient, objectKey string) (string, error) {
+func (s *S3Client) GenerateDownloadURL(presignClient *s3.PresignClient, objectKey string, isPublic ...bool) (string, error) {
+	bucket := s.Config.GetString("s3.bucket")
+	if len(isPublic) > 0 && isPublic[0] {
+		bucket = s.Config.GetString("s3.public_bucket")
+	}
+
 	req, err := presignClient.PresignGetObject(
 		context.Background(),
 		&s3.GetObjectInput{
-			Bucket: aws.String(s.Config.GetString("s3.bucket")),
+			Bucket: aws.String(bucket),
 			Key:    aws.String(objectKey),
 		},
 		s3.WithPresignExpires(30*time.Minute),
@@ -107,4 +114,29 @@ func (s *S3Client) GeneratPresignURL(mimeType string, isPublic ...bool) (string,
 	}
 
 	return req.URL, filename, nil
+}
+
+func (s *S3Client) GetObjectBytes(objectKey string, isPublic ...bool) ([]byte, error) {
+	bucket := s.Config.GetString("s3.bucket")
+	if len(isPublic) > 0 && isPublic[0] {
+		bucket = s.Config.GetString("s3.public_bucket")
+	}
+
+	obj, err := s.Client.GetObject(
+		context.Background(),
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(objectKey),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer obj.Body.Close()
+
+	return io.ReadAll(obj.Body)
+}
+
+func (s *S3Client) GetPublicURL(objectKey string) string {
+	return strings.TrimRight(s.Config.GetString("s3.public_url"), "/") + "/" + strings.TrimLeft(objectKey, "/")
 }

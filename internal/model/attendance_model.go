@@ -47,9 +47,10 @@ type CheckInAttendanceRequest struct {
 }
 
 type RegisterFaceRequest struct {
-	EmployeeID string                `json:"-" validate:"required,uuid4"`
-	CompanyID  string                `json:"-" validate:"required,uuid4"`
-	File       *multipart.FileHeader `json:"-" validate:"required"`
+	EmployeeID string `json:"-" validate:"required,uuid4"`
+	CompanyID  string `json:"-" validate:"required,uuid4"`
+	// File       *multipart.FileHeader `json:"-" validate:"required"`
+	ObjectKey string `json:"object_key" validate:"required"`
 }
 
 type RegisterFaceResponse struct {

@@ -6,6 +6,7 @@ import (
 	"hr-sas/internal/entity"
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
+	"hr-sas/internal/pkg"
 	"hr-sas/internal/repository"
 	"io"
 	"mime/multipart"
@@ -30,6 +31,7 @@ type AttendanceUseCase struct {
 	EmployeeRepository   *repository.EmployeeRepository
 	UserRepository       *repository.UserRepository
 	UploadUseCase        *UploadUseCase
+	S3Client             *pkg.S3Client
 	FaceServiceURL       string
 }
 
@@ -45,6 +47,7 @@ func NewAttendanceUseCase(
 	employeeRepository *repository.EmployeeRepository,
 	userRepository *repository.UserRepository,
 	uploadUseCase *UploadUseCase,
+	s3Client *pkg.S3Client,
 	faceServiceURL string,
 ) *AttendanceUseCase {
 	return &AttendanceUseCase{
@@ -59,6 +62,7 @@ func NewAttendanceUseCase(
 		EmployeeRepository:   employeeRepository,
 		UserRepository:       userRepository,
 		UploadUseCase:        uploadUseCase,
+		S3Client:             s3Client,
 		FaceServiceURL:       faceServiceURL,
 	}
 }
@@ -75,11 +79,20 @@ func (c *AttendanceUseCase) RegisterFace(ctx context.Context, request *model.Reg
 		return nil, fiber.ErrNotFound
 	}
 
-	image, err := readMultipart(request.File)
+	// get image
+
+	// s3 usage
+	image, err := c.S3Client.GetObjectBytes(request.ObjectKey, true)
 	if err != nil {
-		c.Log.WithError(err).Error("Failed to read face image")
-		return nil, fiber.ErrBadRequest
+		return nil, err
 	}
+
+	//
+	// image, err := readMultipart(request.File)
+	// if err != nil {
+	// 	c.Log.WithError(err).Error("Failed to read face image")
+	// 	return nil, fiber.ErrBadRequest
+	// }
 
 	// image, err = resizeImage(image, 1080) // compress dulu
 	// if err != nil {
@@ -87,12 +100,11 @@ func (c *AttendanceUseCase) RegisterFace(ctx context.Context, request *model.Reg
 	// 	return nil, fiber.ErrBadRequest
 	// }
 
-	if err := lib.RegisterFace(c.FaceServiceURL+"/register", employee.ID, request.File.Filename, image); err != nil {
+	if err := lib.RegisterFace(c.FaceServiceURL+"/register", employee.ID, request.ObjectKey, image); err != nil {
 		c.Log.WithError(err).Error("Failed to register face")
 		return nil, fiber.NewError(fiber.StatusBadGateway, "Gagal mendaftarkan wajah")
 	}
 
-	uploadUrl, err := c.uploadFace(ctx, request.File)
 	if err != nil {
 		c.Log.WithError(err).Error("Failed to upload face image")
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal mengunggah wajah")
@@ -104,7 +116,8 @@ func (c *AttendanceUseCase) RegisterFace(ctx context.Context, request *model.Reg
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "Gagal menemukan data user")
 	}
 
-	user.Image = &uploadUrl
+	imageUrl := c.S3Client.GetPublicURL(request.ObjectKey)
+	user.Image = &imageUrl
 
 	if err := c.UserRepository.Update(c.DB.WithContext(ctx), user); err != nil {
 		c.Log.WithError(err).Error("Failed to update user image")
@@ -113,7 +126,7 @@ func (c *AttendanceUseCase) RegisterFace(ctx context.Context, request *model.Reg
 
 	return &model.RegisterFaceResponse{
 		EmployeeID:   employee.ID,
-		FaceImageURL: uploadUrl,
+		FaceImageURL: imageUrl,
 	}, nil
 }
 
