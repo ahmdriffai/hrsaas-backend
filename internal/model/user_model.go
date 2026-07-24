@@ -10,6 +10,7 @@ type UserResponse struct {
 	Email         string            `json:"email,omitempty"`
 	EmailVerified bool              `json:"email_verified,omitempty"`
 	CompanyID     string            `json:"company_id,omitempty"`
+	Image         string            `json:"image_url"`
 	Employee      *EmployeeResponse `json:"employee,omitempty"`
 	Roles         []RoleResponse    `json:"roles,omitempty"`
 	// NotificationToken string               `json:"notif_token,omitempty"`
@@ -106,6 +107,7 @@ func UserToResponse(user *entity.User) *UserResponse {
 		Name:          user.Name,
 		Email:         user.Email,
 		Roles:         roles,
+		Image:         *user.Image,
 		Permissions:   permissions,
 		CompanyID:     user.CompanyID,
 		EmailVerified: user.EmailVerified,
