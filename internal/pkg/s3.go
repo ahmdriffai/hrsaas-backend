@@ -58,9 +58,12 @@ func (s *S3Client) GenerateDownloadURL(presignClient *s3.PresignClient, objectKe
 	return req.URL, nil
 }
 
-func (s *S3Client) GeneratPresignURL(mimeType string) (string, string, error) {
+func (s *S3Client) GeneratPresignURL(mimeType string, isPublic ...bool) (string, string, error) {
 
 	bucket := s.Config.GetString("s3.bucket")
+	if len(isPublic) > 0 && isPublic[0] {
+		bucket = s.Config.GetString("s3.public_bucket")
+	}
 
 	exts, _ := mime.ExtensionsByType(mimeType)
 	ext := ""

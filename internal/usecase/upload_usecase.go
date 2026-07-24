@@ -239,13 +239,21 @@ func (u *UploadUseCase) GenerateUploadURL(ctx context.Context, request *model.Pr
 		return nil, errors.New("unsupported mime type")
 	}
 
-	uploadUrl, filename, err := u.S3Client.GeneratPresignURL(request.MimeType)
+	uploadUrl, filename, err := u.S3Client.GeneratPresignURL(request.MimeType, request.IsPublic)
 	if err != nil {
 		return nil, errors.New("error generate url")
 	}
 
-	return &model.PresignResponse{
+	response := &model.PresignResponse{
 		UploadURL: uploadUrl,
 		ObjectKey: filename,
-	}, nil
+	}
+
+	if request.IsPublic {
+		if publicURL := u.Viper.GetString("s3.public_url"); publicURL != "" {
+			response.PublicURL = fmt.Sprintf("%s/%s", publicURL, filename)
+		}
+	}
+
+	return response, nil
 }

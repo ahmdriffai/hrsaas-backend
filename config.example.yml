@@ -26,9 +26,10 @@ s3:
   endpoint: "" # kosongkan untuk AWS, isi untuk MinIO/Cloudflare R2 (contoh: http://localhost:9000)
   region: "us-east-1"
   bucket: "storage-main"
+  public_bucket: "" # bucket terpisah khusus untuk asset public (mis. foto profil)
   access_key: ""
   secret_key: ""
-  public_url: "" # base URL publik, contoh: https://cdn.example.com atau https://<bucket>.s3.amazonaws.com
+  public_url: "" # base URL publik untuk public_bucket, contoh: https://cdn.example.com
 
 face:
   base_url: "http://localhost:8080"
