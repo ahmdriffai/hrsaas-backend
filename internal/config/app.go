@@ -123,7 +123,7 @@ func Bootstrap(config *BootstrapConfig) {
 	holidayUseCase := usecase.NewHolidayUseCase(config.DB, config.Log, config.Validate, holidayRepository)
 	employeeEducationUseCase := usecase.NewEmployeeEducationUseCase(config.DB, config.Log, config.Validate, employeeEducationRepository)
 	employeeTrainingUseCase := usecase.NewEmployeeTrainingUseCase(config.DB, config.Log, config.Validate, employeeTrainingRepository)
-	remidialVisitUseCase := usecase.NewRemidialVisitUseCase(config.DB, config.Log, config.Validate, remidialVisitRepository, employeeRepository)
+	remidialVisitUseCase := usecase.NewRemidialVisitUseCase(config.DB, config.Log, config.Validate, remidialVisitRepository, employeeRepository, config.S3Client)
 	announcementUseCase := usecase.NewAnnouncementUsecase(config.DB, config.Log, config.Validate, announcementRepository, employeeRepository)
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)

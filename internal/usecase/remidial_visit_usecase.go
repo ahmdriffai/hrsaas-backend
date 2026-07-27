@@ -4,8 +4,10 @@ import (
 	"context"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/model"
+	"hr-sas/internal/pkg"
 	"hr-sas/internal/repository"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -18,6 +20,7 @@ type RemidialVisitUseCase struct {
 	Validate                *validator.Validate
 	RemidialVisitRepository *repository.RemidialVisitRepository
 	EmployeeRepository      *repository.EmployeeRepository
+	S3Client                *pkg.S3Client
 }
 
 func NewRemidialVisitUseCase(
@@ -26,6 +29,7 @@ func NewRemidialVisitUseCase(
 	validate *validator.Validate,
 	remidialVisitRepo *repository.RemidialVisitRepository,
 	employeeRepo *repository.EmployeeRepository,
+	s3 *pkg.S3Client,
 ) *RemidialVisitUseCase {
 	return &RemidialVisitUseCase{
 		DB:                      db,
@@ -33,6 +37,7 @@ func NewRemidialVisitUseCase(
 		Validate:                validate,
 		RemidialVisitRepository: remidialVisitRepo,
 		EmployeeRepository:      employeeRepo,
+		S3Client:                s3,
 	}
 }
 
@@ -148,7 +153,13 @@ func (c *RemidialVisitUseCase) List(ctx context.Context, request *model.SearchRe
 	}
 
 	responses := make([]model.RemidialVisitResponse, len(items))
+	presignUrl := s3.NewPresignClient(c.S3Client.Client)
 	for i, item := range items {
+		url, err := c.S3Client.GenerateDownloadURL(presignUrl, items[i].Img_Url)
+		if err != nil {
+			return nil, 0, err
+		}
+		item.Img_Url = url
 		responses[i] = *c.toResponse(ctx, &item)
 	}
 
