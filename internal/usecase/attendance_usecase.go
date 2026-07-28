@@ -503,7 +503,7 @@ func (c *AttendanceUseCase) CheckIn(ctx context.Context, request *model.CheckInA
 		return nil, fiber.ErrInternalServerError
 	}
 
-	checkInDateType := time.UnixMilli(shiftDay.CheckIn)
+	checkInDateType := time.UnixMilli(shiftDay.CheckIn).UTC()
 	startTimeToday := time.Date(
 		now.Year(), now.Month(), now.Day(),
 		checkInDateType.Hour(), checkInDateType.Minute(), checkInDateType.Second(), checkInDateType.Nanosecond(),

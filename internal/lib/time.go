@@ -106,8 +106,12 @@ func ParseDateToUnixMilli2(dateStr string) (int64, error) {
 	return t.UnixMilli(), nil
 }
 
+// ParseTimeToUnixMilli parses a wall-clock "15:04" string as UTC. Callers
+// that read the value back must decode it with .UTC() (see time.UnixMilli
+// usage in attendance_usecase.go) so the hour/minute round-trips correctly
+// regardless of the server process's local timezone.
 func ParseTimeToUnixMilli(timeStr string) (int64, error) {
-	t, err := time.Parse("15:04", timeStr)
+	t, err := time.ParseInLocation("15:04", timeStr, time.UTC)
 	if err != nil {
 		return 0, err
 	}
