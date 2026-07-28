@@ -72,23 +72,9 @@ func (r *RemidialVisitRepository) SearchNasabah(ctx context.Context, req *model.
 func (r *RemidialVisitRepository) List(db *gorm.DB, request *model.SearchRemidialVisitRequest) ([]entity.RemidialVisit, int64, error) {
 	var items []entity.RemidialVisit
 
-	query := db.Model(&entity.RemidialVisit{}).
-		Joins("LEFT JOIN employees e ON e.id = remidial_visit.employee_id")
-
-	if request.EmployeeID != "" {
-		query = query.Where("remidial_visit.employee_id = ?", request.EmployeeID)
-	}
-	if request.EmployeeName != "" {
-		query = query.Where("e.fullname ILIKE ?", "%"+request.EmployeeName+"%")
-	}
-	if request.NasabahName != "" {
-		query = query.Where("remidial_visit.nasabah_name ILIKE ?", "%"+request.NasabahName+"%")
-	}
-	if request.StartDate != "" {
-		query = query.Where("remidial_visit.created_at >= ?", request.StartDate)
-	}
-	if request.EndDate != "" {
-		query = query.Where("remidial_visit.created_at <= ?", request.EndDate)
+	query, err := r.FilterSearch(db.Model(&entity.RemidialVisit{}), request)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	var total int64
@@ -106,4 +92,27 @@ func (r *RemidialVisitRepository) List(db *gorm.DB, request *model.SearchRemidia
 	}
 
 	return items, total, nil
+}
+
+func (r *RemidialVisitRepository) FilterSearch(db *gorm.DB, request *model.SearchRemidialVisitRequest) (*gorm.DB, error) {
+	query := db.Joins("LEFT JOIN employees e ON e.id = remidial_visit.employee_id")
+	if request.EmployeeID != "" {
+		query = query.Where("remidial_visit.employee_id = ?", request.EmployeeID)
+	}
+	if request.EmployeeName != "" {
+		query = query.Where("e.fullname ILIKE ?", "%"+request.EmployeeName+"%")
+	}
+	if request.NasabahName != "" {
+		query = query.Where("remidial_visit.nasabah_name ILIKE ?", "%"+request.NasabahName+"%")
+	}
+	if request.StartDate != "" {
+		query = query.Where("remidial_visit.created_at >= ?", request.StartDate)
+	}
+	if request.EndDate != "" {
+		query = query.Where("remidial_visit.created_at <= ?", request.EndDate)
+	}
+	if request.NoPjm != "" {
+		query = query.Where("remidial_visit.no_pjm ILIKE ?", "%"+request.NoPjm+"%")
+	}
+	return query, nil
 }

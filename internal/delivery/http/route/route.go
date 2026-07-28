@@ -351,6 +351,7 @@ func (c *RouteConfig) SetupHolidayRouter() {
 
 func (c *RouteConfig) SetupRemidialVisitRouter() {
 	route := c.App.Group("/api/remidial-visits", c.AuthMiddleware)
+	route.Get("/:no_pjm/history", c.RemidialVisitController.ListByNoPjm)
 
 	// Employee routes
 	route.Post("/search-nasabah", c.EmployeeMiddleware, c.RemidialVisitController.SearchNasabah)
