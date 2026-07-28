@@ -21,18 +21,28 @@ func NewEmployeeRepository(log *logrus.Logger) *EmployeeRepository {
 
 func (r *EmployeeRepository) CountByEmployeeNumberAndCompanyID(db *gorm.DB, employeeNumber string, CompanyID string) (int64, error) {
 	var total int64
-	err := db.Model(new(entity.Employee)).Where("employee_number = ?", employeeNumber).Where("company_id = ?", CompanyID).Count(&total).Error
+	err := db.Model(new(entity.Employee)).
+		Where("employee_number = ?", employeeNumber).
+		Where("company_id = ?", CompanyID).Count(&total).Error
 	return total, err
 }
 
 func (r *EmployeeRepository) Search(db *gorm.DB, request *model.SearchEmployeeRequest) ([]entity.Employee, int64, error) {
 	var employee []entity.Employee
-	if err := db.Preload("User").Preload("EmployeeContract").Preload("EmployeeContract.Division").Preload("EmployeeContract.Position").Scopes(r.FilterSearch(request)).Offset((request.Page - 1) * request.Size).Limit(request.Size).Find(&employee).Error; err != nil {
+	if err := db.Preload("User").
+		Order("fullname ASC").
+		Preload("EmployeeContract").
+		Preload("EmployeeContract.Division").
+		Preload("EmployeeContract.Position").
+		Scopes(r.FilterSearch(request)).
+		Offset((request.Page - 1) * request.Size).Limit(request.Size).
+		Find(&employee).Error; err != nil {
 		return nil, 0, err
 	}
 
 	var total int64 = 0
-	if err := db.Model(&entity.Employee{}).Scopes(r.FilterSearch(request)).Count(&total).Error; err != nil {
+	if err := db.Model(&entity.Employee{}).Scopes(r.FilterSearch(request)).
+		Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 

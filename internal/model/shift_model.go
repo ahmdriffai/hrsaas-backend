@@ -61,10 +61,11 @@ type BulkAssignEmployeesToShiftRequest struct {
 }
 
 type SearchShiftRequest struct {
-	CompanyID string `json:"-" validate:"required"`
-	Key       string `json:"key" validate:"max=100"`
-	Page      int    `json:"page" validate:"min=1"`
-	Size      int    `json:"size" validate:"min=1,max=100"`
+	CompanyID  string `json:"-" validate:"required"`
+	EmployeeID string `json:"employee_id"`
+	Key        string `json:"key" validate:"max=100"`
+	Page       int    `json:"page" validate:"min=1"`
+	Size       int    `json:"size" validate:"min=1,max=100"`
 }
 
 type DetailShifRequest struct {

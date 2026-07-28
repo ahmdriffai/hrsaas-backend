@@ -87,6 +87,34 @@ func (c *ShiftController) List(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *ShiftController) ListCurrent(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+	company := middleware.GetCompanyId(ctx)
+	request := &model.SearchShiftRequest{
+		CompanyID:  company,
+		EmployeeID: user.Employee.ID,
+		Page:       ctx.QueryInt("page", 1),
+		Size:       ctx.QueryInt("size", 10),
+	}
+
+	responses, total, err := c.UseCase.Search(ctx.UserContext(), request)
+	if err != nil {
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.ShiftResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+}
+
 func (c *ShiftController) Detail(ctx *fiber.Ctx) error {
 	request := new(model.DetailShifRequest)
 	request.CompanyID = middleware.GetCompanyId(ctx)

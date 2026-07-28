@@ -152,40 +152,68 @@ func ptr[T any](v T) *T { return &v }
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 type seedEmployee struct {
-	name     string
-	email    string
-	empNum   string
-	gender   string
-	position string // key into positionMap
-	salary   float64
-	approver bool // whether this position is an approver
+	name        string
+	email       string
+	empNum      string
+	gender      string
+	position    string // key into positionMap
+	divisionKey string // key into divisionMap ("Operasional" | "Bisnis")
+	salary      float64
+	approver    bool // whether this position is an approver
 }
 
 var employees = []seedEmployee{
+	// ── Divisi Operasional (existing) ───────────────────────────────────────
 	{
 		name: "Budi Santoso", email: "direktur.utama@company.com",
 		empNum: "EMP-001", gender: "Laki-laki",
-		position: "Direktur Utama", salary: 25_000_000, approver: true,
+		position: "Direktur Utama", divisionKey: "Operasional",
+		salary: 25_000_000, approver: true,
 	},
 	{
 		name: "Siti Rahayu", email: "direktur.operasional@company.com",
 		empNum: "EMP-002", gender: "Perempuan",
-		position: "Direktur Operasional", salary: 20_000_000, approver: true,
+		position: "Direktur Operasional", divisionKey: "Operasional",
+		salary: 20_000_000, approver: true,
 	},
 	{
 		name: "Andi Wijaya", email: "kadiv.operasional@company.com",
 		empNum: "EMP-003", gender: "Laki-laki",
-		position: "Kadiv Operasional", salary: 15_000_000, approver: true,
+		position: "Kadiv Operasional", divisionKey: "Operasional",
+		salary: 15_000_000, approver: true,
 	},
 	{
 		name: "Dewi Kusuma", email: "kabag.operasional@company.com",
 		empNum: "EMP-004", gender: "Perempuan",
-		position: "Kabag Operasional", salary: 10_000_000, approver: false,
+		position: "Kabag Operasional", divisionKey: "Operasional",
+		salary: 10_000_000, approver: false,
 	},
 	{
 		name: "Reza Firmansyah", email: "staff.operasional@company.com",
 		empNum: "EMP-005", gender: "Laki-laki",
-		position: "Staff Operasional", salary: 6_000_000, approver: false,
+		position: "Staff Operasional", divisionKey: "Operasional",
+		salary: 6_000_000, approver: false,
+	},
+
+	// ── Divisi Bisnis (baru) — chain TIDAK melewati Direktur Operasional ────
+	// karyawan -> manager -> head division -> dirut
+	{
+		name: "Hendra Saputra", email: "kadiv.bisnis@company.com",
+		empNum: "EMP-006", gender: "Laki-laki",
+		position: "Kadiv Bisnis", divisionKey: "Bisnis",
+		salary: 15_000_000, approver: true,
+	},
+	{
+		name: "Ratna Sari", email: "kabag.bisnis@company.com",
+		empNum: "EMP-007", gender: "Perempuan",
+		position: "Kabag Bisnis", divisionKey: "Bisnis",
+		salary: 10_000_000, approver: false,
+	},
+	{
+		name: "Fajar Nugroho", email: "staff.bisnis@company.com",
+		empNum: "EMP-008", gender: "Laki-laki",
+		position: "Staff Bisnis", divisionKey: "Bisnis",
+		salary: 6_000_000, approver: false,
 	},
 }
 
@@ -214,17 +242,23 @@ func main() {
 		fmt.Printf("Using existing company: %s (%s)\n", company.Name, company.ID)
 	}
 
-	// ── 2. Division: Operasional ───────────────────────────────────────────────
-	var division Division
-	if err := db.Where("name = ? AND company_id = ?", "Operasional", company.ID).First(&division).Error; err != nil {
-		division = Division{
-			ID: newID(), CompanyID: company.ID, Name: "Operasional",
-			CreatedAt: now(), UpdatedAt: now(),
+	// ── 2. Divisions: Operasional & Bisnis ─────────────────────────────────────
+	divisionNames := []string{"Operasional", "Bisnis"}
+	divisionMap := map[string]string{} // name -> id
+
+	for _, dname := range divisionNames {
+		var division Division
+		if err := db.Where("name = ? AND company_id = ?", dname, company.ID).First(&division).Error; err != nil {
+			division = Division{
+				ID: newID(), CompanyID: company.ID, Name: dname,
+				CreatedAt: now(), UpdatedAt: now(),
+			}
+			db.Create(&division)
+			fmt.Printf("Created division: %s\n", division.Name)
+		} else {
+			fmt.Printf("Using existing division: %s (%s)\n", division.Name, division.ID)
 		}
-		db.Create(&division)
-		fmt.Printf("Created division: %s\n", division.Name)
-	} else {
-		fmt.Printf("Using existing division: %s (%s)\n", division.Name, division.ID)
+		divisionMap[dname] = division.ID
 	}
 
 	// ── 3. Positions (hierarchical) ────────────────────────────────────────────
@@ -235,11 +269,19 @@ func main() {
 		approver  bool
 	}
 	posSpecs := []posSpec{
+		// Divisi Operasional
 		{"Direktur Utama", "", true},
 		{"Direktur Operasional", "Direktur Utama", true},
 		{"Kadiv Operasional", "Direktur Operasional", true},
 		{"Kabag Operasional", "Kadiv Operasional", false},
 		{"Staff Operasional", "Kabag Operasional", false},
+		// Divisi Bisnis — parent Kadiv Bisnis LANGSUNG ke Direktur Utama,
+		// TIDAK lewat Direktur Operasional. Tujuannya: test bahwa Dir Ops
+		// tetap muncul sebagai required approver lewat global query,
+		// meskipun secara struktural bukan parent chain Kadiv Bisnis.
+		{"Kadiv Bisnis", "Direktur Utama", true},
+		{"Kabag Bisnis", "Kadiv Bisnis", false},
+		{"Staff Bisnis", "Kabag Bisnis", false},
 	}
 
 	positionMap := map[string]string{} // name -> id
@@ -286,7 +328,7 @@ func main() {
 		"SHIFTS", "TIME_OFF_REQUESTS", "TIME_OFF_TYPES", "TIME_OFF_BALANCES",
 		"PERMISSIONS", "ROLES", "EMPLOYEE_DOCUMENTS", "VISITS", "HOLIDAYS",
 		"EMPLOYEE_EDUCATIONS", "EMPLOYEE_TRAININGS", "EMPLOYEE_IDENTITIES",
-		"ATTENDANCES",
+		"ATTENDANCES", "REMIDIAL_VISITS", "ANNOUNCEMENTS",
 	}
 
 	for _, pname := range permissionNames {
@@ -359,7 +401,7 @@ func main() {
 				ContractType: "PKWTT",
 				StartDate:    contractStart,
 				EndDate:      nil,
-				DivisionID:   division.ID,
+				DivisionID:   divisionMap[emp.divisionKey],
 				PositionID:   positionMap[emp.position],
 				Salary:       emp.salary,
 				IsActive:     true,

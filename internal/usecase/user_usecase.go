@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	// "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -25,6 +26,7 @@ type UserUseCase struct {
 	SessionRepository *repository.SessionRepository
 	CompanyRepository *repository.CompanyRepository
 	RoleRepository    *repository.RoleRepository
+	// S3Client          *pkg.S3Client
 }
 
 func NewUserUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate, userRepository *repository.UserRepository, sessionRepository *repository.SessionRepository, companyRepository *repository.CompanyRepository, roleRepository *repository.RoleRepository) *UserUseCase {
@@ -269,6 +271,8 @@ func (c *UserUseCase) Detail(ctx context.Context, id string) (*model.UserRespons
 		c.Log.WithError(err).Error("Gagal menyelesaikan transaksi")
 		return nil, fiber.ErrInternalServerError
 	}
+
+	// presignedUrl := s3.NewPresignClient(c.S3Client.Client)
 
 	return model.UserToResponse(user), nil
 }

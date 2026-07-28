@@ -109,9 +109,16 @@ func (r *ShiftRepository) Search(db *gorm.DB, request *model.SearchShiftRequest)
 func (r *ShiftRepository) FilterSearch(request *model.SearchShiftRequest) func(tx *gorm.DB) *gorm.DB {
 	return func(tx *gorm.DB) *gorm.DB {
 		tx = tx.Where("company_id = ?", request.CompanyID)
+
+		if request.EmployeeID != "" {
+			tx = tx.Joins("JOIN employee_shifts ON employee_shifts.shift_id = shifts.id").
+				Where("employee_shifts.employee_id = ?", request.EmployeeID)
+		}
+
 		if request.Key != "" {
 			tx = tx.Where("name LIKE ?", "%"+request.Key+"%")
 		}
+
 		return tx
 	}
 }
