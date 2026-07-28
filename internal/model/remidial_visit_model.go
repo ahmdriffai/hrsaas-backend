@@ -113,6 +113,7 @@ type SearchRemidialVisitRequest struct {
 	EmployeeID   string `json:"employee_id,omitempty" validate:"omitempty,uuid4"`
 	EmployeeName string `json:"employee_name,omitempty" validate:"max=100"`
 	NasabahName  string `json:"nama,omitempty" validate:"max=100"`
+	NoPjm        string `json:"no_pjm" validate:"max=100"`
 	StartDate    string `json:"start_date,omitempty" validate:"max=20"`
 	EndDate      string `json:"end_date,omitempty" validate:"max=20"`
 	Page         int    `json:"page,omitempty" validate:"min=1"`

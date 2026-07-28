@@ -74,7 +74,7 @@ func (c *RemidialVisitController) ListCurrent(ctx *fiber.Ctx) error {
 
 	request := new(model.SearchRemidialVisitRequest)
 	request.EmployeeID = user.Employee.ID
-	request.NasabahName = ctx.Query("nama", "")
+	request.NasabahName = ctx.Query("nama_nasabah", "")
 	request.StartDate = ctx.Query("start_date", "")
 	request.EndDate = ctx.Query("end_date", "")
 	request.Page = ctx.QueryInt("page", 1)
@@ -126,6 +126,35 @@ func (c *RemidialVisitController) ListAdmin(ctx *fiber.Ctx) error {
 		Data:   responses,
 		Paging: paging,
 	})
+}
+
+func (c *RemidialVisitController) ListByNoPjm(ctx *fiber.Ctx) error {
+	request := new(model.SearchRemidialVisitRequest)
+	request.NoPjm = ctx.Params("no_pjm")
+	request.StartDate = ctx.Query("start_date", "")
+	request.EndDate = ctx.Query("end_date", "")
+	request.NasabahName = ctx.Query("nama", "")
+	request.Page = ctx.QueryInt("page", 1)
+	request.Size = ctx.QueryInt("size", 10)
+
+	responses, total, err := c.UseCase.List(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to list history remidial visits on this no_pjm")
+		return err
+	}
+
+	paging := &model.PageMetadata{
+		Page:      request.Page,
+		Size:      request.Size,
+		TotalItem: total,
+		TotalPage: int64(math.Ceil(float64(total) / float64(request.Size))),
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.RemidialVisitResponse]{
+		Data:   responses,
+		Paging: paging,
+	})
+
 }
 
 func (c *RemidialVisitController) Update(ctx *fiber.Ctx) error {
