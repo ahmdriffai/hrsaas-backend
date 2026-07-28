@@ -18,6 +18,12 @@ RUN go build -o build/main cmd/web/main.go
 # Stage 2: Minimal runtime
 FROM alpine:latest
 
+# tzdata is required for Go's time.Local to resolve named zones (e.g. TZ=Asia/Jakarta);
+# alpine ships with no timezone database by default and Go silently falls back to UTC without it.
+RUN apk add --no-cache tzdata
+
+ENV TZ=Asia/Jakarta
+
 WORKDIR /app
 
 # Copy executable dari stage build
