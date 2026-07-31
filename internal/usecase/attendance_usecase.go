@@ -316,6 +316,40 @@ func (c *AttendanceUseCase) Detail(ctx context.Context, requestID string, compan
 	return response, nil
 }
 
+func (c *AttendanceUseCase) DetailToday(ctx context.Context, employeeID, companyId string) (*model.AttendanceResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	attendance := new(entity.Attendance)
+	today := time.Now().UnixMilli()
+
+	if err := c.AttendanceRepository.FindByEmployeeIDAndDate(tx, attendance, employeeID, today); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "Belum ada absensi hari ini")
+		}
+		return nil, fiber.ErrInternalServerError
+	}
+
+	logs, err := c.AttendanceLogRepo.FindByAttendanceID(tx, attendance.ID)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to find attendance logs")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	response := model.AttendandeToResponse(attendance)
+	response.Logs = make([]model.AttendanceLogResponse, len(logs))
+	for i, log := range logs {
+		response.Logs[i] = *model.AttendanceLogToResponse(&log)
+	}
+
+	return response, nil
+}
+
 func (c *AttendanceUseCase) Update(ctx context.Context, requestID string, companyID string, request *model.UpdateAttendanceRequest) (*model.AttendanceResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()

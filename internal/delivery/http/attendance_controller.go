@@ -142,6 +142,19 @@ func (c *AttendanceController) Detail(ctx *fiber.Ctx) error {
 	return ctx.JSON(model.WebResponse[*model.AttendanceResponse]{Data: response})
 }
 
+func (c *AttendanceController) DetailToday(ctx *fiber.Ctx) error {
+	user := middleware.GetUser(ctx)
+
+	response, err := c.UseCase.DetailToday(ctx.UserContext(), user.Employee.ID, user.CompanyID)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to get today's attendace detail")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.AttendanceResponse]{Data: response})
+
+}
+
 func (c *AttendanceController) Update(ctx *fiber.Ctx) error {
 	request := new(model.UpdateAttendanceRequest)
 	if err := ctx.BodyParser(request); err != nil {

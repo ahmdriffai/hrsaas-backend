@@ -177,6 +177,7 @@ func (c *RouteConfig) SetupOfficeLocationRouter() {
 
 func (c *RouteConfig) SetupAttendanceRouter() {
 	route := c.App.Group("/api/attendances", c.AuthMiddleware)
+	route.Get("/today", c.EmployeeMiddleware, c.AttendanceController.DetailToday)
 	route.Post("/check-in", c.EmployeeMiddleware, c.AttendanceController.CheckIn)
 	route.Post("/check-out", c.EmployeeMiddleware, c.AttendanceController.CheckOut)
 	route.Post("/break-in", c.EmployeeMiddleware, c.AttendanceController.BreakIn)
