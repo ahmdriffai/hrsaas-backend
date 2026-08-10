@@ -59,6 +59,19 @@ func (r *AttendanceRepository) Search(db *gorm.DB, request *model.SearchAttendan
 	return attendances, total, nil
 }
 
+func (r *AttendanceRepository) SearchAll(db *gorm.DB, request *model.SearchAttendanceRequest) ([]entity.Attendance, error) {
+	var attendances []entity.Attendance
+	if err := db.Scopes(r.FilterSearch(request)).
+		Order("date DESC").
+		Preload("Employee").
+		Preload("Employee.EmployeeContract").
+		Preload("Employee.EmployeeContract.Position").
+		Find(&attendances).Error; err != nil {
+		return nil, err
+	}
+	return attendances, nil
+}
+
 func (r *AttendanceRepository) FilterSearch(request *model.SearchAttendanceRequest) func(tx *gorm.DB) *gorm.DB {
 	return func(tx *gorm.DB) *gorm.DB {
 		tx = tx.Where("company_id = ?", request.CompanyID)
@@ -75,7 +88,15 @@ func (r *AttendanceRepository) FilterSearch(request *model.SearchAttendanceReque
 			tx = tx.Where("is_approved = ?", *request.IsApproved)
 		}
 
-		if request.Date != "" {
+		if request.StartDate != "" && request.EndDate != "" {
+			if startT, err := time.Parse("2006-01-02", request.StartDate); err == nil {
+				if endT, err := time.Parse("2006-01-02", request.EndDate); err == nil {
+					startOfDay := time.Date(startT.Year(), startT.Month(), startT.Day(), 0, 0, 0, 0, time.Local).UnixMilli()
+					endOfDay := time.Date(endT.Year(), endT.Month(), endT.Day(), 0, 0, 0, 0, time.Local).UnixMilli()
+					tx = tx.Where("date >= ? AND date <= ?", startOfDay, endOfDay)
+				}
+			}
+		} else if request.Date != "" {
 			if t, err := time.Parse("2006-01-02", request.Date); err == nil {
 				startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local).UnixMilli()
 				tx = tx.Where("date = ?", startOfDay)

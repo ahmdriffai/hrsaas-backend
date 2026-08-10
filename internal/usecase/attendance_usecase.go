@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"hr-sas/internal/entity"
 	"hr-sas/internal/lib"
 	"hr-sas/internal/model"
@@ -12,10 +13,10 @@ import (
 	"mime/multipart"
 	"strconv"
 	"time"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
@@ -253,6 +254,114 @@ func (c *AttendanceUseCase) Search(ctx context.Context, request *model.SearchAtt
 	}
 
 	return responses, total, nil
+}
+
+func (c *AttendanceUseCase) Export(ctx context.Context, request *model.SearchAttendanceRequest) (*excelize.File, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("error validating request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	attendances, err := c.AttendanceRepository.SearchAll(tx, request)
+	if err != nil {
+		c.Log.WithError(err).Error("error getting attendances for export")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.WithError(err).Error("Failed to commit transaction")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	employeeMap := make(map[string]*model.AttendanceSheet)
+	for _, attendance := range attendances {
+		empID := attendance.EmployeeID
+		if _, exists := employeeMap[empID]; !exists {
+			employeeMap[empID] = &model.AttendanceSheet{
+				Name:  attendance.Employee.Fullname,
+				Data:  []model.AttendanceRow{},
+				Total: 0,
+			}
+		}
+
+		status := attendance.Status
+		if status == "" {
+			status = "Belum Ada Status (TS)"
+		}
+
+		var lateCheckIn string = "-"
+		if attendance.CheckInTime > 0 {
+			tIn := time.UnixMilli(attendance.CheckInTime)
+			expectedIn := time.Date(tIn.Year(), tIn.Month(), tIn.Day(), 7, 45, 0, 0, tIn.Location())
+			diffIn := tIn.Sub(expectedIn)
+			if diffIn > 0 {
+				hours := int(diffIn.Hours())
+				minutes := int(diffIn.Minutes()) % 60
+				if hours > 0 || minutes > 0 {
+					lateCheckIn = fmt.Sprintf("%02d jam %02d menit", hours, minutes)
+				}
+			}
+		}
+
+		var lateCheckOut string = "-"
+		var catatan string
+		if attendance.CheckOutTime > 0 {
+			tOut := time.UnixMilli(attendance.CheckOutTime)
+			hourOut := 17
+			if tOut.Weekday() == time.Saturday {
+				hourOut = 12
+			}
+			expectedOut := time.Date(tOut.Year(), tOut.Month(), tOut.Day(), hourOut, 0, 0, 0, tOut.Location())
+			diffOut := expectedOut.Sub(tOut)
+			if diffOut > 0 {
+				hours := int(diffOut.Hours())
+				minutes := int(diffOut.Minutes()) % 60
+				if hours > 0 || minutes > 0 {
+					lateCheckOut = fmt.Sprintf("%02d jam %02d menit", hours, minutes)
+				}
+			}
+		}
+
+		row := model.AttendanceRow{
+			No:           len(employeeMap[empID].Data) + 1,
+			Date:         attendance.Date,
+			Status:       status,
+			CheckInTime:  attendance.CheckInTime,
+			CheckOutTime: attendance.CheckOutTime,
+			LateCheckIn:  lateCheckIn,
+			LateCheckOut: lateCheckOut,
+			Note:         catatan,
+		}
+
+		if status == "HADIR" || status == "TERLAMBAT" {
+			employeeMap[empID].Total++
+		}
+
+		employeeMap[empID].Data = append(employeeMap[empID].Data, row)
+	}
+
+	var sheets []model.AttendanceSheet
+	for _, sheet := range employeeMap {
+		sheets = append(sheets, *sheet)
+	}
+
+	periodeData := "Semua Periode"
+	if request.StartDate != "" && request.EndDate != "" {
+		periodeData = request.StartDate + " s/d " + request.EndDate
+	} else if request.Date != "" {
+		periodeData = request.Date
+	}
+
+	file, err := lib.ExportAbsensiToExcel(sheets, periodeData)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to generate excel")
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return file, nil
 }
 
 func (c *AttendanceUseCase) SearchLog(ctx context.Context, request *model.SearchAttendanceLogRequest) ([]model.AttendanceLogResponse, int64, error) {

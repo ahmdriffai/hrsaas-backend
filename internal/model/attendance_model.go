@@ -77,6 +77,8 @@ type SearchAttendanceRequest struct {
 	CompanyID  string `json:"-" validate:"required,uuid4"`
 	EmployeeID string `json:"employee_id,omitempty" validate:"omitempty,uuid4"`
 	Date       string `json:"date,omitempty" validate:"omitempty,max=20"`
+	StartDate  string `json:"start_date,omitempty" validate:"omitempty,max=20"`
+	EndDate    string `json:"end_date,omitempty" validate:"omitempty,max=20"`
 	Status     string `json:"status,omitempty" validate:"omitempty,oneof=HADIR TERLAMBAT ALPHA IZIN SAKIT"`
 	IsApproved *bool  `json:"is_approved,omitempty"`
 	Page       int    `json:"page,omitempty" validate:"min=1"`
@@ -92,6 +94,23 @@ type SearchAttendanceLogRequest struct {
 	IsApproved   *bool  `json:"is_approved,omitempty"`
 	Page         int    `json:"page,omitempty" validate:"min=1"`
 	Size         int    `json:"size,omitempty" validate:"min=1,max=100"`
+}
+
+type AttendanceSheet struct {
+	Name  string          `json:"nama"`
+	Data  []AttendanceRow `json:"data"`
+	Total int
+}
+
+type AttendanceRow struct {
+	No           int    `json:"no"`
+	Date         int64  `json:"tanggal"`
+	Status       string `json:"status"`
+	CheckInTime  int64  `json:"jam_masuk"`
+	CheckOutTime int64  `json:"jam_keluar"`
+	LateCheckIn  string `json:"terlambat_masuk"`
+	LateCheckOut string `json:"terlambat_keluar"`
+	Note         string `json:"catatan"`
 }
 
 // converter

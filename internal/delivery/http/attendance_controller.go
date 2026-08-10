@@ -47,6 +47,8 @@ func (c *AttendanceController) List(ctx *fiber.Ctx) error {
 	request.CompanyID = middleware.GetCompanyId(ctx)
 	request.EmployeeID = ctx.Query("employee_id", "")
 	request.Date = ctx.Query("date", "")
+	request.StartDate = ctx.Query("start_date", "")
+	request.EndDate = ctx.Query("end_date", "")
 	request.Status = ctx.Query("status", "")
 	request.Page = ctx.QueryInt("page", 1)
 	request.Size = ctx.QueryInt("size", 10)
@@ -70,11 +72,44 @@ func (c *AttendanceController) List(ctx *fiber.Ctx) error {
 	})
 }
 
+func (c *AttendanceController) Export(ctx *fiber.Ctx) error {
+	request := new(model.SearchAttendanceRequest)
+	request.CompanyID = middleware.GetCompanyId(ctx)
+	request.EmployeeID = ctx.Query("employee_id", "")
+	request.Date = ctx.Query("date", "")
+	request.StartDate = ctx.Query("start_date", "")
+	request.EndDate = ctx.Query("end_date", "")
+	request.Status = ctx.Query("status", "")
+
+	request.Page = 1
+	request.Size = 100
+
+	file, err := c.UseCase.Export(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Error("failed to export attendances")
+		return err
+	}
+
+	ctx.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Set("Content-Disposition", "attachment; filename=\"export-attendance.xlsx\"")
+
+	buffer, err := file.WriteToBuffer()
+	if err != nil {
+		c.Log.WithError(err).Error("failed to write excel to buffer")
+		return fiber.ErrInternalServerError
+	}
+
+	return ctx.Send(buffer.Bytes())
+}
+
 func (c *AttendanceController) ListCurrent(ctx *fiber.Ctx) error {
 	user := middleware.GetUser(ctx)
 	request := &model.SearchAttendanceRequest{
 		CompanyID:  user.CompanyID,
 		EmployeeID: user.Employee.ID,
+		Date:       ctx.Query("date", ""),
+		StartDate:  ctx.Query("start_date", ""),
+		EndDate:    ctx.Query("end_date", ""),
 		Page:       ctx.QueryInt("page", 1),
 		Size:       ctx.QueryInt("size", 10),
 	}
