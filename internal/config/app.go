@@ -51,15 +51,37 @@ func Bootstrap(config *BootstrapConfig) {
 	holidayRepository := repository.NewHolidayRepository(config.Log)
 	employeeEducationRepository := repository.NewEmployeeEducationRepository(config.Log)
 	employeeTrainingRepository := repository.NewEmployeeTrainingRepository(config.Log)
-	remidialVisitRepository := repository.NewRemidialVisitRepository(config.Log, config.Config.GetString("nasabah.base_url"))
+	remidialVisitRepository := repository.NewRemidialVisitRepository(
+		config.Log,
+		config.Config.GetString("nasabah.base_url"),
+	)
 	announcementRepository := repository.NewAnnouncementRepository(config.Log)
 
 	// setup producer
 
 	// setup usecase
-	companyUsecase := usecase.NewCompanyUseCase(config.DB, config.Log, config.Validate, companyRepository, userRepository)
-	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, sessionRepository, companyRepository, roleRepository)
-	uploadUseCase := usecase.NewUploadUseCase(config.Log, config.Validate, config.S3Client, config.Config)
+	companyUsecase := usecase.NewCompanyUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		companyRepository,
+		userRepository,
+	)
+	userUseCase := usecase.NewUserUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		userRepository,
+		sessionRepository,
+		companyRepository,
+		roleRepository,
+	)
+	uploadUseCase := usecase.NewUploadUseCase(
+		config.Log,
+		config.Validate,
+		config.S3Client,
+		config.Config,
+	)
 	employeeUseCase := usecase.NewEmployeeUseCase(
 		config.DB,
 		config.Log,
@@ -70,12 +92,55 @@ func Bootstrap(config *BootstrapConfig) {
 		positionRepository,
 		divisionRepository,
 	)
-	sanctionUseCase := usecase.NewSantionUseCase(config.DB, config.Log, config.Validate, sanctionRepository)
-	emSancUseCase := usecase.NewEmSancUseCase(config.DB, config.Log, config.Validate, emSancRepository, sanctionRepository, employeeRepository, config.S3Client)
-	positionUseCase := usecase.NewPositionUseCase(config.DB, config.Log, config.Validate, positionRepository)
-	officeLocationUseCase := usecase.NewOfficeLocationUseCase(config.DB, config.Log, config.Validate, officeLocationRepositoruy)
-	attendanceUseCase := usecase.NewAttendanceUseCase(config.DB, config.Log, config.Validate, attendaceRepositpry, officeLocationRepositoruy, shifRepository, shiftDayRepository, attendanceLogRepository, employeeRepository, userRepository, uploadUseCase, config.S3Client, config.Config.GetString("face.base_url"))
-	shiftUseCase := usecase.NewShiftUseCase(config.DB, config.Log, config.Validate, shifRepository, shiftDayRepository)
+	sanctionUseCase := usecase.NewSantionUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		sanctionRepository,
+	)
+	emSancUseCase := usecase.NewEmSancUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		emSancRepository,
+		sanctionRepository,
+		employeeRepository,
+		config.S3Client,
+	)
+	positionUseCase := usecase.NewPositionUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		positionRepository,
+	)
+	officeLocationUseCase := usecase.NewOfficeLocationUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		officeLocationRepositoruy,
+	)
+	attendanceUseCase := usecase.NewAttendanceUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		attendaceRepositpry,
+		officeLocationRepositoruy,
+		shifRepository,
+		shiftDayRepository,
+		attendanceLogRepository,
+		employeeRepository,
+		userRepository,
+		uploadUseCase,
+		config.S3Client,
+		config.Config.GetString("face.base_url"),
+	)
+	shiftUseCase := usecase.NewShiftUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		shifRepository,
+		shiftDayRepository,
+	)
 	timeOffRequestUseCase := usecase.NewTimeOffRequestUseCase(
 		config.DB,
 		config.Log,
@@ -115,16 +180,71 @@ func Bootstrap(config *BootstrapConfig) {
 		timeOffTypeRepository,
 		timeOffBalanceRepository,
 	)
-	divisionUseCase := usecase.NewDivisionUseCase(config.DB, config.Log, config.Validate, divisionRepository)
-	visitUseCase := usecase.NewVisitUseCase(config.DB, config.Log, config.Validate, visitRepository, config.S3Client)
-	permissionUseCase := usecase.NewPermissionUseCase(config.DB, config.Log, config.Validate, permissionRepository)
-	roleUseCase := usecase.NewRoleUseCase(config.DB, config.Log, config.Validate, roleRepository, permissionRepository)
-	employeeDocumentUseCase := usecase.NewEmployeeDocumentUseCase(config.DB, config.Log, config.Validate, employeeDocumentRepository)
-	holidayUseCase := usecase.NewHolidayUseCase(config.DB, config.Log, config.Validate, holidayRepository)
-	employeeEducationUseCase := usecase.NewEmployeeEducationUseCase(config.DB, config.Log, config.Validate, employeeEducationRepository)
-	employeeTrainingUseCase := usecase.NewEmployeeTrainingUseCase(config.DB, config.Log, config.Validate, employeeTrainingRepository)
-	remidialVisitUseCase := usecase.NewRemidialVisitUseCase(config.DB, config.Log, config.Validate, remidialVisitRepository, employeeRepository, config.S3Client)
-	announcementUseCase := usecase.NewAnnouncementUsecase(config.DB, config.Log, config.Validate, announcementRepository, employeeRepository)
+	divisionUseCase := usecase.NewDivisionUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		divisionRepository,
+	)
+	visitUseCase := usecase.NewVisitUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		visitRepository,
+		config.S3Client,
+	)
+	permissionUseCase := usecase.NewPermissionUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		permissionRepository,
+	)
+	roleUseCase := usecase.NewRoleUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		roleRepository,
+		permissionRepository,
+	)
+	employeeDocumentUseCase := usecase.NewEmployeeDocumentUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		employeeDocumentRepository,
+	)
+	holidayUseCase := usecase.NewHolidayUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		holidayRepository,
+	)
+	employeeEducationUseCase := usecase.NewEmployeeEducationUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		employeeEducationRepository,
+	)
+	employeeTrainingUseCase := usecase.NewEmployeeTrainingUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		employeeTrainingRepository,
+	)
+	remidialVisitUseCase := usecase.NewRemidialVisitUseCase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		remidialVisitRepository,
+		employeeRepository,
+		config.S3Client,
+	)
+	announcementUseCase := usecase.NewAnnouncementUsecase(
+		config.DB,
+		config.Log,
+		config.Validate,
+		announcementRepository,
+		employeeRepository,
+	)
 	// setup controller
 	companyController := http.NewCompanyController(companyUsecase, config.Log)
 	userController := http.NewUserController(userUseCase, config.Log, config.Config)
@@ -138,17 +258,33 @@ func Bootstrap(config *BootstrapConfig) {
 	timeOffRequestController := http.NewTimeOffRequestController(timeOffRequestUseCase, config.Log)
 	timeOffTypeController := http.NewTimeOffTypeController(timeOffTypeUseCase, config.Log)
 	timeOffBalanceController := http.NewTimeOffBalanceController(timeOffBalanceUseCase, config.Log)
-	timeOffApprovalController := http.NewTimeOffApprovalController(timeOffApprovalUseCase, timeOffRequestUseCase, config.Log)
+	timeOffApprovalController := http.NewTimeOffApprovalController(
+		timeOffApprovalUseCase,
+		timeOffRequestUseCase,
+		config.Log,
+	)
 	uploadController := http.NewUploadController(uploadUseCase, config.Log)
-	employeeContractController := http.NewEmployeeContractController(employeeContractUseCase, config.Log)
+	employeeContractController := http.NewEmployeeContractController(
+		employeeContractUseCase,
+		config.Log,
+	)
 	divisionController := http.NewDivisionController(divisionUseCase, config.Log)
 	visitController := http.NewVisitController(visitUseCase, config.Log)
 	permissionController := http.NewPermissionController(permissionUseCase, config.Log)
 	roleController := http.NewRoleController(roleUseCase, config.Log)
-	employeeDocumentController := http.NewEmployeeDocumentController(employeeDocumentUseCase, config.Log)
+	employeeDocumentController := http.NewEmployeeDocumentController(
+		employeeDocumentUseCase,
+		config.Log,
+	)
 	holidayController := http.NewHolidayController(holidayUseCase, config.Log)
-	employeeEducationController := http.NewEmployeeEducationController(employeeEducationUseCase, config.Log)
-	employeeTrainingController := http.NewEmployeeTrainingController(employeeTrainingUseCase, config.Log)
+	employeeEducationController := http.NewEmployeeEducationController(
+		employeeEducationUseCase,
+		config.Log,
+	)
+	employeeTrainingController := http.NewEmployeeTrainingController(
+		employeeTrainingUseCase,
+		config.Log,
+	)
 	remidialVisitController := http.NewRemidialVisitController(remidialVisitUseCase, config.Log)
 	announcementController := http.NewAnnouncementController(announcementUseCase, config.Log)
 	// setup middleware

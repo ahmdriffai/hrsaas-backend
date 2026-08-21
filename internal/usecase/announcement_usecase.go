@@ -21,7 +21,13 @@ type AnnouncementUsecase struct {
 	EmployeeRepository *repository.EmployeeRepository
 }
 
-func NewAnnouncementUsecase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate, announcementRepo *repository.AnnouncementRepository, employeeRepository *repository.EmployeeRepository) *AnnouncementUsecase {
+func NewAnnouncementUsecase(
+	db *gorm.DB,
+	log *logrus.Logger,
+	validate *validator.Validate,
+	announcementRepo *repository.AnnouncementRepository,
+	employeeRepository *repository.EmployeeRepository,
+) *AnnouncementUsecase {
 	return &AnnouncementUsecase{
 		DB:                 db,
 		Log:                log,
@@ -32,7 +38,10 @@ func NewAnnouncementUsecase(db *gorm.DB, log *logrus.Logger, validate *validator
 }
 
 // Create Announcement
-func (c *AnnouncementUsecase) Create(ctx context.Context, request *model.CreateAnnouncementRequest) (*model.AnnouncementResponse, error) {
+func (c *AnnouncementUsecase) Create(
+	ctx context.Context,
+	request *model.CreateAnnouncementRequest,
+) (*model.AnnouncementResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
@@ -72,7 +81,10 @@ func (c *AnnouncementUsecase) Create(ctx context.Context, request *model.CreateA
 }
 
 // List Announcements
-func (c *AnnouncementUsecase) List(ctx context.Context, request *model.SearchAnnouncementRequest) ([]model.AnnouncementResponse, int64, error) {
+func (c *AnnouncementUsecase) List(
+	ctx context.Context,
+	request *model.SearchAnnouncementRequest,
+) ([]model.AnnouncementResponse, int64, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
@@ -101,7 +113,11 @@ func (c *AnnouncementUsecase) List(ctx context.Context, request *model.SearchAnn
 }
 
 // Get Announcement Detail
-func (c *AnnouncementUsecase) Detail(ctx context.Context, id string, companyID string) (*model.AnnouncementResponse, error) {
+func (c *AnnouncementUsecase) Detail(
+	ctx context.Context,
+	id string,
+	companyID string,
+) (*model.AnnouncementResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
@@ -120,7 +136,12 @@ func (c *AnnouncementUsecase) Detail(ctx context.Context, id string, companyID s
 }
 
 // Update Announcement
-func (c *AnnouncementUsecase) Update(ctx context.Context, id string, companyID string, request *model.UpdateAnnouncementRequest) (*model.AnnouncementResponse, error) {
+func (c *AnnouncementUsecase) Update(
+	ctx context.Context,
+	id string,
+	companyID string,
+	request *model.UpdateAnnouncementRequest,
+) (*model.AnnouncementResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
